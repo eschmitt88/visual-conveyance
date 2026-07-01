@@ -6,6 +6,7 @@ added: "2026-07-01"
 sources:
   - "[[literature/papers/berger2024visualization]]"
   - "[[literature/papers/dibia2023lida]]"
+  - "[[literature/posts/googleresearch2025generativeui]]"
 related_concepts: ["llm-as-judge-for-visuals", "diagram-dsl-generation"]
 related_experiments: []
 tags: [pipelines, generate-check-refine, agents, visualization-generation]
@@ -23,6 +24,7 @@ Our approaches are currently one-shot prompt specs; the literature suggests the 
 
 - Berger & Liu distinguish visualization *generation* (emit code — solved) from visualization *design* (iterate: conceive → implement → visually assess the render → re-conceive) and argue "visual perception will be critical in forming such an iterative improvement loop." An agent that never looks at its own render is assuming it can envision the result — an unvalidated assumption.
 - LIDA (the canonical four-stage pipeline: summarize → explore goals → generate/execute/filter code → stylize) shows the *grounding-context stage dominates*: without a data summary, code-generation error rate is 96–99%; with a compact rules-based summary, ~3.5%. Also: forcing a goal-with-rationale step before generation yields more semantically meaningful outputs, and an execute-and-filter stage gives a free reliability metric (visualization error rate).
+- Google's production Generative UI keeps the same shape at scale: crafted system instructions (planning framework + concrete output examples + error-avoidance tips) → tool calls → HTML/CSS/JS emission → dedicated post-processors for common failure modes. Even at frontier-model quality, the pipeline stages (not the bare model) carry reliability.
 
 ## Connections
 

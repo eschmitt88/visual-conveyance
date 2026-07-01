@@ -9,3 +9,4 @@ skills; read by `/lint`.
 2026-07-01 21:26 ingest berger2024visualization
 2026-07-01 21:30 ingest while2024glanceable
 2026-07-01 21:32 ingest dibia2023lida
+2026-07-01 21:34 ingest googleresearch2025generativeui
