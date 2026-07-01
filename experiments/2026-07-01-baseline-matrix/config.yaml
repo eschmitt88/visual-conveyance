@@ -1,0 +1,36 @@
+# Inputs, hyperparameters, seeds for this experiment.
+seed: 42
+
+# Matrix definition — approach specs (approaches/<file>, version pinned)
+approaches:
+  - 01-prose-baseline         # v1
+  - 02-mermaid-diagrams       # v1
+  - 03-svg-infographic        # v1
+  - 04-layered-dashboard      # v1
+  - 05-interactive-explainer  # v1
+  - 06-visual-metaphor        # v1
+  - 07-scrolly-slides         # v1
+
+testcases:
+  - codebase-structure   # v1
+  - diffusion-variants   # v1
+  - research-project     # v1
+  - incident-analysis    # v1
+  - tradeoff-decision    # v1
+  - experiment-results   # v1
+
+# One fresh subagent per cell; generator sees approach spec + contract +
+# brief + source (never key_facts). Evaluator sees screenshots + html +
+# key_facts + rubric (never the approach spec).
+generator_model: claude-fable-5
+evaluator_model: claude-fable-5
+rubric: eval/rubric.md             # v1
+contract: approaches/_contract.md  # v1
+
+render:
+  viewport: [1440, 900]
+  browsers_path: /mnt/projects/.playwright-browsers
+
+# git SHA of approaches/ + testcases/ at generation time — filled when
+# generation starts.
+inputs_sha: TBD

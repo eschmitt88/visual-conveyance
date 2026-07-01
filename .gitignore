@@ -18,6 +18,10 @@ __pycache__/
 .DS_Store
 *.swp
 
+# Rendered screenshots — derived artifacts, regenerate with `make shots`
+docs/presentations/*/*/glance.png
+docs/presentations/*/*/full.png
+
 # Large binary artifacts that should not be in Git
 *.ckpt
 *.pt
