@@ -12,6 +12,10 @@ and `/new-experiment`.
 
 (promote a cluster of ≥5 related concepts into `mocs/<theme>.md`)
 
+## Literature
+
+- [[literature/papers/shbita2025mermaidseqbench]] — MermaidSeqBench: NL→Mermaid benchmark, six-dimension LLM-as-judge rubric (rel 4)
+
 ## Active experiments
 
 (list of `experiments/YYYY-MM-DD-<slug>/` folders currently in flight)
