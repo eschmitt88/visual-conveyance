@@ -83,3 +83,25 @@
     "Monitor": 1
   }
 }
+{
+  "timestamp": "2026-07-01T21:26:41Z",
+  "session_id": "f086a304-af8f-4b32-be75-d210268421b5",
+  "input_tokens": 56409,
+  "output_tokens": 148153,
+  "cache_read_tokens": 10790430,
+  "cache_creation_tokens": 464514,
+  "tools_used_summary": {
+    "Bash": 20,
+    "Skill": 3,
+    "ToolSearch": 3,
+    "Read": 6,
+    "TaskCreate": 7,
+    "TaskUpdate": 7,
+    "Edit": 5,
+    "WebSearch": 7,
+    "Write": 19,
+    "Agent": 7,
+    "TaskList": 1,
+    "Monitor": 1
+  }
+}
