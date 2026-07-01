@@ -6,3 +6,4 @@ skills; read by `/lint`.
 2026-07-01 21:15 ingest shbita2025mermaidseqbench
 2026-07-01 21:18 ingest liang2025diagrameval
 2026-07-01 21:23 ingest tang2026igenbench
+2026-07-01 21:26 ingest berger2024visualization
