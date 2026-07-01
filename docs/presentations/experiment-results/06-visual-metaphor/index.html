@@ -51,7 +51,7 @@
     color: var(--muted); margin: 0 0 4px;
   }
   h1 {
-    font-size: clamp(24px, 3.2vw, 33px); line-height: 1.15;
+    font-size: clamp(23px, 3vw, 30px); line-height: 1.15;
     margin: 0 0 10px; font-weight: 750;
   }
   .verdict { margin: 0 0 12px; max-width: 65rem; color: var(--ink2); }
@@ -157,14 +157,14 @@
   <h1>The lukewarm river: why the overall number can't decide this ship</h1>
   <p class="verdict">
     <strong>Overall trial-to-paid conversion moved 11.4% → 12.2% (+0.8pp, 95% CI [−0.3, +1.9], p&nbsp;=&nbsp;0.16) — not statistically significant. Do not read this as "B won."</strong>
-    The blended number is lukewarm river water: a genuinely warm tributary (mobile-web, +4.2pp) and a genuinely cold one (iOS, −1.9pp) mixing into an average no one actually swims in.
-    The map below is the whole readout.
+    The blended number is lukewarm river water: a genuinely warm tributary (mobile-web, +4.2pp) and a genuinely cold one (iOS, −1.9pp) mixing into an average no one actually swims in — so the ship decision has to be made tributary by tributary.
     <span class="gloss">(pp = percentage points; a 95% CI is the range of effects consistent with the data — if it includes 0, the data can't distinguish the effect from nothing.)</span>
   </p>
   <ul class="decisions">
     <li><b>Mobile-web:</b> ship B (with a 5% holdback)</li>
     <li><b>iOS:</b> do NOT ship — run a fix experiment on the step-3 permission prompt</li>
     <li><b>Android:</b> do NOT ship — null result, revisit after the iOS fix</li>
+    <li><b>Beware early snapshots:</b> week-1 read +2.9pp — novelty that decayed to +0.1pp by week 6 (the mobile-web gain persisted)</li>
   </ul>
 </header>
 

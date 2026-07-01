@@ -230,19 +230,19 @@
         <title>Detection and diagnosis: 68 minutes elapsed between the first alert (14:11) and the correct diagnosis (15:19).</title>
         <rect x="762" y="34" width="418" height="126" rx="10" fill="var(--surface)" stroke="var(--border)"/>
         <circle cx="784" cy="56" r="11" fill="var(--ink)"/><text x="784" y="60" text-anchor="middle" class="pill">5</text>
-        <text x="802" y="60" class="lbl-b critl">THE WRONG VALLEY — 68 minutes lost (14:11 → 15:19)</text>
-        <text x="778" y="80" class="lbl">The overflow gauge (error rate) fired at 14:11; no water-level</text>
-        <text x="778" y="96" class="lbl">(latency) gauge existed, and level readings sampled 1 in 100.</text>
-        <text x="778" y="112" class="lbl">The deploy signpost: broken since Jun 10. Crews chased a distant</text>
-        <text x="778" y="128" class="lbl">storm report (cloud-provider advisory) 14:20–15:10 — wrong valley.</text>
-        <text x="778" y="146" class="lbl-b">15:19 — the canal and its scans are found, 68 min after the alert.</text>
+        <text x="802" y="60" class="lbl-b critl">THE WRONG VALLEY — 68 min lost (14:11 → 15:19)</text>
+        <text x="778" y="80" class="lbl" style="font-size:11.5px">Overflow gauge (error rate) fired 14:11; no water-level</text>
+        <text x="778" y="96" class="lbl" style="font-size:11.5px">(latency) gauge existed; level readings sampled 1 in 100.</text>
+        <text x="778" y="112" class="lbl" style="font-size:11.5px">Deploy signpost broken since Jun 10. Crews chased a distant</text>
+        <text x="778" y="128" class="lbl" style="font-size:11.5px">storm report (cloud advisory) 14:20–15:10 — wrong valley.</text>
+        <text x="778" y="146" class="lbl-b" style="font-size:12px">15:19 — canal + scans found, 68 min after the alert.</text>
       </g>
 
       <!-- ====== storm + search stream source ====== -->
       <g>
         <title>The trigger: release 2026-06-24.3 at 14:02 (PR 8841) turned every invoice search into a 24–31 second sequential scan.</title>
-        <rect x="82" y="24" width="52" height="18" rx="9" fill="var(--ink)"/>
-        <text x="108" y="37" text-anchor="middle" class="pill">14:02</text>
+        <rect x="90" y="12" width="52" height="18" rx="9" fill="var(--ink)"/>
+        <text x="116" y="25" text-anchor="middle" class="pill">14:02</text>
         <path d="M96 84 a18 18 0 0 1 8 -34 a24 24 0 0 1 46 -8 a20 20 0 0 1 28 18 a15 15 0 0 1 -6 24 z" fill="var(--muted)" opacity="0.85"/>
         <polygon points="138,86 128,104 136,104 126,122 144,102 136,102 146,86" fill="var(--crit)"/>
         <g stroke="var(--water-deep)" stroke-width="2" opacity="0.8">
@@ -261,9 +261,9 @@
         <title>The old bypass: the covering index the old query used. Migration 0412 dropped it; recreating it takes about 6 hours — so rollback could not work.</title>
         <path d="M258 152 C330 112, 470 104, 558 168" fill="none" stroke="var(--muted)" stroke-width="7" stroke-dasharray="10 8" opacity="0.75"/>
         <g stroke="var(--crit)" stroke-width="3"><line x1="400" y1="108" x2="420" y2="128"/><line x1="420" y1="108" x2="400" y2="128"/></g>
-        <text x="578" y="112" class="lbl-b">old bypass — filled in at 14:02</text>
-        <text x="578" y="127" class="lbl-s">(migration 0412 dropped the covering</text>
-        <text x="578" y="141" class="lbl-s">index; re-digging it ≈ 6 h)</text>
+        <text x="748" y="112" text-anchor="end" class="lbl-b">old bypass — filled in at 14:02</text>
+        <text x="748" y="127" text-anchor="end" class="lbl-s">(migration 0412 dropped the covering</text>
+        <text x="748" y="141" text-anchor="end" class="lbl-s">index; re-digging it ≈ 6 h)</text>
       </g>
 
       <!-- silt flats -->
@@ -283,49 +283,49 @@
         <path d="M70 140 C160 152, 210 168, 268 180" fill="none" stroke="var(--water-deep)" stroke-width="2" opacity="0.5"/>
         <polyline points="196,158 208,164 196,170" fill="none" stroke="var(--water-deep)" stroke-width="2.5"/>
         <polyline points="420,190 432,196 420,202" fill="none" stroke="var(--water-deep)" stroke-width="2.5"/>
-        <text x="64" y="122" class="lbl-s">the search stream — GET /v2/invoices/search</text>
+        <text x="182" y="120" class="lbl-s">the search stream — GET /v2/invoices/search</text>
       </g>
 
       <!-- levee + spill -->
       <g>
         <title>The 30-second levee: the statement timeout. Bloat pushed scans to 24–31 s, straddling it — about 57% of searches were killed and surfaced as errors.</title>
         <line x1="245" y1="242" x2="572" y2="252" stroke="var(--ink)" stroke-width="4.5" stroke-linecap="round"/>
-        <text x="408" y="270" text-anchor="middle" class="lbl-b">the 30-second levee = statement timeout</text>
+        <text x="128" y="268" class="lbl-b">the 30-second levee = statement timeout</text>
         <g stroke="var(--crit)" stroke-width="2.5" fill="none">
-          <line x1="368" y1="252" x2="360" y2="292" marker-end="url(#arrC)"/>
-          <line x1="410" y1="254" x2="404" y2="294" marker-end="url(#arrC)"/>
-          <line x1="452" y1="255" x2="448" y2="296" marker-end="url(#arrC)"/>
+          <line x1="384" y1="252" x2="378" y2="292" marker-end="url(#arrC)"/>
+          <line x1="424" y1="254" x2="418" y2="294" marker-end="url(#arrC)"/>
+          <line x1="464" y1="255" x2="460" y2="296" marker-end="url(#arrC)"/>
         </g>
-        <ellipse cx="408" cy="316" rx="62" ry="14" fill="var(--water-light)"/>
-        <text x="486" y="300" class="lbl critl">≈57% of searches spill</text>
-        <text x="486" y="315" class="lbl critl">over the levee — killed at</text>
-        <text x="486" y="330" class="lbl critl">30 s, surfacing as 5xx</text>
+        <ellipse cx="424" cy="316" rx="58" ry="14" fill="var(--water-light)"/>
+        <text x="510" y="300" class="lbl critl">≈57% of searches spill</text>
+        <text x="510" y="315" class="lbl critl">over the levee — killed at</text>
+        <text x="510" y="330" class="lbl critl">30 s, surfacing as 5xx</text>
       </g>
 
       <!-- silt caption (left column) -->
       <g>
-        <text x="62" y="282" class="lbl">silt: 38.1 M dead tuples (+12.2% bloat,</text>
-        <text x="62" y="297" class="lbl">+23 GB of heap) from the Jun 22 backfill;</text>
-        <text x="62" y="312" class="lbl">autovacuum's wake-up point ≈54.9 M —</text>
-        <text x="62" y="327" class="lbl">never crossed, so it slept</text>
-        <text x="62" y="345" class="lbl goodl">dredged 17:12–17:50 (manual VACUUM)</text>
+        <text x="128" y="288" class="lbl">silt: 38.1 M dead tuples from the</text>
+        <text x="128" y="303" class="lbl">Jun 22 backfill (+12.2% bloat, +23 GB);</text>
+        <text x="128" y="318" class="lbl">autovacuum's wake-up point ≈54.9 M</text>
+        <text x="128" y="333" class="lbl">— never crossed, so it slept</text>
+        <text x="128" y="351" class="lbl goodl">dredged 17:12–17:50 (manual VACUUM)</text>
       </g>
 
       <!-- retry pumps -->
       <g>
         <title>The retry pumps: SDKs and internal clients retried failures on a fixed 1-second interval, 3 attempts, no jitter, no budget — multiplying inflow 4.7×.</title>
-        <path d="M400 328 C280 356, 148 336, 112 232 C98 194, 96 168, 110 150"
+        <path d="M462 352 C355 392, 162 390, 84 250 C72 202, 78 166, 100 150"
               fill="none" stroke="var(--pump)" stroke-width="5" stroke-dasharray="12 7" marker-end="url(#arr)"/>
         <g>
-          <rect x="410" y="330" width="26" height="20" rx="4" fill="var(--pump)"/>
-          <circle cx="423" cy="330" r="7" fill="var(--pump)"/>
-          <rect x="442" y="334" width="22" height="16" rx="4" fill="var(--pump)"/>
-          <circle cx="453" cy="334" r="6" fill="var(--pump)"/>
+          <rect x="428" y="328" width="26" height="20" rx="4" fill="var(--pump)"/>
+          <circle cx="441" cy="328" r="7" fill="var(--pump)"/>
+          <rect x="460" y="332" width="22" height="16" rx="4" fill="var(--pump)"/>
+          <circle cx="471" cy="332" r="6" fill="var(--pump)"/>
         </g>
-        <circle cx="132" cy="376" r="11" fill="var(--ink)"/><text x="132" y="380" text-anchor="middle" class="pill">3</text>
-        <text x="150" y="380" class="lbl-b">RETRY PUMPS — spilled requests pumped straight back upstream</text>
-        <text x="150" y="397" class="lbl">fixed 1 s interval, 3 attempts, no jitter, no retry budget</text>
-        <text x="150" y="413" class="lbl critl">inflow ×4.7 — 3,200 → 15,020 rpm at the 15:47 peak</text>
+        <circle cx="132" cy="394" r="11" fill="var(--ink)"/><text x="132" y="398" text-anchor="middle" class="pill">3</text>
+        <text x="150" y="398" class="lbl-b">RETRY PUMPS — spilled requests pumped straight back upstream</text>
+        <text x="150" y="415" class="lbl">fixed 1 s interval, 3 attempts, no jitter, no retry budget</text>
+        <text x="150" y="431" class="lbl critl">inflow ×4.7 — 3,200 → 15,020 rpm at the 15:47 peak</text>
       </g>
 
       <!-- sluice gate (feature flag) -->
@@ -343,11 +343,11 @@
       <!-- shared canal -->
       <g>
         <title>The shared canal: the pgbouncer connection pool — 80 server connections shared by invoice reads, writes, PDF rendering, and webhook dispatch. Saturated at 15:12.</title>
-        <circle cx="668" cy="222" r="11" fill="var(--ink)"/><text x="668" y="226" text-anchor="middle" class="pill">4</text>
-        <text x="686" y="226" class="lbl-b">THE SHARED CANAL = pgbouncer pool</text>
-        <text x="686" y="242" class="lbl">80 gates shared by the whole valley</text>
-        <text x="686" y="260" class="lbl critl">SATURATED 15:12 — queue peaked at 1,437 (15:58)</text>
-        <text x="686" y="276" class="lbl">widening tried 16:20 (80→200) — worse; reverted 16:31</text>
+        <circle cx="622" cy="210" r="11" fill="var(--ink)"/><text x="622" y="214" text-anchor="middle" class="pill">4</text>
+        <text x="640" y="214" class="lbl-b">THE SHARED CANAL = pgbouncer pool</text>
+        <text x="640" y="230" class="lbl">80 gates shared by the whole valley</text>
+        <text x="640" y="248" class="lbl critl">SATURATED 15:12 — queue peak 1,437 (15:58)</text>
+        <text x="640" y="264" class="lbl">widening tried 16:20 (80→200) — worse; reverted 16:31</text>
         <rect x="698" y="293" width="186" height="18" rx="6" fill="var(--water)"/>
         <g stroke="var(--ink)" stroke-width="1.6" opacity="0.75">
           <line x1="712" y1="290" x2="712" y2="314"/><line x1="727" y1="290" x2="727" y2="314"/>
@@ -358,7 +358,7 @@
           <line x1="862" y1="290" x2="862" y2="314"/><line x1="877" y1="290" x2="877" y2="314"/>
         </g>
         <text x="791" y="329" text-anchor="middle" class="lbl-s">80 gates</text>
-        <text x="686" y="349" class="lbl goodl">queue drained by 17:18</text>
+        <text x="806" y="349" text-anchor="middle" class="lbl goodl">queue drained by 17:18</text>
       </g>
 
       <!-- tributaries -->
@@ -377,15 +377,15 @@
       <!-- dry high ground -->
       <g>
         <title>High ground that stayed dry: reporting runs on read replicas; auth has its own separate pool. This is why the platform peak was 31.2%, not higher.</title>
-        <ellipse cx="990" cy="200" rx="54" ry="30" fill="var(--dry)" stroke="var(--dry-line)"/>
-        <ellipse cx="990" cy="204" rx="34" ry="16" fill="none" stroke="var(--dry-line)"/>
-        <ellipse cx="1108" cy="204" rx="52" ry="28" fill="var(--dry)" stroke="var(--dry-line)"/>
-        <ellipse cx="1108" cy="208" rx="32" ry="14" fill="none" stroke="var(--dry-line)"/>
-        <text x="990" y="196" text-anchor="middle" class="lbl-b" style="font-size:11px">REPORTING HEIGHTS</text>
-        <text x="990" y="210" text-anchor="middle" class="lbl-s">(read replicas)</text>
-        <text x="1108" y="200" text-anchor="middle" class="lbl-b" style="font-size:11px">AUTH RIDGE</text>
-        <text x="1108" y="214" text-anchor="middle" class="lbl-s">(separate pool)</text>
-        <text x="1048" y="248" text-anchor="middle" class="lbl goodl">stayed dry — capping the flood at 31.2%</text>
+        <ellipse cx="1000" cy="186" rx="54" ry="30" fill="var(--dry)" stroke="var(--dry-line)"/>
+        <ellipse cx="1000" cy="190" rx="34" ry="16" fill="none" stroke="var(--dry-line)"/>
+        <ellipse cx="1116" cy="190" rx="52" ry="28" fill="var(--dry)" stroke="var(--dry-line)"/>
+        <ellipse cx="1116" cy="194" rx="32" ry="14" fill="none" stroke="var(--dry-line)"/>
+        <text x="1000" y="182" text-anchor="middle" class="lbl-b" style="font-size:11px">REPORTING HEIGHTS</text>
+        <text x="1000" y="196" text-anchor="middle" class="lbl-s">(read replicas)</text>
+        <text x="1116" y="186" text-anchor="middle" class="lbl-b" style="font-size:11px">AUTH RIDGE</text>
+        <text x="1116" y="200" text-anchor="middle" class="lbl-s">(separate pool)</text>
+        <text x="1058" y="236" text-anchor="middle" class="lbl goodl">stayed dry — capping the flood at 31.2%</text>
       </g>
 
       <!-- floodplain -->
@@ -397,12 +397,12 @@
           <rect x="948" y="364" width="36" height="26" rx="3"/><rect x="998" y="362" width="36" height="26" rx="3"/><rect x="1048" y="366" width="36" height="26" rx="3"/><rect x="1102" y="362" width="36" height="26" rx="3"/>
           <rect x="954" y="402" width="36" height="26" rx="3"/><rect x="1004" y="400" width="36" height="26" rx="3"/><rect x="1054" y="404" width="36" height="26" rx="3"/>
         </g>
-        <path d="M884 292 C930 270, 1030 264, 1120 272 C1160 276, 1174 286, 1174 300 L1174 436 C1120 452, 1010 456, 940 444 C905 438, 890 400, 888 360 Z"
+        <path d="M880 292 C926 262, 1040 254, 1130 262 C1168 266, 1178 280, 1178 296 L1178 446 C1130 462, 1010 466, 938 452 C900 444, 886 396, 884 352 Z"
               fill="var(--flood)" opacity="0.55"/>
         <polyline points="900,296 914,302 900,308" fill="none" stroke="var(--water-deep)" stroke-width="2.5"/>
         <text x="936" y="478" class="lbl-b">CUSTOMER DISTRICTS — flooded</text>
         <text x="936" y="495" class="lbl">2,312 orgs hit (24.4% of 9,480 active)</text>
-        <text x="936" y="512" class="lbl critl">peak flood: 31.2% of requests failing, 15:47</text>
+        <text x="936" y="512" class="lbl critl">peak flood: 31.2% failing at 15:47</text>
         <text x="936" y="529" class="lbl">≈$41,300 in SLA credits · zero data lost</text>
       </g>
     </svg>

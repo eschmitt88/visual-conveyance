@@ -173,9 +173,9 @@
   /* ---------- layer 2 : cards ---------- */
   main { padding: 8px 0 30px; }
   .grid-head {
-    display: flex; align-items: baseline; gap: 12px; margin: 18px 0 12px;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 18px 0 12px;
   }
-  .grid-head h2 { margin: 0; font-size: 18px; }
+  .grid-head h2 { margin: 0; font-size: 18px; white-space: nowrap; }
   .grid-head p { margin: 0; font-size: 13px; color: var(--muted); }
   .cards {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
@@ -290,7 +290,7 @@
       <span class="chip"><span class="ic bad">✕</span><span><b>Rollback impossible</b> — the release dropped the old index (rebuild ≈6&#8202;h)</span></span>
       <span class="chip"><span class="ic ok">✓</span><span><b>A feature flag stopped it at 17:05</b> — a 90-second flip, no deploy</span></span>
       <span class="chip"><span class="ic ok">✓</span><span><b>No data lost</b> — all 37,400 delayed webhooks replayed</span></span>
-      <span class="chip"><span class="ic plan">▶</span><span><b>3 P0 fixes land Q3 2026</b> — one per failure leg</span></span>
+      <span class="chip"><span class="ic plan">▶</span><span><b>3 P0 fixes land Q3 2026</b>, one per leg — latency SLO alerts · pool-saturation alerts · retries with jitter</span></span>
     </div>
 
     <div class="hero">

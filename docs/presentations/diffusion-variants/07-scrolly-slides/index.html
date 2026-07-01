@@ -172,8 +172,8 @@
         <g transform="translate(312,0)"><g clip-path="url(#clpA)"><use href="#scnA"/><rect width="96" height="96" filter="url(#nzA)" opacity=".5"/></g></g>
         <g transform="translate(468,0)"><g clip-path="url(#clpA)"><use href="#scnA"/><rect width="96" height="96" filter="url(#nzA)" opacity=".24"/></g></g>
         <g transform="translate(624,0)"><g clip-path="url(#clpA)"><use href="#scnA"/></g></g>
-        <text x="48" y="118" text-anchor="middle" font-size="15" fill="#898781">pure random noise</text>
-        <text x="672" y="118" text-anchor="middle" font-size="15" fill="#898781">a new image</text>
+        <text x="2" y="118" font-size="15" fill="#898781">pure random noise</text>
+        <text x="718" y="118" text-anchor="end" font-size="15" fill="#898781">a new image</text>
         <line x1="8" y1="140" x2="700" y2="140" stroke="#3987e5" stroke-width="2.5" marker-end="url(#arwA)"/>
         <text x="360" y="166" text-anchor="middle" font-size="16" fill="#c3c2b7">learned denoising — many small steps</text>
       </svg>
@@ -315,7 +315,7 @@
         <text x="204" y="118" text-anchor="middle" font-size="15" fill="#898781">blobs of tone</text>
         <text x="360" y="118" text-anchor="middle" font-size="15" fill="#898781">coarse layout</text>
         <text x="516" y="118" text-anchor="middle" font-size="15" fill="#898781">shapes</text>
-        <text x="672" y="118" text-anchor="middle" font-size="15" fill="#898781">t = 0 · texture</text>
+        <text x="718" y="118" text-anchor="end" font-size="15" fill="#898781">t = 0 · texture</text>
         <line x1="8" y1="140" x2="700" y2="140" stroke="#3987e5" stroke-width="2.5" marker-end="url(#arwD)"/>
         <text x="360" y="166" text-anchor="middle" font-size="16" fill="#c3c2b7">the same learned step, repeated: t = 1000, 999, 998, … 0</text>
       </svg>
@@ -405,14 +405,14 @@
     <div class="visual">
       <svg viewBox="0 0 720 244" role="img" aria-label="From a noise point to an image point: a jagged random walk labeled SDE, and a smooth deterministic curve labeled probability-flow ODE with about ten solver steps marked">
         <path d="M70 190 L110 160 L130 178 L170 140 L195 158 L235 118 L260 136 L300 100 L330 118 L365 84 L395 102 L430 70 L460 88 L495 60 L525 76 L560 48 L590 64 L620 44 L650 50" fill="none" stroke="#52514e" stroke-width="2"/>
-        <text x="96" y="122" font-size="15" fill="#898781">reverse-time SDE — a random walk (DDPM-like)</text>
+        <text x="96" y="122" font-size="15" fill="#898781" stroke="#1a1a19" stroke-width="5" paint-order="stroke">reverse-time SDE — a random walk (DDPM-like)</text>
         <path d="M70 190 C 250 192, 430 62, 650 50" fill="none" stroke="#3987e5" stroke-width="2.5"/>
         <g fill="#3987e5">
           <circle cx="128" cy="188" r="4"/><circle cx="186" cy="181" r="4"/><circle cx="244" cy="169" r="4"/>
           <circle cx="302" cy="151" r="4"/><circle cx="360" cy="128" r="4"/><circle cx="418" cy="104" r="4"/>
           <circle cx="476" cy="83" r="4"/><circle cx="534" cy="67" r="4"/><circle cx="592" cy="56" r="4"/>
         </g>
-        <text x="330" y="216" font-size="15" fill="#c3c2b7">probability-flow ODE — deterministic; DDIM ≈ one discretization of it</text>
+        <text x="360" y="216" text-anchor="middle" font-size="15" fill="#c3c2b7">probability-flow ODE — deterministic (DDIM ≈ one discretization)</text>
         <circle cx="70" cy="190" r="7" fill="#898781"/>
         <text x="70" y="216" text-anchor="middle" font-size="15" fill="#898781">noise</text>
         <circle cx="650" cy="50" r="7" fill="#3987e5"/>
@@ -551,7 +551,7 @@
     <h2>Flow matching: take the straight path</h2>
     <div class="visual">
       <svg viewBox="0 0 720 224" role="img" aria-label="From a noise point to an image point: diffusion follows a curved path, rectified flow a straight line with only a few solver steps">
-        <text x="700" y="26" text-anchor="end" font-size="14" fill="#898781">SD3 · Flux are trained this way</text>
+        <text x="20" y="26" font-size="14" fill="#898781">SD3 · Flux are trained this way</text>
         <path d="M70 180 C 300 176, 490 148, 650 50" fill="none" stroke="#52514e" stroke-width="2"/>
         <text x="330" y="192" text-anchor="middle" font-size="15" fill="#898781">diffusion's curved path</text>
         <line x1="70" y1="180" x2="650" y2="50" stroke="#3987e5" stroke-width="2.5"/>
@@ -608,7 +608,7 @@
           <text x="413" y="130">~20–30 (fewer viable)</text>
           <text x="258" y="163">1–4</text>
         </g>
-        <text x="360" y="190" text-anchor="middle" font-size="12.5" fill="#52514e">bar lengths on a log scale · below ~10, undistilled models degrade · past ~50, imperceptible gains · CFG doubles every count</text>
+        <text x="360" y="190" text-anchor="middle" font-size="12.5" fill="#52514e">log scale · below ~10 undistilled degrades · past ~50 imperceptible · CFG doubles all counts</text>
       </svg>
     </div>
   </div>

@@ -1,0 +1,443 @@
+{
+  "run": "2026-07-01-baseline-matrix",
+  "rubric_version": 1,
+  "testcases": [
+    "codebase-structure",
+    "diffusion-variants",
+    "experiment-results",
+    "incident-analysis",
+    "research-project",
+    "tradeoff-decision"
+  ],
+  "approaches": [
+    "01-prose-baseline",
+    "02-mermaid-diagrams",
+    "03-svg-infographic",
+    "04-layered-dashboard",
+    "05-interactive-explainer",
+    "06-visual-metaphor",
+    "07-scrolly-slides"
+  ],
+  "cells": [
+    {
+      "testcase": "codebase-structure",
+      "approach": "01-prose-baseline",
+      "path": "codebase-structure/01-prose-baseline/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "codebase-structure",
+      "approach": "02-mermaid-diagrams",
+      "path": "codebase-structure/02-mermaid-diagrams/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "codebase-structure",
+      "approach": "03-svg-infographic",
+      "path": "codebase-structure/03-svg-infographic/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "codebase-structure",
+      "approach": "04-layered-dashboard",
+      "path": "codebase-structure/04-layered-dashboard/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "codebase-structure",
+      "approach": "05-interactive-explainer",
+      "path": "codebase-structure/05-interactive-explainer/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "codebase-structure",
+      "approach": "06-visual-metaphor",
+      "path": "codebase-structure/06-visual-metaphor/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "codebase-structure",
+      "approach": "07-scrolly-slides",
+      "path": "codebase-structure/07-scrolly-slides/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "diffusion-variants",
+      "approach": "01-prose-baseline",
+      "path": "diffusion-variants/01-prose-baseline/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "diffusion-variants",
+      "approach": "02-mermaid-diagrams",
+      "path": "diffusion-variants/02-mermaid-diagrams/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "diffusion-variants",
+      "approach": "03-svg-infographic",
+      "path": "diffusion-variants/03-svg-infographic/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "diffusion-variants",
+      "approach": "04-layered-dashboard",
+      "path": "diffusion-variants/04-layered-dashboard/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "diffusion-variants",
+      "approach": "05-interactive-explainer",
+      "path": "diffusion-variants/05-interactive-explainer/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "diffusion-variants",
+      "approach": "06-visual-metaphor",
+      "path": "diffusion-variants/06-visual-metaphor/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "diffusion-variants",
+      "approach": "07-scrolly-slides",
+      "path": "diffusion-variants/07-scrolly-slides/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "01-prose-baseline",
+      "path": "experiment-results/01-prose-baseline/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "02-mermaid-diagrams",
+      "path": "experiment-results/02-mermaid-diagrams/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "03-svg-infographic",
+      "path": "experiment-results/03-svg-infographic/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "04-layered-dashboard",
+      "path": "experiment-results/04-layered-dashboard/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "05-interactive-explainer",
+      "path": "experiment-results/05-interactive-explainer/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "06-visual-metaphor",
+      "path": "experiment-results/06-visual-metaphor/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "07-scrolly-slides",
+      "path": "experiment-results/07-scrolly-slides/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "incident-analysis",
+      "approach": "01-prose-baseline",
+      "path": "incident-analysis/01-prose-baseline/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "incident-analysis",
+      "approach": "02-mermaid-diagrams",
+      "path": "incident-analysis/02-mermaid-diagrams/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "incident-analysis",
+      "approach": "03-svg-infographic",
+      "path": "incident-analysis/03-svg-infographic/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "incident-analysis",
+      "approach": "04-layered-dashboard",
+      "path": "incident-analysis/04-layered-dashboard/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "incident-analysis",
+      "approach": "05-interactive-explainer",
+      "path": "incident-analysis/05-interactive-explainer/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "incident-analysis",
+      "approach": "06-visual-metaphor",
+      "path": "incident-analysis/06-visual-metaphor/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "incident-analysis",
+      "approach": "07-scrolly-slides",
+      "path": "incident-analysis/07-scrolly-slides/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "research-project",
+      "approach": "01-prose-baseline",
+      "path": "research-project/01-prose-baseline/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "research-project",
+      "approach": "02-mermaid-diagrams",
+      "path": "research-project/02-mermaid-diagrams/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "research-project",
+      "approach": "03-svg-infographic",
+      "path": "research-project/03-svg-infographic/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "research-project",
+      "approach": "04-layered-dashboard",
+      "path": "research-project/04-layered-dashboard/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "research-project",
+      "approach": "05-interactive-explainer",
+      "path": "research-project/05-interactive-explainer/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "research-project",
+      "approach": "06-visual-metaphor",
+      "path": "research-project/06-visual-metaphor/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "research-project",
+      "approach": "07-scrolly-slides",
+      "path": "research-project/07-scrolly-slides/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "01-prose-baseline",
+      "path": "tradeoff-decision/01-prose-baseline/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "02-mermaid-diagrams",
+      "path": "tradeoff-decision/02-mermaid-diagrams/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "03-svg-infographic",
+      "path": "tradeoff-decision/03-svg-infographic/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "04-layered-dashboard",
+      "path": "tradeoff-decision/04-layered-dashboard/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "05-interactive-explainer",
+      "path": "tradeoff-decision/05-interactive-explainer/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "06-visual-metaphor",
+      "path": "tradeoff-decision/06-visual-metaphor/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "07-scrolly-slides",
+      "path": "tradeoff-decision/07-scrolly-slides/index.html",
+      "ai_scores": null,
+      "ai_evaluated": false,
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    }
+  ]
+}

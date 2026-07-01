@@ -115,8 +115,8 @@
   <!-- fare-zone gridlines -->
   <line class="gridln" x1="360" y1="430" x2="1345" y2="430"/>
   <line class="gridln" x1="360" y1="310" x2="1345" y2="310"/>
-  <text class="t10 mut halo" x="366" y="426">$1,000/mo</text>
-  <text class="t10 mut halo" x="366" y="306">$10,000/mo</text>
+  <text class="t10 mut halo" x="1341" y="426" text-anchor="end">$1,000/mo</text>
+  <text class="t10 mut halo" x="1341" y="306" text-anchor="end">$10,000/mo</text>
 
   <!-- origin info block -->
   <text class="t12 b" x="30" y="76">DEPARTURE: PROTOTYPE INDEX</text>
@@ -125,10 +125,10 @@
   <text class="t11 ink2" x="30" y="120">sable-embed-v2 · 85–120 QPS · 30% filtered</text>
 
   <!-- fare axis title -->
-  <text class="t11 b" x="366" y="84">FARE AXIS ↑</text>
-  <text class="t10 ink2" x="366" y="98">height = infra $/mo (log).</text>
-  <text class="t10 ink2" x="366" y="112">Ops labor excluded —</text>
-  <text class="t10 ink2" x="366" y="126">see ≈30M marker.</text>
+  <text class="t11 b halo" x="366" y="330">FARE AXIS ↑</text>
+  <text class="t10 ink2 halo" x="366" y="344">height = infra $/mo (log).</text>
+  <text class="t10 ink2 halo" x="366" y="358">Ops labor excluded —</text>
+  <text class="t10 ink2 halo" x="366" y="372">see ≈30M marker.</text>
 
   <!-- decision banner -->
   <rect x="496" y="56" width="852" height="92" rx="8" fill="var(--surface)" stroke="var(--border)"/>
@@ -234,7 +234,7 @@
   </rect>
   <circle cx="700" cy="443" r="4" fill="var(--ink)"/>
   <circle cx="700" cy="462" r="4" fill="var(--ink)"/>
-  <text class="t11 b halo" x="700" y="490" text-anchor="middle">◎ checkpoint 2026-10-01</text>
+  <text class="t11 b halo" x="700" y="507" text-anchor="middle">◎ checkpoint 2026-10-01</text>
 
   <!-- termini labels -->
   <text class="t11 b halo" x="1348" y="236" text-anchor="end"><tspan class="fq">QUIVER terminus</tspan> — $23,000/mo at 100M</text>
@@ -285,9 +285,9 @@
 
 <div class="gates">
   <b class="hd">The five gates (must-haves — miss any one and you're out, regardless of other merits)</b>
-  <p><code>M1</code> p95 latency ≤ 100 ms at 10M vectors under the production mix, <em>including</em> the 30% filtered traffic (the search page has 250 ms end-to-end; vector search gets 100 ms) ·
-     <code>M2</code> recall@10 ≥ 0.92 on unfiltered queries vs exact brute-force ground truth ·
-     <code>M3</code> metadata filtering with recall@10 ≥ 0.90 down to 5% filter selectivity — post-hoc filtering that silently drops recall does not count ·
+  <p><code>M1</code> p95 latency ≤ 100 ms at 10M vectors under the production mix, <em>including</em> the 30% filtered traffic (the search page has 250 ms end-to-end; vector search gets 100 ms; p95 = the time even the slowest 1-in-20 queries stay under) ·
+     <code>M2</code> recall@10 ≥ 0.92 on unfiltered queries vs exact brute-force ground truth (recall@10 = how many of the true top-10 results the engine actually finds) ·
+     <code>M3</code> metadata filtering with recall@10 ≥ 0.90 down to 5% filter selectivity (a filter matching only ~1 in 20 products) — post-hoc filtering that silently drops recall does not count ·
      <code>M4</code> all product and query data stays in an EU region ·
      <code>M5</code> ≤ $2,500/month run cost at the 12-month scale (~10M vectors).</p>
 </div>
@@ -324,7 +324,7 @@
     <tr><td class="crit">Full 10M re-index</td><td>~21 min (8,000 vectors/s tier limit)</td><td>~7 min (25,000 vectors/s) — best among the service-shaped options</td></tr>
     <tr><td class="crit">Infra $/mo at 1M / 10M / 100M</td><td>$180 / $1,900 / $23,000 (Enterprise plan forced above 50M)</td><td>$520 (HA floor) / $1,400 / $6,800</td></tr>
     <tr><td class="crit">Today, at 4.1M</td><td>$740/mo quote</td><td>$520/mo (the 3-node floor covers to ≈5M)</td></tr>
-    <tr><td class="crit">Ops burden</td><td>≈0 FTE — vendor on-call, 99.9% SLA (≈43 min/month allowed downtime, credits only)</td><td>~0.5 FTE the first quarter, settling to ~0.2 FTE, plus a ≥4-engineer on-call rotation; optional vendor support at $1,500/mo not included in the fares above</td></tr>
+    <tr><td class="crit">Ops burden (FTE = full-time-engineer equivalent)</td><td>≈0 FTE — vendor on-call, 99.9% SLA (≈43 min/month allowed downtime, credits only)</td><td>~0.5 FTE the first quarter, settling to ~0.2 FTE, plus a ≥4-engineer on-call rotation; optional vendor support at $1,500/mo not included in the fares above</td></tr>
     <tr><td class="crit">In-VPC (N1)</td><td>Not offered — ever</td><td>Yes; EU region in our own VPC</td></tr>
     <tr><td class="crit">Hybrid keyword+vector (N3)</td><td>Built in</td><td>Beta plugin (partial)</td></tr>
     <tr><td class="crit">Ecosystem</td><td>6-year-old commercial product, polished SDKs</td><td>4-year-old active OSS (~28k stars, quarterly releases); one breaking index-format change in its history (v3→v4, 2025, forced a full re-index)</td></tr>
