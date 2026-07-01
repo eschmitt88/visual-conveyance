@@ -7,3 +7,4 @@ skills; read by `/lint`.
 2026-07-01 21:18 ingest liang2025diagrameval
 2026-07-01 21:23 ingest tang2026igenbench
 2026-07-01 21:26 ingest berger2024visualization
+2026-07-01 21:30 ingest while2024glanceable
