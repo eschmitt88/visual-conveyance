@@ -8,6 +8,7 @@ sources:
   - "[[literature/papers/liang2025diagrameval]]"
   - "[[literature/papers/tang2026igenbench]]"
   - "[[literature/papers/berger2024visualization]]"
+  - "[[literature/papers/dibia2023lida]]"
 related_concepts: ["diagram-dsl-generation", "structural-fidelity-metrics"]
 related_experiments: []
 tags: [evaluation, llm-as-judge, visualization]
@@ -29,6 +30,7 @@ Our Phase-1 loop scores every approach×testcase presentation with AI evaluators
 - Atomic yes/no question decomposition makes a judge both interpretable and human-aligned: IGenBench's Gemini-2.5-Pro verifier hits Pearson r=0.90 with expert annotators, and rankings stay stable (ρ≥0.95) across judges from three providers even when absolute scores differ. Judge validity should be *validated once* against humans, then per-dimension error rates tracked (their verifier is over-positive on data-encoding questions, 12% disagreement).
 - Report two granularities: per-question accuracy (Q-ACC) and all-questions-correct rate (I-ACC) — the gap between them (0.90 vs 0.49 for the best model in IGenBench) is where "looks mostly right" hides "unusable."
 - Judge the *rendered image*, not the source code/spec: judging specs assumes the model "can envision the resulting visualization," which is unvalidated (Berger & Liu). And a perceptual judge's human-alignment is itself an open question — summary/ensemble extraction, preattentive salience, and just-noticeable differences may all diverge from human vision (ViT coarse spatial grids) — so AI-vs-human rank agreement must be measured, not assumed.
+- Earliest instance of the pattern: LIDA's SEVQ (GPT-4 scores 1–10 with rationale across code accuracy / data transformation / goal compliance / visualization type / data encoding / aesthetics) — usable for critique and auto-repair, but shipped with *no* human-agreement validation, the gap all later work had to close.
 
 ## Connections
 

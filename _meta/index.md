@@ -19,6 +19,7 @@ and `/new-experiment`.
 - [[literature/papers/tang2026igenbench]] — IGenBench: text-to-infographic reliability via atomic yes/no MLLM verification, Q-ACC vs I-ACC gap, data fidelity bottleneck (rel 5)
 - [[literature/papers/berger2024visualization]] — Visualization JUDGE position paper: MFMs as perceiving judges, generation vs design loop, human-alignment open questions (rel 4)
 - [[literature/papers/while2024glanceable]] — CHI '24 glanceability thresholds: donut ~300ms / bar ~500ms / radial ~2.2s, element-count budget, age heterogeneity (rel 4)
+- [[literature/papers/dibia2023lida]] — LIDA: canonical four-stage LLM visualization pipeline, VER + SEVQ metrics, grounding-context ablation (rel 4)
 
 ## Active experiments
 

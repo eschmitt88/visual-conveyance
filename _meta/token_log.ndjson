@@ -127,3 +127,135 @@
     "Monitor": 1
   }
 }
+{
+  "timestamp": "2026-07-01T21:30:54Z",
+  "session_id": "f086a304-af8f-4b32-be75-d210268421b5",
+  "input_tokens": 69259,
+  "output_tokens": 426900,
+  "cache_read_tokens": 14971037,
+  "cache_creation_tokens": 4593107,
+  "tools_used_summary": {
+    "Bash": 24,
+    "Skill": 3,
+    "ToolSearch": 3,
+    "Read": 6,
+    "TaskCreate": 7,
+    "TaskUpdate": 9,
+    "Edit": 6,
+    "WebSearch": 7,
+    "Write": 19,
+    "Agent": 49,
+    "TaskList": 1,
+    "Monitor": 1
+  }
+}
+{
+  "timestamp": "2026-07-01T21:31:16Z",
+  "session_id": "f086a304-af8f-4b32-be75-d210268421b5",
+  "input_tokens": 69261,
+  "output_tokens": 426916,
+  "cache_read_tokens": 15136145,
+  "cache_creation_tokens": 4593233,
+  "tools_used_summary": {
+    "Bash": 24,
+    "Skill": 3,
+    "ToolSearch": 3,
+    "Read": 6,
+    "TaskCreate": 7,
+    "TaskUpdate": 9,
+    "Edit": 6,
+    "WebSearch": 7,
+    "Write": 19,
+    "Agent": 49,
+    "TaskList": 1,
+    "Monitor": 1
+  }
+}
+{
+  "timestamp": "2026-07-01T21:31:27Z",
+  "session_id": "f086a304-af8f-4b32-be75-d210268421b5",
+  "input_tokens": 69263,
+  "output_tokens": 426938,
+  "cache_read_tokens": 15301379,
+  "cache_creation_tokens": 4593559,
+  "tools_used_summary": {
+    "Bash": 24,
+    "Skill": 3,
+    "ToolSearch": 3,
+    "Read": 6,
+    "TaskCreate": 7,
+    "TaskUpdate": 9,
+    "Edit": 6,
+    "WebSearch": 7,
+    "Write": 19,
+    "Agent": 49,
+    "TaskList": 1,
+    "Monitor": 1
+  }
+}
+{
+  "timestamp": "2026-07-01T21:31:35Z",
+  "session_id": "f086a304-af8f-4b32-be75-d210268421b5",
+  "input_tokens": 69265,
+  "output_tokens": 426950,
+  "cache_read_tokens": 15466939,
+  "cache_creation_tokens": 4593887,
+  "tools_used_summary": {
+    "Bash": 24,
+    "Skill": 3,
+    "ToolSearch": 3,
+    "Read": 6,
+    "TaskCreate": 7,
+    "TaskUpdate": 9,
+    "Edit": 6,
+    "WebSearch": 7,
+    "Write": 19,
+    "Agent": 49,
+    "TaskList": 1,
+    "Monitor": 1
+  }
+}
+{
+  "timestamp": "2026-07-01T21:32:05Z",
+  "session_id": "f086a304-af8f-4b32-be75-d210268421b5",
+  "input_tokens": 69271,
+  "output_tokens": 427091,
+  "cache_read_tokens": 15964918,
+  "cache_creation_tokens": 4594895,
+  "tools_used_summary": {
+    "Bash": 24,
+    "Skill": 3,
+    "ToolSearch": 3,
+    "Read": 6,
+    "TaskCreate": 7,
+    "TaskUpdate": 9,
+    "Edit": 6,
+    "WebSearch": 7,
+    "Write": 19,
+    "Agent": 49,
+    "TaskList": 1,
+    "Monitor": 1
+  }
+}
+{
+  "timestamp": "2026-07-01T21:32:13Z",
+  "session_id": "f086a304-af8f-4b32-be75-d210268421b5",
+  "input_tokens": 69271,
+  "output_tokens": 427091,
+  "cache_read_tokens": 15964918,
+  "cache_creation_tokens": 4594895,
+  "tools_used_summary": {
+    "Bash": 24,
+    "Skill": 3,
+    "ToolSearch": 3,
+    "Read": 6,
+    "TaskCreate": 7,
+    "TaskUpdate": 9,
+    "Edit": 6,
+    "WebSearch": 7,
+    "Write": 19,
+    "Agent": 49,
+    "TaskList": 1,
+    "Monitor": 1
+  }
+}
