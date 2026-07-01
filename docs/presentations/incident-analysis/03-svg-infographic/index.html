@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INC-1194 — the June 24 outage, at a glance</title>
+<style>
+  :root{
+    --page:#f9f9f7; --surface:#fcfcfb;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --line:#e1e0d9; --border:rgba(11,11,11,.10);
+    --accent:#2a78d6; --bad:#d03b3b; --onfill:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --page:#0d0d0d; --surface:#1a1a19;
+      --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --line:#2c2c2a; --border:rgba(255,255,255,.10);
+      --accent:#3987e5; --bad:#d03b3b; --onfill:#0b0b0b;
+    }
+  }
+  *{box-sizing:border-box; margin:0}
+  body{
+    background:var(--page); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    line-height:1.35;
+  }
+  .poster{max-width:1080px; margin:0 auto; padding:0 20px 32px}
+
+  /* ---------- hero ---------- */
+  .hero{padding:44px 0 26px; text-align:center}
+  .kicker{
+    font-size:13px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--muted); font-weight:600;
+  }
+  .hero-num{
+    font-size:clamp(72px,11vw,132px); font-weight:750; line-height:1;
+    color:var(--bad); margin:14px 0 6px; letter-spacing:-.02em;
+  }
+  .hero h1{font-size:clamp(20px,2.6vw,30px); font-weight:700}
+  .hero .sub{
+    font-size:clamp(15px,1.6vw,18px); color:var(--ink2);
+    max-width:560px; margin:10px auto 0;
+  }
+  .sub strong{color:var(--ink)}
+
+  /* ---------- stat tiles ---------- */
+  .tiles{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+    margin:10px 0 40px;
+  }
+  .tile{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:16px 18px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .tile .v{font-size:clamp(24px,2.6vw,32px); font-weight:700; line-height:1.1}
+  .tile .l{font-size:13px; color:var(--ink2); margin-top:2px}
+  .tile svg{flex:0 0 auto}
+
+  /* ---------- bands ---------- */
+  section{margin:0 0 40px}
+  h2{
+    font-size:15px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--muted); font-weight:700; margin-bottom:14px;
+    text-align:center;
+  }
+
+  /* ---------- causal legs ---------- */
+  .legs{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  .leg{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:18px;
+  }
+  .leg svg{display:block; margin-bottom:10px; stroke:var(--ink2)}
+  .tag{
+    display:inline-block; font-size:11px; font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase;
+    border-radius:99px; padding:2px 10px; margin-bottom:8px;
+  }
+  .tag-trigger{background:var(--bad); color:var(--onfill)}
+  .tag-amp{color:var(--bad); border:1.5px solid var(--bad)}
+  .leg h3{font-size:17px; margin-bottom:6px}
+  .leg p{font-size:14px; color:var(--ink2)}
+  .converge{display:block; width:min(640px,90%); margin:2px auto}
+  .outcome{
+    width:max-content; max-width:100%; margin:0 auto;
+    background:var(--bad); color:var(--onfill);
+    font-weight:700; font-size:15px;
+    border-radius:99px; padding:8px 22px; text-align:center;
+  }
+
+  /* ---------- timeline ---------- */
+  .scrollwrap{overflow-x:auto}
+  .timeline{display:block; width:100%; min-width:680px}
+  .timeline text{font-size:15px; fill:var(--ink2)}
+  .timeline .dur{font-weight:700; fill:var(--ink)}
+  .timeline .tick{font-size:13.5px; fill:var(--muted)}
+  .timeline .infill{font-size:15px; font-weight:600; fill:var(--onfill)}
+  .tl-caption{
+    font-size:14px; color:var(--ink2); text-align:center;
+    max-width:640px; margin:12px auto 0;
+  }
+
+  /* ---------- comparison strip ---------- */
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:760px; margin:0 auto}
+  .panel{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:16px 18px; display:flex; gap:12px; align-items:flex-start;
+  }
+  .panel svg{flex:0 0 auto; margin-top:2px}
+  .panel h3{font-size:16px; margin-bottom:4px}
+  .panel p{font-size:14px; color:var(--ink2)}
+  .panel.no h3{color:var(--bad)}
+  .panel.yes h3{color:var(--accent)}
+
+  /* ---------- remediation ---------- */
+  .fixes{max-width:760px; margin:0 auto; display:grid; gap:8px}
+  .fix{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:12px 16px;
+    display:flex; align-items:center; gap:12px; font-size:15px;
+  }
+  .p0{
+    flex:0 0 auto; background:var(--accent); color:var(--onfill);
+    font-weight:800; font-size:12px; border-radius:6px; padding:3px 8px;
+  }
+  .fix .to{margin-left:auto; color:var(--muted); font-size:13px; white-space:nowrap}
+  .fix-foot{font-size:13px; color:var(--muted); text-align:center; margin-top:10px}
+
+  /* ---------- caveat ---------- */
+  .caveat{
+    max-width:760px; margin:0 auto 40px;
+    background:var(--surface); border:1px solid var(--border);
+    border-left:4px solid var(--bad); border-radius:8px;
+    padding:14px 16px; font-size:13.5px; color:var(--ink2);
+    display:flex; gap:10px; align-items:flex-start;
+  }
+  .caveat .bang{
+    flex:0 0 auto; width:20px; height:20px; border-radius:50%;
+    background:var(--bad); color:var(--onfill); font-weight:800;
+    font-size:13px; text-align:center; line-height:20px;
+  }
+
+  footer{
+    text-align:center; font-size:11.5px; color:var(--muted);
+    border-top:1px solid var(--line); padding-top:14px;
+  }
+
+  @media (max-width:760px){
+    .tiles{grid-template-columns:1fr 1fr}
+    .legs{grid-template-columns:1fr}
+    .duo{grid-template-columns:1fr}
+    .converge{display:none}
+    .outcome{margin-top:12px}
+  }
+</style>
+</head>
+<body>
+<main class="poster">
+
+  <!-- ================= hero ================= -->
+  <header class="hero">
+    <p class="kicker">INC-1194 · ledgerline · 2026-06-24</p>
+    <p class="hero-num">4h 17m</p>
+    <h1>Partial outage, no single root cause</h1>
+    <p class="sub">One trigger <strong>+</strong> two amplifiers.
+      Remove <strong>any</strong> leg → a one-endpoint slowdown, not an outage.</p>
+  </header>
+
+  <!-- ================= stat tiles ================= -->
+  <div class="tiles">
+    <div class="tile">
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+        <circle cx="22" cy="22" r="15.9155" fill="none" stroke="var(--line)" stroke-width="7"/>
+        <circle cx="22" cy="22" r="15.9155" fill="none" stroke="var(--bad)" stroke-width="7"
+          stroke-dasharray="31.2 68.8" pathLength="100" transform="rotate(-90 22 22)"/>
+      </svg>
+      <div><div class="v">31.2%</div><div class="l">peak error rate · 15:47</div></div>
+    </div>
+    <div class="tile"><div><div class="v">2,312</div><div class="l">orgs hit · 24.4%</div></div></div>
+    <div class="tile"><div><div class="v">≈$41,300</div><div class="l">SLA credits</div></div></div>
+    <div class="tile"><div><div class="v">0</div><div class="l">records lost</div></div></div>
+  </div>
+
+  <!-- ================= causal structure ================= -->
+  <section>
+    <h2>Three legs, one outage</h2>
+    <div class="legs">
+      <article class="leg">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="10" cy="10" r="6"/><path d="M14.5 14.5 L21 21"/>
+        </svg>
+        <span class="tag tag-trigger">Trigger</span>
+        <h3>Query regression</h3>
+        <p>The 14:02 deploy rewrote search so no index applied: 0.4ms became
+           24–31s full scans of 274M rows.</p>
+      </article>
+      <article class="leg">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="4.5" rx="1.5"/>
+          <rect x="3" y="10" width="18" height="4.5" rx="1.5"/>
+          <rect x="3" y="17" width="18" height="4.5" rx="1.5"/>
+        </svg>
+        <span class="tag tag-amp">Amplifier 1</span>
+        <h3>Autovacuum debt</h3>
+        <p>Jun 22's backfill left 38.1M dead tuples — stale row copies awaiting cleanup —
+           pushing scans past the 30s timeout: slow became <em>failing</em>.</p>
+      </article>
+      <article class="leg">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/>
+          <polyline points="20.5 3.5 20.5 9.5 14.5 9.5"/>
+        </svg>
+        <span class="tag tag-amp">Amplifier 2</span>
+        <h3>Retry storm</h3>
+        <p>Failures retried every 1s, no jitter: traffic ×4.7. The shared pgbouncer
+           pool — 80 database connections — saturated at 15:12, stalling every endpoint.</p>
+      </article>
+    </div>
+    <svg class="converge" viewBox="0 0 600 58" aria-hidden="true">
+      <path d="M100 4 C 100 36, 292 24, 297 48" fill="none" stroke="var(--bad)" stroke-width="2"/>
+      <path d="M300 4 L 300 48" fill="none" stroke="var(--bad)" stroke-width="2"/>
+      <path d="M500 4 C 500 36, 308 24, 303 48" fill="none" stroke="var(--bad)" stroke-width="2"/>
+      <polygon points="293,48 307,48 300,57" fill="var(--bad)"/>
+    </svg>
+    <p class="outcome">Platform-wide outage</p>
+  </section>
+
+  <!-- ================= timeline ================= -->
+  <section>
+    <h2>Where 257 minutes went</h2>
+    <div class="scrollwrap">
+    <svg class="timeline" viewBox="0 0 1000 136" role="img"
+         aria-label="Proportional timeline: 9 minutes undetected, 68 minutes of wrong diagnosis, 106 minutes at a rollback dead-end, 74 minutes of recovery.">
+      <!-- phase labels (staggered rows) -->
+      <text x="0"   y="16" text-anchor="start">undetected · <tspan class="dur">9m</tspan></text>
+      <text x="506" y="16" text-anchor="middle">rollback dead-end · <tspan class="dur">106m</tspan></text>
+      <text x="167" y="36" text-anchor="middle">wrong diagnosis · <tspan class="dur">68m</tspan></text>
+      <text x="856" y="36" text-anchor="middle">recovery · <tspan class="dur">74m</tspan></text>
+      <!-- segments: 9 / 68 / 106 / 74 min of 257 → 35 / 264.6 / 412.5 / 287.9 units -->
+      <rect x="0"     y="46" width="34"  height="30" fill="var(--line)"/>
+      <rect x="37"    y="46" width="260.6" height="30" fill="var(--bad)" fill-opacity=".4"/>
+      <rect x="301.6" y="46" width="408.5" height="30" fill="var(--bad)"/>
+      <rect x="714.1" y="46" width="285.9" height="30" fill="var(--accent)"/>
+      <!-- ticks -->
+      <line x1="0"    y1="76" x2="0"    y2="88"  stroke="var(--muted)"/>
+      <line x1="35"   y1="76" x2="35"   y2="106" stroke="var(--muted)"/>
+      <line x1="300"  y1="76" x2="300"  y2="88"  stroke="var(--muted)"/>
+      <line x1="712"  y1="76" x2="712"  y2="106" stroke="var(--muted)"/>
+      <line x1="1000" y1="76" x2="1000" y2="88"  stroke="var(--muted)"/>
+      <text class="tick" x="0"    y="102" text-anchor="start">14:02 deploy</text>
+      <text class="tick" x="300"  y="102" text-anchor="middle">15:19 database found</text>
+      <text class="tick" x="1000" y="102" text-anchor="end">18:19 closed</text>
+      <text class="tick" x="35"   y="122" text-anchor="start">14:11 alert</text>
+      <text class="tick" x="712"  y="122" text-anchor="middle">17:05 flag off</text>
+    </svg>
+    </div>
+    <p class="tl-caption">Alerts watched errors, not latency; dashboards sampled 1/100 requests —
+       50 minutes chased a phantom network issue.</p>
+  </section>
+
+  <!-- ================= rollback vs flag ================= -->
+  <section>
+    <h2>Why no rollback?</h2>
+    <div class="duo">
+      <div class="panel no">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--bad)"
+             stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 5 L19 19 M19 5 L5 19"/>
+        </svg>
+        <div>
+          <h3>Rollback: dead end</h3>
+          <p>Its migration had dropped the old index — rebuild ≈6h.</p>
+        </div>
+      </div>
+      <div class="panel yes">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="4 13 10 19 20 6"/>
+        </svg>
+        <div>
+          <h3>Feature flag: the fix</h3>
+          <p>Off at 17:05 — errors under 3% in ten minutes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= remediation ================= -->
+  <section>
+    <h2>One P0 per leg · Q3 2026</h2>
+    <div class="fixes">
+      <div class="fix"><span class="p0">P0</span> Per-endpoint latency SLO alerts <span class="to">→ detection lag</span></div>
+      <div class="fix"><span class="p0">P0</span> Pool-saturation alerting + sizing review <span class="to">→ pool exhaustion</span></div>
+      <div class="fix"><span class="p0">P0</span> Standardized retries: exponential backoff, jitter, budgets <span class="to">→ retry storm</span></div>
+    </div>
+    <p class="fix-foot">+6 P1/P2 items</p>
+  </section>
+
+  <!-- ================= caveat chip ================= -->
+  <aside class="caveat">
+    <span class="bang">!</span>
+    <p>Latency figures cover completed requests; timeouts count as errors.
+       “Affected” = ≥1 failed request. Blameless: systems failed, not people.
+       No data lost — all 37,400 delayed webhooks replayed by 19:05.</p>
+  </aside>
+
+  <footer>incident-analysis · svg-infographic · v1 · 2026-07-01</footer>
+</main>
+</body>
+</html>

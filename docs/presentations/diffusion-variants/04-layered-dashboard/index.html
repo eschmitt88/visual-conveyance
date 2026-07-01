@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion models and their variants: how modern image generators work</title>
+<style>
+  :root{
+    --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7;
+    --accent:#2a78d6; --accent-deep:#1c5cab; --accent-wash:rgba(42,120,214,.10);
+    --warn:#fab219; --warn-wash:rgba(250,178,25,.12);
+    --border:rgba(11,11,11,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835;
+      --accent:#3987e5; --accent-deep:#6da7ec; --accent-wash:rgba(57,135,229,.16);
+      --warn-wash:rgba(250,178,25,.14);
+      --border:rgba(255,255,255,.10);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--page); color:var(--ink);
+    font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  .wrap{max-width:1240px; margin:0 auto; padding:0 20px}
+  section, header.glance{scroll-margin-top:64px}
+  article.card{scroll-margin-top:64px}
+
+  /* ---------- sticky nav (Layer affordance) ---------- */
+  nav.topnav{
+    position:sticky; top:0; z-index:20;
+    background:color-mix(in srgb, var(--page) 88%, transparent);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+  }
+  nav.topnav .wrap{
+    display:flex; align-items:center; gap:4px; overflow-x:auto;
+    padding-top:8px; padding-bottom:8px; white-space:nowrap;
+  }
+  nav.topnav a{
+    color:var(--ink2); text-decoration:none; font-size:13.5px;
+    padding:4px 10px; border-radius:999px;
+  }
+  nav.topnav a:hover{background:var(--accent-wash); color:var(--ink)}
+  nav.topnav .spacer{flex:1}
+  nav.topnav button{
+    font:600 12.5px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink2); background:var(--surface); border:1px solid var(--border);
+    border-radius:999px; padding:6px 12px; cursor:pointer;
+  }
+  nav.topnav button:hover{color:var(--ink); border-color:var(--baseline)}
+
+  /* ---------- Layer 1: glance band ---------- */
+  header.glance{padding:26px 0 30px; border-bottom:1px solid var(--border)}
+  .kicker{
+    font-size:12.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--accent); margin:0 0 6px;
+  }
+  h1{font-size:30px; line-height:1.2; margin:0 0 10px; letter-spacing:-.01em}
+  p.headline{font-size:17.5px; color:var(--ink2); max-width:66rem; margin:0 0 16px}
+  p.headline strong{color:var(--ink)}
+
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px}
+  .chip{
+    display:inline-flex; align-items:center; gap:7px;
+    font-size:13px; font-weight:600; color:var(--ink);
+    background:var(--accent-wash); border:1px solid var(--border);
+    border-radius:999px; padding:5px 12px;
+  }
+  .chip .dot{width:8px; height:8px; border-radius:50%; background:var(--accent); flex:none}
+
+  .tiles{display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin:0 0 20px}
+  .tile{
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:12px 14px 11px; display:flex; flex-direction:column; gap:2px;
+  }
+  .tile .lbl{font-size:12.5px; color:var(--ink2); line-height:1.3}
+  .tile .val{font-size:31px; font-weight:600; line-height:1.15; letter-spacing:-.01em}
+  .tile .sub{font-size:12px; color:var(--muted); line-height:1.35}
+
+  /* hero visual */
+  figure.hero{
+    margin:0; background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:16px 18px 12px;
+  }
+  .arrow-lbl{font-size:13.5px; color:var(--ink2); margin:0 0 4px}
+  .arrow-lbl strong{color:var(--ink)}
+  .arrowline{position:relative; height:2px; background:var(--accent); margin:2px 6px 12px 0}
+  .arrowline.right::after{
+    content:""; position:absolute; right:-2px; top:-4px;
+    border-left:9px solid var(--accent); border-top:5px solid transparent; border-bottom:5px solid transparent;
+  }
+  .arrowline.left::after{
+    content:""; position:absolute; left:-2px; top:-4px;
+    border-right:9px solid var(--accent); border-top:5px solid transparent; border-bottom:5px solid transparent;
+  }
+  .arrowline.left{margin:10px 0 4px 6px}
+  .frames{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap}
+  .frame{display:flex; flex-direction:column; align-items:center; gap:5px; flex:1; min-width:96px}
+  .frame svg.shot{
+    width:112px; max-width:100%; height:auto; border-radius:8px;
+    border:1px solid var(--border); display:block;
+  }
+  .frame .cap{font-size:12px; color:var(--ink2); text-align:center; line-height:1.3}
+  .frame .cap b{color:var(--ink); font-weight:600}
+  figure.hero figcaption{
+    font-size:12.5px; color:var(--muted); margin-top:10px;
+    border-top:1px solid var(--grid); padding-top:8px;
+  }
+
+  /* ---------- Layers 2 & 3 ---------- */
+  main{padding:8px 0 20px}
+  section{padding:26px 0 6px}
+  h2{font-size:21px; margin:0 0 4px; letter-spacing:-.01em}
+  p.secintro{font-size:14.5px; color:var(--ink2); margin:0 0 16px; max-width:62rem}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:14px}
+  .grid > .wide{grid-column:1/-1}
+
+  article.card{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:16px 18px 12px; display:flex; flex-direction:column;
+  }
+  .card-head{display:flex; align-items:flex-start; gap:10px; margin-bottom:8px}
+  .idx{
+    flex:none; font-size:12px; font-weight:700; color:var(--accent);
+    background:var(--accent-wash); border-radius:6px; padding:3px 7px; margin-top:2px;
+  }
+  .card-head h3{font-size:16.5px; margin:0; line-height:1.3; flex:1}
+  .keynum{
+    flex:none; font-size:12px; font-weight:700; color:var(--ink2);
+    border:1px solid var(--border); border-radius:999px; padding:3px 9px; margin-top:1px;
+    white-space:nowrap;
+  }
+  p.skim{font-size:14px; color:var(--ink2); margin:0 0 10px}
+  p.skim strong{color:var(--ink)}
+
+  details.card-details{border-top:1px solid var(--grid); margin-top:auto}
+  details.card-details summary{
+    list-style:none; cursor:pointer; padding:9px 2px;
+    font-size:13px; font-weight:600; color:var(--accent);
+    display:flex; align-items:center; gap:6px;
+  }
+  details.card-details summary::-webkit-details-marker{display:none}
+  details.card-details summary::before{content:"▸"; font-size:11px; transition:transform .15s}
+  details.card-details[open] summary::before{transform:rotate(90deg)}
+  details.card-details summary:hover{color:var(--accent-deep)}
+  .detail-body{font-size:14.5px; color:var(--ink); padding:2px 2px 10px}
+  .detail-body p{margin:0 0 10px}
+  .detail-body ul, .detail-body ol{margin:0 0 10px; padding-left:22px}
+  .detail-body li{margin-bottom:6px}
+  .detail-body .gloss{color:var(--muted); font-size:13px}
+  .detail-body h4{font-size:14px; margin:12px 0 6px}
+
+  .caveat{
+    border-left:3px solid var(--warn); background:var(--warn-wash);
+    border-radius:0 8px 8px 0; padding:8px 12px; margin:0 0 10px;
+    font-size:13.5px; color:var(--ink);
+  }
+  .caveat b.tag{
+    display:inline-block; font-size:11px; font-weight:700; letter-spacing:.07em;
+    text-transform:uppercase; color:var(--ink2); margin-right:6px;
+  }
+
+  .fact{
+    background:var(--accent-wash); border-radius:8px; padding:8px 12px;
+    font-size:13.5px; margin:0 0 10px;
+  }
+
+  /* misconceptions */
+  ul.myths{list-style:none; padding:0; margin:0}
+  ul.myths li{
+    border-top:1px solid var(--grid); padding:10px 2px; margin:0;
+  }
+  ul.myths li:first-child{border-top:none}
+  .myth-claim{font-weight:600}
+  .myth-claim .x{color:var(--accent); font-weight:700; margin-right:6px}
+  .myth-fix{font-size:14px; color:var(--ink2); margin-top:3px}
+
+  /* glossary */
+  dl.gloss-list{margin:0}
+  dl.gloss-list dt{font-weight:600; font-size:14.5px; margin-top:9px}
+  dl.gloss-list dd{margin:1px 0 0 0; font-size:14px; color:var(--ink2)}
+
+  /* table + chart */
+  .chartwrap, .tablewrap{overflow-x:auto}
+  .chartwrap svg{min-width:600px; width:100%; height:auto; display:block}
+  svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  .row rect.range, .row path.pt{transition:fill .12s}
+  .row:hover rect.range, .row:hover path.pt{fill:var(--accent-deep)}
+  table.variants{
+    border-collapse:collapse; width:100%; font-size:14px; margin:14px 0 4px;
+  }
+  table.variants th{
+    text-align:left; font-size:12.5px; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--muted); font-weight:600; padding:6px 10px; border-bottom:1px solid var(--baseline);
+  }
+  table.variants td{padding:8px 10px; border-bottom:1px solid var(--grid); vertical-align:top}
+  table.variants td.num{font-variant-numeric:tabular-nums; white-space:nowrap}
+  table.variants tr:last-child td{border-bottom:none}
+
+  footer.colophon{
+    border-top:1px solid var(--border); margin-top:28px;
+    padding:14px 0 22px; text-align:center;
+  }
+  footer.colophon small{font-size:11.5px; color:var(--muted)}
+
+  [hidden]{display:none !important}
+
+  @media (max-width:980px){
+    .tiles{grid-template-columns:repeat(3,1fr)}
+  }
+  @media (max-width:640px){
+    h1{font-size:24px}
+    p.headline{font-size:15.5px}
+    .tiles{grid-template-columns:repeat(2,1fr)}
+    .tile .val{font-size:26px}
+    .frames{justify-content:center}
+    .frame{min-width:44%}
+  }
+</style>
+</head>
+<body>
+
+<!-- shared SVG defs: sample scene + noise filter -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="pic">
+      <rect width="120" height="120" fill="#bcd6f2"/>
+      <circle cx="88" cy="30" r="14" fill="#eda100"/>
+      <polygon points="0,120 44,52 82,120" fill="#3f7a52"/>
+      <polygon points="56,120 96,68 120,94 120,120" fill="#2c5a3d"/>
+      <rect y="104" width="120" height="16" fill="#88b07a"/>
+    </g>
+    <filter id="nz" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+</svg>
+
+<nav class="topnav" aria-label="Sections">
+  <div class="wrap">
+    <a href="#glance">Glance</a>
+    <a href="#mechanism">The mechanism</a>
+    <a href="#speed">Faster sampling</a>
+    <a href="#scaling">Scale &amp; steering</a>
+    <a href="#reference">Misconceptions &amp; glossary</a>
+    <span class="spacer"></span>
+    <button id="xall" type="button" hidden>Expand all</button>
+    <button id="call" type="button" hidden>Collapse all</button>
+  </div>
+</nav>
+
+<!-- ============ LAYER 1 — GLANCE ============ -->
+<header class="glance" id="glance">
+  <div class="wrap">
+    <p class="kicker">Diffusion models, explained for non-ML professionals</p>
+    <h1>How modern image generators work — and why so many variants exist</h1>
+    <p class="headline">
+      Stable Diffusion, Midjourney-class systems, DALL·E&nbsp;3 and Flux all work the same way:
+      a fixed process gradually destroys images into noise, a neural network learns to run that
+      destruction <strong>backwards</strong>, and every generated image is built by denoising
+      <strong>pure random noise</strong> — never by editing a photo or collaging a database.
+      Most variants exist to answer one question: <strong>how do we take fewer steps?</strong>
+    </p>
+
+    <div class="chips">
+      <span class="chip"><span class="dot"></span>Starts from pure noise — not from any existing photo</span>
+      <span class="chip"><span class="dot"></span>Training images are not stored: statistics, not copies</span>
+      <span class="chip"><span class="dot"></span>DDIM, score models, flow matching = one framework, not rivals</span>
+    </div>
+
+    <div class="tiles">
+      <div class="tile">
+        <span class="lbl">Naive (DDPM) sampling</span>
+        <span class="val">~1000</span>
+        <span class="sub">sequential network passes per image — the cost every variant attacks</span>
+      </div>
+      <div class="tile">
+        <span class="lbl">DDIM, the everyday workhorse</span>
+        <span class="val">20–50</span>
+        <span class="sub">steps; same trained model, deterministic sampler, modest quality loss</span>
+      </div>
+      <div class="tile">
+        <span class="lbl">Distilled &amp; consistency models</span>
+        <span class="val">1–4</span>
+        <span class="sub">steps; fastest tier, mild quality &amp; diversity cost</span>
+      </div>
+      <div class="tile">
+        <span class="lbl">Latent diffusion savings</span>
+        <span class="val">≈48×</span>
+        <span class="sub">fewer values per step (64×64×4 vs 512×512×3) — why it runs on consumer GPUs</span>
+      </div>
+      <div class="tile">
+        <span class="lbl">Guidance scale (CFG)</span>
+        <span class="val">s ≈ 7.5</span>
+        <span class="sub">common default; higher = closer to the prompt, less variety — and 2× cost per step</span>
+      </div>
+    </div>
+
+    <figure class="hero">
+      <p class="arrow-lbl"><strong>Forward — fixed, no learning:</strong> add a little Gaussian noise, step after step (T&nbsp;=&nbsp;1000 in the original DDPM)</p>
+      <div class="arrowline right" aria-hidden="true"></div>
+      <div class="frames" aria-hidden="true">
+        <div class="frame">
+          <svg class="shot" viewBox="0 0 120 120"><use href="#pic"/></svg>
+          <span class="cap"><b>t = 0</b><br>a real image</span>
+        </div>
+        <div class="frame">
+          <svg class="shot" viewBox="0 0 120 120"><use href="#pic"/><rect width="120" height="120" filter="url(#nz)" opacity="0.45"/></svg>
+          <span class="cap"><b>t ≈ 200</b><br>slightly grainy</span>
+        </div>
+        <div class="frame">
+          <svg class="shot" viewBox="0 0 120 120"><use href="#pic"/><rect width="120" height="120" filter="url(#nz)" opacity="0.85"/></svg>
+          <span class="cap"><b>t ≈ 600</b><br>only coarse shapes survive</span>
+        </div>
+        <div class="frame">
+          <svg class="shot" viewBox="0 0 120 120"><rect width="120" height="120" fill="#7d7d7d"/><rect width="120" height="120" filter="url(#nz)" opacity="1"/></svg>
+          <span class="cap"><b>t = 1000</b><br>pure noise (TV static)</span>
+        </div>
+      </div>
+      <div class="arrowline left" aria-hidden="true"></div>
+      <p class="arrow-lbl"><strong>Reverse — learned:</strong> a network removes a little noise at each step. Generation starts at the right, from <strong>fresh random noise</strong>, and ends at a brand-new image that never existed anywhere.</p>
+      <figcaption>
+        The forward direction is a fixed recipe; only the reverse direction is learned. Removing all
+        the noise in one jump would be nearly impossible — removing a little, ~1000 times, is what works.
+      </figcaption>
+    </figure>
+  </div>
+</header>
+
+<!-- ============ LAYERS 2 + 3 ============ -->
+<main class="wrap">
+
+  <!-- ---------- The mechanism ---------- -->
+  <section id="mechanism">
+    <h2>The core mechanism</h2>
+    <p class="secintro">Three pieces: a destruction process you never train, a network that learns to undo it, and a training recipe that is little more than “guess the noise.”</p>
+    <div class="grid">
+
+      <article class="card" id="c01">
+        <div class="card-head">
+          <span class="idx">01</span>
+          <h3>The core idea: destroy carefully, learn to rebuild</h3>
+          <span class="keynum">t: 1000 → 0</span>
+        </div>
+        <p class="skim"><strong>Two processes, opposite directions.</strong> A fixed forward process gradually drowns real images in noise; a network is trained to undo that destruction one small step at a time. Generating an image means running the learned undo chain on pure random noise.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p><b>The forward (noising) process</b> is fixed and involves no learning. Take a real
+            image and add a small amount of Gaussian noise <span class="gloss">(random static drawn
+            from a bell curve)</span>. Repeat, over and over — about <b>T&nbsp;=&nbsp;1000 steps</b> in the
+            original DDPM formulation — following a predefined <i>noise schedule</i>
+            <span class="gloss">(the recipe for how much noise each step adds)</span>. The process is
+            gradual: at step 200 the image is slightly grainy, at step 600 only coarse shapes survive,
+            and by step 1000 nothing survives — the result is statistically indistinguishable from pure
+            Gaussian noise, like analog TV static.</p>
+            <p><b>The reverse (denoising) process</b> is what gets learned. A neural network is trained
+            to undo one small step: given a noisy image and the step number <i>t</i> (the “timestep”),
+            estimate a slightly less noisy version. Removing <i>all</i> the noise in one jump would be
+            nearly impossible — countless clean images are consistent with a very noisy input — but
+            removing <i>a little</i> noise is a tractable prediction problem, and chaining many small
+            denoising steps together is what makes the whole thing work.</p>
+            <p><b>Generation:</b> sample a fresh image of pure random noise and apply the learned
+            denoising step repeatedly — t&nbsp;=&nbsp;1000, 999, 998, … down to 0. Structure emerges
+            gradually: first blobs of tone, then coarse layout, then object shapes, finally fine texture.
+            The output is a new image that never existed anywhere; the only inputs were random numbers
+            and the network’s learned weights.</p>
+            <p class="fact"><b>The two most-misunderstood points:</b> (1)&nbsp;Generation starts from
+            pure noise, not from a photograph — the model is not “cleaning up” any real image, except in
+            specialized image-to-image modes where a user deliberately supplies one. (2)&nbsp;Training
+            images are <b>not stored</b> in the model: a network of a few billion parameters trained on
+            billions of images cannot and does not keep copies. What it stores is a statistical model of
+            what plausible images look like at every noise level.</p>
+          </div>
+        </details>
+      </article>
+
+      <article class="card" id="c02">
+        <div class="card-head">
+          <span class="idx">02</span>
+          <h3>What the network actually predicts</h3>
+          <span class="keynum">ε · score · v</span>
+        </div>
+        <p class="skim"><strong>One quantity, three names.</strong> The network’s output can be the added noise (ε), the “score” (the direction that makes the image more probable), or a “velocity” mix of both — mathematically interchangeable choices that differ in training stability and convention.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p>“The network denoises the image” hides a design choice: what exactly does it output?
+            Three parameterizations are common. Simple algebra converts one to another, but they differ
+            in training stability and convention:</p>
+            <ul>
+              <li><b>Noise prediction (ε-prediction).</b> Predict <i>the noise that was added</i>;
+              subtracting a scaled version of that prediction recovers an estimate of the clean image.
+              The original DDPM choice, and still the most common.</li>
+              <li><b>Score prediction.</b> Predict the <i>score</i> — the gradient of the
+              log-probability density of noisy images <span class="gloss">(the direction in pixel space
+              that makes the image more probable)</span>. The predicted noise is just a negatively
+              scaled score: two descriptions of the same quantity.</li>
+              <li><b>Velocity prediction (v-prediction).</b> Predict a defined mixture of the image and
+              the noise (“velocity”). Introduced with progressive distillation; numerically better
+              behaved at very high noise levels, and used by several later models.</li>
+            </ul>
+            <p>Whichever target is used, the network sees two inputs — the noisy image and the timestep
+            <i>t</i> — plus, in text-to-image models, a representation of the prompt (card&nbsp;10).
+            Architecturally it is typically a <b>U-Net</b> <span class="gloss">(a convolutional
+            encoder-decoder with skip connections)</span> in the Stable-Diffusion-1/2 generation, or a
+            <b>diffusion transformer (DiT)</b> in newer systems like SD3 and Flux.</p>
+          </div>
+        </details>
+      </article>
+
+      <article class="card" id="c03">
+        <div class="card-head">
+          <span class="idx">03</span>
+          <h3>Training: a denoising exercise, repeated billions of times</h3>
+          <span class="keynum">MSE loss</span>
+        </div>
+        <p class="skim"><strong>Training is just: guess the noise.</strong> Noise a real image by a random amount, ask the network what was added, penalize the error. No adversarial game, unlike GANs — that stability is a big reason diffusion took over large-scale image generation.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p>Training is remarkably simple compared to older generative approaches:</p>
+            <ol>
+              <li>Draw a real image from the training set.</li>
+              <li>Draw a random timestep <i>t</i> — anywhere from light to total noise.</li>
+              <li>Add the corresponding amount of noise <b>in one shot</b>: a closed-form formula gives
+              the correctly noised image for any <i>t</i> directly, without simulating the intermediate
+              steps.</li>
+              <li>Ask the network to predict the noise that was added; penalize it with a simple
+              <b>mean-squared error</b> <span class="gloss">(average of squared differences)</span>
+              between predicted and actual noise.</li>
+            </ol>
+            <p>That is the entire objective. (Formally it is a weighted variational bound on the data
+            likelihood — a principled statistical target — but the practical loss really is “guess the
+            noise, MSE.”) Each training example exercises one random noise level, so over billions of
+            examples the network learns denoising at <i>every</i> level: at high noise it learns global
+            composition (“where could a horizon plausibly go?”), at low noise it learns fine texture.</p>
+            <p>This objective is stable and scalable — no adversarial game as in GANs
+            <span class="gloss">(generative adversarial networks, where a generator and a discriminator
+            must be kept in delicate balance)</span> — and that stability is a big reason diffusion
+            displaced GANs for large-scale image generation.</p>
+          </div>
+        </details>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ---------- Faster sampling ---------- -->
+  <section id="speed">
+    <h2>The speed problem — and the fixes</h2>
+    <p class="secintro">Training looks at one noise level at a time; sampling must walk the whole chain. Nearly every major variant is an answer to “how do we take fewer steps?”</p>
+    <div class="grid">
+
+      <article class="card" id="c04">
+        <div class="card-head">
+          <span class="idx">04</span>
+          <h3>Why sampling is slow — the original sin</h3>
+          <span class="keynum">~1000 passes</span>
+        </div>
+        <p class="skim"><strong>~1000 sequential network runs per image.</strong> Naive DDPM sampling runs the full network once per step, and the steps can’t be parallelized — each depends on the previous one. In 2020 a single image took the better part of a minute on a fast GPU.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p>Training looks at one noise level at a time, but <i>sampling</i> must walk the whole
+            chain. Naive DDPM sampling runs the full network once per step — <b>~1000 sequential forward
+            passes</b> per image. The steps cannot be parallelized, because each depends on the previous
+            one, so even on a fast GPU a single image took the better part of a minute in 2020.</p>
+            <p>Nearly every major variant since exists to attack this cost. It helps to read the whole
+            variant zoo — DDIM, ODE solvers, distillation, consistency models, rectified flow — as one
+            long answer to the question: <b>how do we take fewer steps?</b></p>
+          </div>
+        </details>
+      </article>
+
+      <article class="card" id="c05">
+        <div class="card-head">
+          <span class="idx">05</span>
+          <h3>DDIM: same model, fewer and deterministic steps</h3>
+          <span class="keynum">20–50 steps</span>
+        </div>
+        <p class="skim"><strong>Fewer, deterministic steps — no retraining.</strong> DDIM (2020) reuses the same trained network with a deterministic sampler that tolerates big jumps: 20–50 steps is the everyday range. The “steps” slider in image tools exposes exactly this tradeoff.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p>DDIM (Denoising Diffusion Implicit Models, 2020) was the first big win. Two observations:</p>
+            <ul>
+              <li>The DDPM sampler injects fresh randomness at every step, but one can define an
+              alternative sampler — using the <i>same trained network, unchanged</i> — that is
+              <b>deterministic</b>: fix the initial noise and you get exactly the same image every
+              time.</li>
+              <li>This deterministic sampler tolerates much larger jumps. Instead of visiting all 1000
+              timesteps, visit a subsequence — <b>20–50 steps is the typical practical range</b> — with
+              only a modest quality loss.</li>
+            </ul>
+            <p>Determinism has side benefits beyond speed: the mapping from initial noise to final image
+            becomes a well-defined function, so you can <b>invert</b> a generated image back to its noise
+            (useful for editing) and smoothly <b>interpolate</b> between two images by interpolating
+            their noise. When an image tool exposes a “steps” slider defaulting to something like 30, it
+            is exposing exactly this tradeoff.</p>
+          </div>
+        </details>
+      </article>
+
+      <article class="card" id="c06">
+        <div class="card-head">
+          <span class="idx">06</span>
+          <h3>The score-based / SDE view: one lens that unifies everything</h3>
+          <span class="keynum">~10–20 steps</span>
+        </div>
+        <p class="skim"><strong>It’s all one equation underneath.</strong> In 2021, score-based models were shown to be diffusion in continuous time: sampling becomes “just solving an ODE,” so off-the-shelf numerical solvers (DPM-Solver and successors) reach good samples in ~10–20 steps with no retraining.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p>In 2021, a parallel line of work (score-based generative models) was shown to be the
+            <i>same thing</i> as diffusion in a continuous-time limit, and the merged view is the
+            field’s standard mental model today:</p>
+            <ul>
+              <li>The forward noising process is a <b>stochastic differential equation (SDE)</b>
+              <span class="gloss">(a differential equation with built-in randomness — a continuous
+              random drift of images toward noise)</span>.</li>
+              <li>Reversing it requires exactly one learned quantity: the <b>score</b> (the gradient of
+              log-density from card&nbsp;02). With the score in hand there are two ways back: a
+              reverse-time SDE (random, like DDPM) or a <b>probability flow ODE</b>
+              <span class="gloss">(an ordinary differential equation — no randomness)</span> that is
+              fully deterministic and produces the same distribution of images. DDIM is essentially a
+              discretization of this ODE.</li>
+            </ul>
+            <p>Why a non-ML reader should care: once sampling is “just solving an ODE,” the entire
+            toolbox of numerical ODE solvers applies. Purpose-built higher-order solvers
+            (<b>DPM-Solver</b> and successors) get good samples in <b>~10–20 steps</b> with no
+            retraining. This view also explains, in one picture, why so many variants coexist: they are
+            different discretizations, different paths, or different parameterizations of the same
+            underlying object.</p>
+          </div>
+        </details>
+      </article>
+
+      <article class="card" id="c07">
+        <div class="card-head">
+          <span class="idx">07</span>
+          <h3>Distillation and consistency models: 1–4 steps</h3>
+          <span class="keynum">1–4 steps</span>
+        </div>
+        <p class="skim"><strong>Train for big jumps.</strong> Below ~10–20 steps you must retrain: progressive distillation halves the step count round by round; consistency models map any noisy point straight to the clean endpoint, enabling 1-step generation. This powers “real-time” demos — at a mild quality and diversity cost.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p>Fast samplers plateau around 10–20 steps. Going lower requires <i>training</i> a model to
+            take big jumps rather than cleverly scheduling small ones:</p>
+            <ul>
+              <li><b>Progressive distillation</b> trains a student network to match, in one step, what a
+              teacher does in two — then repeats, halving the step count each round
+              (1000&nbsp;→&nbsp;500&nbsp;→&nbsp;…&nbsp;→&nbsp;4).</li>
+              <li><b>Consistency models</b> (2023) train the network so that <i>any</i> noisy point on a
+              given trajectory maps directly to the same clean endpoint. That self-consistency property
+              allows <b>1-step generation</b>, with 2–4 steps as a refinement option. Latent consistency
+              models (LCMs) apply this to Stable-Diffusion-class latents, giving ~4-step generation.</li>
+              <li><b>Adversarial distillation</b> (SDXL-Turbo-style) adds a GAN-like critic to sharpen
+              few-step outputs.</li>
+            </ul>
+            <p class="caveat"><b class="tag">Caveat</b>Distilled few-step models trade some quality and
+            diversity for speed — outputs tend to be slightly softer or less varied than the
+            20–50-step teacher — and the extra training stage adds pipeline complexity.</p>
+            <p>This is the technology behind “real-time” generation demos that redraw as you type.</p>
+          </div>
+        </details>
+      </article>
+
+      <article class="card" id="c08">
+        <div class="card-head">
+          <span class="idx">08</span>
+          <h3>Flow matching and rectified flow: straighter paths</h3>
+          <span class="keynum">SD3 · Flux</span>
+        </div>
+        <p class="skim"><strong>Straighten the path, take fewer steps.</strong> Rectified flow trains the network to move along straight lines from noise to image — a cleaner recipe that needs fewer solver steps. It is a reframing of diffusion, not a rival; Stable Diffusion 3 and Flux-class models are trained this way.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p>The newest mainstream reformulation asks: why follow the curved paths that Gaussian
+            noising dictates at all? <b>Flow matching</b> trains a network to predict a <b>velocity
+            field</b> that transports noise to data along prescribed paths; <b>rectified flow</b>
+            chooses the simplest possible ones — <b>straight lines</b>. A training point is just a
+            linear blend of an image and a noise sample, and the regression target is the constant
+            velocity (their difference) along that line.</p>
+            <p>Why this matters: solving an ODE along nearly straight paths needs far fewer steps than
+            along curved ones, and the formulation drops the diffusion-specific scaffolding — noise
+            schedules, timestep-dependent scalings — for a cleaner recipe.</p>
+            <p>Mathematically it is a close sibling of diffusion: with Gaussian paths, flow matching
+            recovers diffusion’s probability-flow ODE, and the score / noise / velocity quantities
+            remain interconvertible. It is best read as a <i>reframing that generalizes</i>, not a rival
+            mechanism. <b>Stable Diffusion 3 and Flux-class models are trained this way</b>, combined
+            with transformer backbones and latent-space operation.</p>
+          </div>
+        </details>
+      </article>
+
+      <!-- variants at a glance: chart + table -->
+      <article class="card wide" id="at-a-glance">
+        <div class="card-head">
+          <span class="idx">→</span>
+          <h3>Variants at a glance: typical steps vs. character</h3>
+          <span class="keynum">log scale</span>
+        </div>
+        <p class="skim"><strong>From ~1000 steps down to 1–4.</strong> Each family is a different point on the speed–quality curve. Hover a bar for its character; the table below carries the full comparison.</p>
+
+        <div class="chartwrap">
+          <svg viewBox="0 0 760 244" role="img" aria-label="Typical sampling steps per variant family, log scale from 1 to 1000">
+            <!-- gridlines -->
+            <line x1="150" y1="14" x2="150" y2="196" stroke="var(--grid)" stroke-width="1"/>
+            <line x1="340" y1="14" x2="340" y2="196" stroke="var(--grid)" stroke-width="1"/>
+            <line x1="530" y1="14" x2="530" y2="196" stroke="var(--grid)" stroke-width="1"/>
+            <line x1="720" y1="14" x2="720" y2="196" stroke="var(--grid)" stroke-width="1"/>
+            <!-- baseline -->
+            <line x1="150" y1="196" x2="720" y2="196" stroke="var(--baseline)" stroke-width="1"/>
+            <!-- axis tick labels -->
+            <text x="150" y="212" font-size="12" fill="var(--muted)" text-anchor="middle">1</text>
+            <text x="340" y="212" font-size="12" fill="var(--muted)" text-anchor="middle">10</text>
+            <text x="530" y="212" font-size="12" fill="var(--muted)" text-anchor="middle">100</text>
+            <text x="720" y="212" font-size="12" fill="var(--muted)" text-anchor="middle">1000</text>
+            <text x="435" y="234" font-size="12" fill="var(--muted)" text-anchor="middle">typical sampling steps per image (log scale)</text>
+
+            <!-- DDPM ~1000 -->
+            <g class="row">
+              <title>DDPM (ancestral): ~1000 steps. Original formulation; excellent quality; impractically slow.</title>
+              <rect x="146" y="20" width="592" height="28" fill="transparent"/>
+              <text x="142" y="38" font-size="13" fill="var(--ink2)" text-anchor="end">DDPM (ancestral)</text>
+              <path class="pt" d="M 720 25 L 729 34 L 720 43 L 711 34 Z" fill="var(--accent)"/>
+              <text x="704" y="38" font-size="12.5" font-weight="600" fill="var(--ink2)" text-anchor="end">~1000</text>
+            </g>
+            <!-- DDIM 20-50 -->
+            <g class="row">
+              <title>DDIM: 20–50 steps. Same trained model; deterministic; the everyday workhorse range.</title>
+              <rect x="146" y="56" width="592" height="28" fill="transparent"/>
+              <text x="142" y="74" font-size="13" fill="var(--ink2)" text-anchor="end">DDIM</text>
+              <rect class="range" x="397" y="64" width="76" height="12" rx="6" fill="var(--accent)"/>
+              <text x="481" y="74" font-size="12.5" font-weight="600" fill="var(--ink2)">20–50</text>
+            </g>
+            <!-- ODE solvers 10-20 -->
+            <g class="row">
+              <title>ODE solvers (DPM-Solver++ etc.): 10–20 steps. Better numerics, no retraining; near-DDIM quality.</title>
+              <rect x="146" y="92" width="592" height="28" fill="transparent"/>
+              <text x="142" y="110" font-size="13" fill="var(--ink2)" text-anchor="end">ODE solvers</text>
+              <rect class="range" x="340" y="100" width="57" height="12" rx="6" fill="var(--accent)"/>
+              <text x="405" y="110" font-size="12.5" font-weight="600" fill="var(--ink2)">10–20</text>
+            </g>
+            <!-- Rectified flow ~20-30 -->
+            <g class="row">
+              <title>Rectified flow / flow matching: ~20–30 steps (fewer viable). Retrained objective; straight paths; SD3/Flux generation.</title>
+              <rect x="146" y="128" width="592" height="28" fill="transparent"/>
+              <text x="142" y="146" font-size="13" fill="var(--ink2)" text-anchor="end">Rectified flow</text>
+              <rect class="range" x="397" y="136" width="34" height="12" rx="6" fill="var(--accent)"/>
+              <text x="439" y="146" font-size="12.5" font-weight="600" fill="var(--ink2)">≈20–30 (fewer viable)</text>
+            </g>
+            <!-- Distilled 1-4 -->
+            <g class="row">
+              <title>Distilled / consistency / LCM: 1–4 steps. Retrained for big jumps; fastest; mild quality and diversity cost.</title>
+              <rect x="146" y="164" width="592" height="28" fill="transparent"/>
+              <text x="142" y="182" font-size="13" fill="var(--ink2)" text-anchor="end">Distilled / LCM</text>
+              <rect class="range" x="150" y="172" width="114" height="12" rx="6" fill="var(--accent)"/>
+              <text x="272" y="182" font-size="12.5" font-weight="600" fill="var(--ink2)">1–4</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="tablewrap">
+        <table class="variants">
+          <thead>
+            <tr><th scope="col">Family</th><th scope="col">Typical steps</th><th scope="col">Character</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>DDPM (ancestral)</td><td class="num">~1000</td><td>Original formulation; excellent quality; impractically slow</td></tr>
+            <tr><td>DDIM</td><td class="num">20–50</td><td>Same trained model; deterministic; the everyday workhorse range</td></tr>
+            <tr><td>ODE solvers (DPM-Solver++ etc.)</td><td class="num">10–20</td><td>Better numerics, no retraining; near-DDIM quality</td></tr>
+            <tr><td>Rectified flow / flow matching</td><td class="num">~20–30 (fewer viable)</td><td>Retrained objective; straight paths; SD3/Flux generation</td></tr>
+            <tr><td>Distilled / consistency / LCM</td><td class="num">1–4</td><td>Retrained for big jumps; fastest; mild quality &amp; diversity cost</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <p class="fact" style="margin-top:10px"><b>Rules of thumb.</b> Below ~10 steps, undistilled
+        models degrade visibly; above ~50, returns diminish rapidly. “More steps” refines the
+        <i>same</i> trajectory — it is not a search over more images. And classifier-free guidance
+        (card&nbsp;10) doubles the per-step cost.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ---------- Scale & steering ---------- -->
+  <section id="scaling">
+    <h2>Scale and steering</h2>
+    <p class="secintro">Two changes made diffusion practical and controllable: run it in a compressed space, and steer it with the prompt at every step.</p>
+    <div class="grid">
+
+      <article class="card" id="c09">
+        <div class="card-head">
+          <span class="idx">09</span>
+          <h3>Latent diffusion: do it in compressed space</h3>
+          <span class="keynum">≈48× fewer values</span>
+        </div>
+        <p class="skim"><strong>Diffuse in compressed space.</strong> A separately trained VAE squeezes a 512×512×3 image (786,432 numbers) into a 64×64×4 latent (16,384 numbers — roughly 48× fewer); diffusion runs entirely there. This is what made Stable-Diffusion-class models run on consumer GPUs.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p>Everything in the cards above operates directly on pixels, and pixels are expensive: a
+            512×512 RGB image is 512&nbsp;×&nbsp;512&nbsp;×&nbsp;3 = <b>786,432 numbers</b>, and the
+            denoising network must process all of them at every one of dozens-to-hundreds of steps.</p>
+            <p><b>Latent diffusion</b> (2022) adds a compression stage. A separately trained
+            <b>variational autoencoder (VAE)</b> <span class="gloss">(an encoder-decoder pair that
+            compresses and decompresses images)</span> maps each image into a much smaller <i>latent</i>
+            representation and back. In Stable Diffusion the encoder downsamples 8× in each spatial
+            dimension: a 512×512×3 image becomes a <b>64×64 latent with 4 channels = 16,384 numbers —
+            roughly 48× fewer values</b>. The compression is perceptual, not lossless: the VAE is
+            trained so the reconstruction looks essentially identical, discarding imperceptible
+            detail.</p>
+            <p>The diffusion process — forward noising, training, and sampling exactly as already
+            described — then runs entirely in this latent space. Generation becomes:</p>
+            <ol>
+              <li>Sample random noise <i>in latent space</i> (e.g. 64×64×4).</li>
+              <li>Run the learned denoising loop there — every step ~48× cheaper than in pixel space.</li>
+              <li>Decode the final clean latent through the VAE decoder — one single pass — to obtain
+              the full-resolution image.</li>
+            </ol>
+            <p>This is the change that made Stable-Diffusion-class models run on consumer GPUs, and it
+            is why the model is called “latent.”</p>
+            <p class="caveat"><b class="tag">Caveat</b>The costs are minor but real: a slight quality
+            ceiling from the compression bottleneck — historically visible in fine text and small faces,
+            much improved in newer VAEs — plus one extra decode pass.</p>
+            <p>Note the division of labor: the VAE is only a compressor/decompressor — the diffusion
+            model in the middle is what generates.</p>
+          </div>
+        </details>
+      </article>
+
+      <article class="card" id="c10">
+        <div class="card-head">
+          <span class="idx">10</span>
+          <h3>Classifier-free guidance: steering with the prompt</h3>
+          <span class="keynum">s ≈ 7.5</span>
+        </div>
+        <p class="skim"><strong>Predict twice, exaggerate the difference.</strong> Every step runs the network with and without the prompt, then extrapolates: guided = unconditional + s × (conditional − unconditional). The scale s (~7.5 by default) trades diversity and naturalness for prompt adherence — and doubles per-step cost.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <p>Text conditioning gets the prompt <i>into</i> the network — as embeddings from a text
+            encoder such as CLIP or T5 <span class="gloss">(a model that turns text into number
+            vectors)</span>, attended to at each denoising step — but conditioning alone tends to
+            produce images that only loosely follow the prompt. <b>Classifier-free guidance (CFG)</b> is
+            the fix used by essentially every modern text-to-image system:</p>
+            <ul>
+              <li><b>At training time</b>, the prompt is randomly dropped (replaced by an empty prompt)
+              for a small fraction of examples — typically <b>~10–20%</b> — so one network learns both
+              prompt-conditioned and unconditional denoising.</li>
+              <li><b>At sampling time</b>, every step runs the network <b>twice</b>: once with the
+              prompt, once without. The two predictions are blended by <i>extrapolation</i>:</li>
+            </ul>
+            <p class="fact" style="text-align:center"><b>guided&nbsp;=&nbsp;unconditional&nbsp;+&nbsp;s&nbsp;×&nbsp;(conditional&nbsp;−&nbsp;unconditional)</b></p>
+            <p>The difference between the two predictions is “the direction the prompt pulls,” and the
+            <b>guidance scale s</b> exaggerates it. s&nbsp;=&nbsp;1 means no guidance;
+            <b>s&nbsp;≈&nbsp;7.5 is a common default</b> in Stable-Diffusion-class models.</p>
+            <p class="caveat"><b class="tag">Caveat</b>The tradeoff is real and visible: higher s gives
+            stronger prompt adherence and cleaner-looking, more “typical” images, but reduces diversity —
+            and pushed too far (roughly s&nbsp;&gt;&nbsp;12–15 in classic SD) it produces oversaturated
+            colors and burned-in artifacts. CFG also <b>doubles the network evaluations per step</b>,
+            which matters when counting sampling cost.</p>
+          </div>
+        </details>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ---------- Reference ---------- -->
+  <section id="reference">
+    <h2>Getting it right</h2>
+    <p class="secintro">The misconceptions worth debunking, and the jargon you’ll meet in tool settings and articles.</p>
+    <div class="grid">
+
+      <article class="card wide" id="c11">
+        <div class="card-head">
+          <span class="idx">11</span>
+          <h3>Common misconceptions</h3>
+          <span class="keynum">6 myths</span>
+        </div>
+        <p class="skim"><strong>Six things people get wrong.</strong> It doesn’t collage a database, it doesn’t clean up a real photo, the VAE isn’t the generator, more steps isn’t always better, the guidance scale isn’t a quality knob — and the variants aren’t competing technologies.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <ul class="myths">
+              <li>
+                <p class="myth-claim"><span class="x">✕</span>“It searches a database and collages existing images.”</p>
+                <p class="myth-fix">False. No training images are stored or consulted at generation
+                time; the model’s weights encode statistics, not copies, and sampling starts from random
+                noise.</p>
+                <p class="caveat" style="margin-top:8px"><b class="tag">Nuance</b>Rare near-duplication
+                of training images <i>has</i> been demonstrated — essentially for images repeated many
+                times in the training set. A real but exceptional memorization failure mode, not the
+                mechanism.</p>
+              </li>
+              <li>
+                <p class="myth-claim"><span class="x">✕</span>“It denoises a real photo.”</p>
+                <p class="myth-fix">False for text-to-image generation, which starts from pure synthetic
+                noise. Image-to-image and inpainting modes <i>do</i> start from a user-supplied image —
+                by partially noising it and denoising back — but that is an explicit variant, not the
+                default mechanism.</p>
+              </li>
+              <li>
+                <p class="myth-claim"><span class="x">✕</span>“The VAE is the generator.”</p>
+                <p class="myth-fix">No; the VAE only compresses and decompresses. The diffusion model
+                operating in latent space does the generating.</p>
+              </li>
+              <li>
+                <p class="myth-claim"><span class="x">✕</span>“More steps always means better images.”</p>
+                <p class="myth-fix">Only up to a point. Past the workhorse range (~50 steps), extra
+                steps refine imperceptibly — and for distilled models, the intended step count is part
+                of the design.</p>
+              </li>
+              <li>
+                <p class="myth-claim"><span class="x">✕</span>“The guidance scale is a ‘quality’ knob.”</p>
+                <p class="myth-fix">It is an adherence-vs-diversity knob with an artifact regime at high
+                values; “better” depends on what you want.</p>
+              </li>
+              <li>
+                <p class="myth-claim"><span class="x">✕</span>“Diffusion, DDIM, score-based models, and flow matching are competing technologies.”</p>
+                <p class="myth-fix">They are one framework: identical or interconvertible training
+                targets, different samplers, paths, and parameterizations.</p>
+              </li>
+            </ul>
+          </div>
+        </details>
+      </article>
+
+      <article class="card wide" id="c12">
+        <div class="card-head">
+          <span class="idx">12</span>
+          <h3>Glossary</h3>
+          <span class="keynum">8 terms</span>
+        </div>
+        <p class="skim"><strong>The jargon, one line each</strong> — the terms you’ll actually see in tool settings: timestep, noise schedule, sampler, latent space, CFG scale, distillation, NFE.</p>
+        <details class="card-details">
+          <summary>Full detail</summary>
+          <div class="detail-body">
+            <dl class="gloss-list">
+              <dt>Timestep (t)</dt><dd>Position along the noising process; high t = more noise.</dd>
+              <dt>Noise schedule</dt><dd>The predefined recipe for how much noise each forward step adds.</dd>
+              <dt>ε / score / velocity</dt><dd>Three interconvertible choices of network output.</dd>
+              <dt>Sampler</dt><dd>The algorithm that turns many network predictions into an image (DDPM, DDIM, DPM-Solver, …).</dd>
+              <dt>Latent space</dt><dd>The VAE-compressed representation where latent diffusion operates (e.g. 64×64×4 for a 512×512 image).</dd>
+              <dt>CFG scale (s)</dt><dd>Strength of classifier-free guidance extrapolation.</dd>
+              <dt>Distillation</dt><dd>Training a fast student model to imitate a slow teacher.</dd>
+              <dt>NFE (number of function evaluations)</dt><dd>How many times the network runs during sampling — the honest cost metric (CFG doubles it per step).</dd>
+            </dl>
+          </div>
+        </details>
+      </article>
+
+    </div>
+  </section>
+
+</main>
+
+<footer class="colophon">
+  <small>diffusion-variants · layered-dashboard · v1 · 2026-07-01</small>
+</footer>
+
+<script>
+  (function(){
+    var x = document.getElementById('xall'), c = document.getElementById('call');
+    if(!x || !c) return;
+    x.hidden = false; c.hidden = false;
+    function setAll(open){
+      document.querySelectorAll('details.card-details').forEach(function(d){ d.open = open; });
+    }
+    x.addEventListener('click', function(){ setAll(true); });
+    c.addEventListener('click', function(){ setAll(false); });
+  })();
+</script>
+
+</body>
+</html>

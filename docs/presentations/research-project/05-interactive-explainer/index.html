@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>murmur — cheap reverb augmentation for bird-call classification</title>
+<script>document.documentElement.className = "js";</script>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --ink: #1a1d21;
+    --muted: #5b6572;
+    --line: #dfe3e8;
+    --accent: #2f6f4f;      /* win green */
+    --accent-soft: #e3f0e9;
+    --floor: #8a94a1;       /* baseline gray */
+    --bad: #b6412f;         /* regression */
+    --bad-soft: #f6e3df;
+    --null: #b78414;        /* null amber */
+    --best: #1f5e8c;        /* best blue */
+    --best-soft: #e0ecf5;
+    --focus: #1f5e8c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171b;
+      --panel: #1d2127;
+      --ink: #eef1f4;
+      --muted: #9aa4b1;
+      --line: #313742;
+      --accent: #5ecf95;
+      --accent-soft: #1c2f26;
+      --floor: #6b7581;
+      --bad: #f08a76;
+      --bad-soft: #33211d;
+      --null: #e6b84d;
+      --best: #6fb6e8;
+      --best-soft: #1a2a37;
+      --focus: #6fb6e8;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  /* ---------- glance zone ---------- */
+  .eyebrow { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  h1 { font-size: 30px; line-height: 1.15; margin: 0 0 8px; }
+  h1 .name { color: var(--accent); }
+  .hypo { font-size: 16px; color: var(--muted); margin: 0 0 18px; max-width: 62ch; }
+  .hypo b { color: var(--ink); font-weight: 600; }
+
+  .verdict {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-soft); color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 999px;
+    padding: 5px 14px; font-weight: 600; font-size: 14px; margin-bottom: 18px;
+  }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 20px; }
+  .stat {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 16px; min-width: 120px; flex: 1 1 120px;
+  }
+  .stat .num { font-size: 26px; font-weight: 700; line-height: 1; }
+  .stat .lbl { font-size: 12.5px; color: var(--muted); margin-top: 5px; }
+  .stat.best .num { color: var(--best); }
+  .stat.gain .num { color: var(--accent); }
+
+  .takeaways { margin: 0 0 26px; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .takeaways li {
+    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: 8px; padding: 9px 13px; font-size: 14.5px;
+  }
+  .takeaways li b { color: var(--ink); }
+
+  /* ---------- chart ---------- */
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 18px 18px 14px; margin: 0 0 22px;
+  }
+  .card h2 { font-size: 17px; margin: 0 0 2px; }
+  .card .sub { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+  .chart-wrap { width: 100%; overflow-x: auto; }
+  svg.chart { width: 100%; height: auto; display: block; min-width: 520px; }
+  .bar {
+    cursor: pointer; transition: opacity .12s, stroke-width .12s;
+    stroke: transparent; stroke-width: 3;
+  }
+  .bar:hover, .bar:focus { outline: none; stroke: var(--focus); }
+  .bar.dim { opacity: .38; }
+  .barlabel { font-size: 12px; fill: var(--muted); text-anchor: middle; }
+  .barval { font-size: 12.5px; font-weight: 600; text-anchor: middle; }
+  .reflabel { font-size: 11px; fill: var(--muted); }
+  .refline { stroke: var(--floor); stroke-dasharray: 4 4; stroke-width: 1; }
+  .refline.best { stroke: var(--best); }
+  .hint { font-size: 12.5px; color: var(--muted); margin: 6px 2px 0; display: flex; align-items: center; gap: 6px; }
+  .hint .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--best); display: inline-block; }
+
+  .detail {
+    margin-top: 12px; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px; background: var(--bg); font-size: 14.5px;
+  }
+  .detail .dhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .detail .dslug { font-weight: 700; font-size: 16px; }
+  .detail .ddate { color: var(--muted); font-size: 13px; }
+  .detail .dtag {
+    font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    border: 1px solid currentColor;
+  }
+  .dtag.win { color: var(--accent); } .dtag.floor { color: var(--floor); }
+  .dtag.bad { color: var(--bad); } .dtag.null { color: var(--null); }
+  .dtag.best { color: var(--best); }
+  .detail .dmetric { font-variant-numeric: tabular-nums; }
+
+  /* ---------- tabs ---------- */
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; border-bottom: 1px solid var(--line); }
+  .tab {
+    appearance: none; background: transparent; border: 1px solid transparent; border-bottom: none;
+    color: var(--muted); font: inherit; font-weight: 600; font-size: 14.5px;
+    padding: 9px 14px; border-radius: 9px 9px 0 0; cursor: pointer; margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] {
+    color: var(--ink); background: var(--panel);
+    border-color: var(--line); border-bottom: 1px solid var(--panel);
+  }
+  .tab:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .panel { display: none; }
+  .panel.show { display: block; }
+  html.no-js .panel { display: block !important; margin-bottom: 18px; }
+  html.no-js .panel::before {
+    content: attr(data-title); display: block; font-weight: 700; font-size: 17px;
+    margin: 18px 0 8px; padding-top: 8px; border-top: 1px solid var(--line);
+  }
+  html.no-js .tabs { display: none; }
+
+  /* ---------- tables ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.is-best td { background: var(--best-soft); }
+  tr.is-bad td { background: var(--bad-soft); }
+  .pill { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .delta.up { color: var(--accent); font-weight: 600; }
+  .delta.down { color: var(--bad); font-weight: 600; }
+  .delta.flat { color: var(--null); font-weight: 600; }
+  .note-sm { color: var(--muted); font-size: 13px; }
+
+  /* per-species toggle */
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .switch button {
+    appearance: none; border: none; background: transparent; color: var(--muted);
+    font: inherit; font-weight: 600; font-size: 13.5px; padding: 6px 14px; cursor: pointer;
+  }
+  .switch button[aria-pressed="true"] { background: var(--best); color: #fff; }
+  .switch button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+  .barcell { position: relative; }
+  .fmeter { height: 8px; border-radius: 4px; background: var(--line); margin-top: 4px; overflow: hidden; }
+  .fmeter > span { display: block; height: 100%; background: var(--best); transition: width .3s; }
+
+  /* recipe */
+  pre {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px; overflow-x: auto; font-size: 13px; line-height: 1.55;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  pre .c { color: var(--muted); }
+  .off { color: var(--bad); }
+  .callout {
+    border-left: 3px solid var(--null); background: var(--bad-soft);
+    padding: 10px 14px; border-radius: 8px; font-size: 14px; margin: 12px 0 0;
+  }
+
+  ol.next { padding-left: 0; list-style: none; counter-reset: n; display: grid; gap: 12px; }
+  ol.next li { counter-increment: n; display: flex; gap: 12px; align-items: flex-start; }
+  ol.next li::before {
+    content: counter(n); flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 15px;
+  }
+  ol.next .t { font-weight: 700; }
+  ol.next code { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 13px; }
+  ol.next .est { color: var(--muted); font-size: 13px; }
+
+  footer { margin-top: 34px; padding-top: 14px; border-top: 1px solid var(--line);
+    font-size: 11.5px; color: var(--muted); }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 24px; }
+    .wrap { padding: 20px 14px 48px; }
+    .stat .num { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===================== GLANCE ZONE ===================== -->
+  <p class="eyebrow">Personal ML research project · state as of 2026-06-28</p>
+  <h1><span class="name">murmur</span> — cheap reverb augmentation, and exactly where it stops working</h1>
+  <p class="hypo">
+    The bet: <b>ultra-cheap audio augmentations inspired by natural reverberation improve bird-call
+    classification on small datasets — more per unit of compute than reaching for a bigger or pretrained
+    architecture.</b> A small CNN on log-mel spectrograms is held fixed as the control; only the
+    augmentation pipeline moves. 6,200 clips, 34 heavily long-tailed species, one desktop GPU.
+  </p>
+
+  <span class="verdict">◐ Verdict: partially supported</span>
+
+  <div class="stats">
+    <div class="stat"><div class="num">0.612</div><div class="lbl">baseline val macro-F1 (no augmentation)</div></div>
+    <div class="stat best"><div class="num">0.671</div><div class="lbl">best recipe (exp-05, the stack)</div></div>
+    <div class="stat gain"><div class="num">+5.9</div><div class="lbl">points gained — but concentrated in common species</div></div>
+  </div>
+
+  <ul class="takeaways">
+    <li><b>Partially supported, not clean.</b> The best recipe lifts validation macro-F1 by +5.9 points, but the gain is concentrated in common species and barely touches the rare tail.</li>
+    <li><b>Not every "natural-reverb" augmentation helped.</b> Pitch/time stretch actively regressed the model (to 0.589); SNR-controlled noise mixing alone was a null result (+0.002, inside seed noise ≈ ±0.006).</li>
+    <li><b>Best is a stack, not a single trick</b> — light reverb + noise mixing + SpecAugment. Heavy reverb helped common classes only and came in below the stack.</li>
+    <li><b>Next move: class-conditional augmentation</b> — apply the helpful transforms only where they help and protect the rare tail. Global augmentation has plateaued.</li>
+  </ul>
+
+  <!-- ===================== TRAJECTORY CHART (always visible) ===================== -->
+  <div class="card">
+    <h2>Experiment trajectory — validation macro-F1</h2>
+    <p class="sub">Six experiments, 2026-03 → 2026-06. Same seed, split, and backbone. The dip (exp-03) and the flat one (exp-04) are the honest part of the story.</p>
+    <div class="chart-wrap">
+      <!-- Bars are static SVG so the chart reads with JS off; JS adds click-to-inspect. -->
+      <svg class="chart" viewBox="0 0 720 340" role="img" aria-label="Bar chart of validation macro-F1 across six experiments, from 0.612 baseline to 0.671 best">
+        <!-- reference lines: baseline 0.612 (y=164.9), best 0.671 (y=55.3) -->
+        <line class="refline" x1="55" y1="164.9" x2="700" y2="164.9"></line>
+        <text class="reflabel" x="700" y="161" text-anchor="end">baseline 0.612</text>
+        <line class="refline best" x1="55" y1="55.3" x2="700" y2="55.3"></line>
+        <text class="reflabel" x="700" y="51.5" text-anchor="end" fill="var(--best)">best 0.671</text>
+
+        <!-- exp-01 --><rect class="bar" data-exp="0" tabindex="0" role="button" aria-label="exp-01 baseline-clean, 0.612" x="70"  y="164.9" width="60" height="115.1" rx="4" fill="var(--floor)"></rect>
+        <text class="barval" x="100" y="156">0.612</text><text class="barlabel" x="100" y="298">01 baseline</text>
+        <!-- exp-02 --><rect class="bar" data-exp="1" tabindex="0" role="button" aria-label="exp-02 reverb-light-ir, 0.641" x="180" y="111"   width="60" height="169"   rx="4" fill="var(--accent)"></rect>
+        <text class="barval" x="210" y="102">0.641</text><text class="barlabel" x="210" y="298">02 reverb</text>
+        <!-- exp-03 --><rect class="bar" data-exp="2" tabindex="0" role="button" aria-label="exp-03 pitchshift-timestretch, 0.589 regression" x="290" y="207.6" width="60" height="72.4"  rx="4" fill="var(--bad)"></rect>
+        <text class="barval" x="320" y="199">0.589</text><text class="barlabel" x="320" y="298">03 pitch/stretch</text>
+        <!-- exp-04 --><rect class="bar" data-exp="3" tabindex="0" role="button" aria-label="exp-04 noise-mix-snr, 0.643 null result" x="400" y="107.3" width="60" height="172.7" rx="4" fill="var(--null)"></rect>
+        <text class="barval" x="430" y="98">0.643</text><text class="barlabel" x="430" y="298">04 noise-mix</text>
+        <!-- exp-05 --><rect class="bar" data-exp="4" tabindex="0" role="button" aria-label="exp-05 stack, 0.671 current best" x="510" y="55.3"  width="60" height="224.7" rx="4" fill="var(--best)"></rect>
+        <text class="barval" x="540" y="46" fill="var(--best)">0.671</text><text class="barlabel" x="540" y="298">05 stack ★</text>
+        <!-- exp-06 --><rect class="bar" data-exp="5" tabindex="0" role="button" aria-label="exp-06 reverb-heavy, 0.663" x="620" y="70.1"  width="60" height="209.9" rx="4" fill="var(--accent)"></rect>
+        <text class="barval" x="650" y="61">0.663</text><text class="barlabel" x="650" y="298">06 heavy reverb</text>
+
+        <line x1="55" y1="280" x2="700" y2="280" stroke="var(--line)" stroke-width="1"></line>
+      </svg>
+    </div>
+    <p class="hint"><span class="dot"></span> Click or tab-to a bar to inspect that experiment. Seed-to-seed variability ≈ ±0.006 macro-F1.</p>
+    <div class="detail" id="detail" hidden></div>
+  </div>
+
+  <!-- ===================== TABS ===================== -->
+  <div class="tabs" role="tablist" aria-label="Explore the project">
+    <button class="tab" role="tab" id="tab-ledger"  aria-controls="p-ledger"  aria-selected="true">Experiment ledger</button>
+    <button class="tab" role="tab" id="tab-species" aria-controls="p-species" aria-selected="false">Per-species (where it works)</button>
+    <button class="tab" role="tab" id="tab-recipe"  aria-controls="p-recipe"  aria-selected="false">Best recipe</button>
+    <button class="tab" role="tab" id="tab-next"    aria-controls="p-next"    aria-selected="false">What's next</button>
+  </div>
+
+  <!-- panel: ledger -->
+  <section class="panel show" id="p-ledger" role="tabpanel" aria-labelledby="tab-ledger" data-title="Experiment ledger">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Slug</th><th>Date</th><th class="num">Macro-F1</th><th class="num">Δ vs baseline</th><th>Note</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>01</td><td>baseline-clean</td><td class="note-sm">2026-03-08</td><td class="num">0.612</td><td class="num">—</td><td class="note-sm">floor</td></tr>
+        <tr><td>02</td><td>reverb-light-ir</td><td class="note-sm">2026-03-24</td><td class="num">0.641</td><td class="num delta up">+0.029</td><td class="note-sm">first win</td></tr>
+        <tr class="is-bad"><td>03</td><td>pitchshift-timestretch</td><td class="note-sm">2026-04-11</td><td class="num">0.589</td><td class="num delta down">−0.023</td><td class="note-sm">regression</td></tr>
+        <tr><td>04</td><td>noise-mix-snr</td><td class="note-sm">2026-04-29</td><td class="num">0.643</td><td class="num delta up">+0.031</td><td class="note-sm">null vs exp-02 (+0.002)</td></tr>
+        <tr class="is-best"><td>05</td><td>stack-reverb-noise-specaug</td><td class="note-sm">2026-05-20</td><td class="num"><b>0.671</b></td><td class="num delta up">+0.059</td><td class="note-sm"><b>best</b></td></tr>
+        <tr><td>06</td><td>reverb-heavy-longrt60</td><td class="note-sm">2026-06-14</td><td class="num">0.663</td><td class="num delta up">+0.051</td><td class="note-sm">common-only</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <b>Two honest results in this ledger.</b> exp-03 is a real <b>regression</b> — pitch/time warping smears the
+      fine spectral cues the rare classes depend on, dropping below the no-aug baseline. exp-04 is a <b>null</b>: its
+      +0.002 over exp-02 sits inside run-to-run noise (±~0.006 across seeds). It was kept in the stack on the bet
+      that it composes with SpecAugment — which exp-05 bore out.
+    </div>
+  </section>
+
+  <!-- panel: per-species -->
+  <section class="panel" id="p-species" role="tabpanel" aria-labelledby="tab-species" data-title="Per-species (where it works)">
+    <p class="note-sm">Per-species F1, baseline (exp-01) vs best (exp-05). The shape of this table <i>is</i> the result: 6–7 points to the head, a few to the mid, almost nothing to the rare tail, and a slight regression on the single deepest-tail class.</p>
+    <div class="toggle-row">
+      <span class="note-sm">Show:</span>
+      <span class="switch" role="group" aria-label="Choose which model to show F1 for">
+        <button id="sw-base" aria-pressed="false">Baseline (exp-01)</button>
+        <button id="sw-best" aria-pressed="true">Best (exp-05)</button>
+      </span>
+      <span class="note-sm" id="sw-caption">Showing best recipe.</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Species</th><th>Tier</th><th class="num">Clips</th>
+        <th class="num" id="fcol">F1 (best)</th><th class="num">Δ base→best</th>
+      </tr></thead>
+      <tbody id="species-body">
+        <!-- rows filled by JS; static fallback below for no-JS -->
+        <tr><td>American Robin</td><td><span class="pill">common</span></td><td class="num">480</td>
+          <td class="barcell"><span class="fval">0.85</span><span class="fmeter"><span style="width:85%"></span></span></td>
+          <td class="num delta up">+0.06</td></tr>
+        <tr><td>Northern Cardinal</td><td><span class="pill">common</span></td><td class="num">421</td>
+          <td class="barcell"><span class="fval">0.83</span><span class="fmeter"><span style="width:83%"></span></span></td>
+          <td class="num delta up">+0.07</td></tr>
+        <tr><td>Song Sparrow</td><td><span class="pill">mid</span></td><td class="num">308</td>
+          <td class="barcell"><span class="fval">0.74</span><span class="fmeter"><span style="width:74%"></span></span></td>
+          <td class="num delta up">+0.06</td></tr>
+        <tr><td>Wood Thrush</td><td><span class="pill">rare</span></td><td class="num">92</td>
+          <td class="barcell"><span class="fval">0.54</span><span class="fmeter"><span style="width:54%"></span></span></td>
+          <td class="num delta up">+0.03</td></tr>
+        <tr><td>Kirtland's Warbler</td><td><span class="pill">deep tail</span></td><td class="num">41</td>
+          <td class="barcell"><span class="fval">0.33</span><span class="fmeter"><span style="width:33%"></span></span></td>
+          <td class="num delta down">−0.01</td></tr>
+      </tbody>
+    </table>
+    <p class="note-sm" style="margin-top:12px">The dataset is heavily long-tailed by design: the 8 most common species are ~52% of clips; the top class (American Robin) has 480 clips while 11 species have fewer than 80, and 5 fewer than 45. Macro-F1 is the primary metric precisely because it weights the tail equally with the head.</p>
+  </section>
+
+  <!-- panel: recipe -->
+  <section class="panel" id="p-recipe" role="tabpanel" aria-labelledby="tab-recipe" data-title="Best recipe">
+    <p class="note-sm">Reproduces exp-05 (val macro-F1 0.671). The win came from data-space moves, not compute — these augmentations add well under a minute of wall-clock over the clean baseline.</p>
+<pre><span class="c">backbone: small_cnn            # unchanged control across all experiments</span>
+input: logmel_128              <span class="c"># 128 mels, 25ms/10ms</span>
+train: {lr: 3e-4, batch: 32, epochs: 60, schedule: cosine}
+sampler:
+  class_balanced: 0.5          <span class="c"># partial reweight toward the tail</span>
+aug:
+  reverb_ir:  {p: 0.5, rt60_range: [0.3, 0.6]}   <span class="c"># light, measured IRs</span>
+  noise_mix:  {snr_db: [5, 20], beds: [wind, rain, chorus]}
+  specaugment: {freq_masks: 2, time_masks: 2}
+  <span class="off"># pitch_shift / time_stretch: OFF (regressed the rare tail — exp-03)</span>
+  <span class="off"># heavy reverb: OFF (helped common classes only — exp-06)</span></pre>
+    <div class="callout">
+      <b>Why a stack and not one trick?</b> The components compose: noise mixing that was null alone becomes useful
+      once SpecAugment is present, and the partial balanced sampler recovers a little tail recall. But decomposition
+      shows ~4.5 of the 5.9 points come from common/mid tiers — the deep tail improved yet remains the ceiling.
+    </div>
+  </section>
+
+  <!-- panel: next -->
+  <section class="panel" id="p-next" role="tabpanel" aria-labelledby="tab-next" data-title="What's next">
+    <p class="note-sm">The clear direction: stop augmenting globally, start augmenting <b>per class</b> — protect the tail from the transforms that smear it while keeping the head's gains.</p>
+    <ol class="next">
+      <li><div><div class="t"><code>class-conditional-aug</code></div>
+        Apply each augmentation only to the tiers where the ledger shows it helps: light reverb everywhere, but pitch/stretch and heavy reverb <i>excluded</i> from rare/deep-tail classes. Direct test of the "condition on class" thesis. <span class="est">Est. ~1 h.</span></div></li>
+      <li><div><div class="t"><code>sampler-vs-aug-ablation</code></div>
+        A clean 2×2 — (balanced sampler on/off) × (aug stack on/off) — to de-confound exp-05, where the sampler and augmentations were introduced in the same run. <span class="est">Cheap, ~4 runs × ~50 min.</span></div></li>
+      <li><div><div class="t"><code>backbone-fairness-arm</code></div>
+        Finally run the architecture control: a larger / AudioSet-pretrained backbone with <i>no</i> augmentation at matched compute, to see whether murmur's +5.9 augmentation points beat what a bigger model buys. Settles H2. <span class="est">Est. up to ~6 h — the heaviest run, worktree overnight.</span></div></li>
+    </ol>
+    <div class="callout">
+      <b>Honest caveat carried forward:</b> the efficiency half of the hypothesis (H2 — augmentation is the better
+      marginal spend than a bigger backbone) is still <b>asserted, not shown</b>: the fair bigger-backbone arm has
+      never actually been run. The test split (~930 clips) also remains untouched — every number here is validation
+      macro-F1, with a single held-out scoring pass reserved for after the recipe is frozen.
+    </div>
+  </section>
+
+  <footer>
+    research-project · interactive-explainer · approach v1 · generated 2026-07-01
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- experiment detail data (traceable to source ledger) ----
+  var EXP = [
+    {slug:"exp-01 · baseline-clean", date:"2026-03-08", f1:"0.612", tag:"floor", tagcls:"floor",
+     txt:"Small CNN on log-mel spectrograms, no augmentation at all — the floor. Trains cleanly, overfits by ~epoch 35. Tail classes carry almost all the error; the head is already near-saturated. Confirms the problem is generalization on scarce classes, not capacity."},
+    {slug:"exp-02 · reverb-light-ir", date:"2026-03-24", f1:"0.641 (+0.029)", tag:"first win", tagcls:"win",
+     txt:"Adds light impulse-response reverb (short measured room IRs, RT60 ≈ 0.3–0.6 s, p=0.5). First clear win; the gain is broad but skews to mid/common tiers and the deep tail moves only slightly. Makes reverb the spine of the pipeline."},
+    {slug:"exp-03 · pitchshift-timestretch", date:"2026-04-11", f1:"0.589 (−0.023 vs baseline)", tag:"regression", tagcls:"bad",
+     txt:"Adds pitch-shift (±2 st) and time-stretch (0.9–1.1×) on top of reverb. Regression — below the no-aug baseline. Warping moves synthetic examples across the exact decision boundaries the rare classes depend on; several deep-tail species collapse toward zero recall. Caveat: only ±2 st was tested; a gentler setting is untested. Dropped."},
+    {slug:"exp-04 · noise-mix-snr", date:"2026-04-29", f1:"0.643 (+0.002 vs exp-02)", tag:"null result", tagcls:"null",
+     txt:"Drops pitch/stretch, adds SNR-controlled background-noise mixing (wind, rain, distant chorus at 5–20 dB SNR). +0.002 over exp-02 is inside run-to-run noise (±~0.006 across seeds) — a null result on its own. Kept in the stack on the hypothesis that it composes with SpecAugment."},
+    {slug:"exp-05 · stack-reverb-noise-specaug", date:"2026-05-20", f1:"0.671 (+0.059, current best)", tag:"best", tagcls:"best",
+     txt:"The full stack — light reverb + noise mixing + SpecAugment (2 freq, 2 time masks) + a mildly class-balanced sampler (0.5). Current best. The components compose: noise mixing that was null alone becomes useful with SpecAugment. Still, ~4.5 of the 5.9 points come from common/mid tiers; the deep tail remains the ceiling."},
+    {slug:"exp-06 · reverb-heavy-longrt60", date:"2026-06-14", f1:"0.663 (−0.008 vs best)", tag:"common-only", tagcls:"win",
+     txt:"Pushes reverb hard — long RT60 (0.8–1.5 s), p=0.7 — on the exp-05 stack. Below best: heavy reverb helps common classes further (they have data to absorb the variation) but blurs short, quiet rare-class calls into the noise floor. The effect is class-dependent, not monotone in reverb strength — motivates class-conditional augmentation."}
+  ];
+
+  var bars = Array.prototype.slice.call(document.querySelectorAll(".bar"));
+  var detail = document.getElementById("detail");
+
+  function selectExp(i) {
+    var e = EXP[i];
+    detail.hidden = false;
+    detail.innerHTML =
+      '<div class="dhead">' +
+        '<span class="dslug">' + e.slug + '</span>' +
+        '<span class="ddate">' + e.date + '</span>' +
+        '<span class="dtag ' + e.tagcls + '">' + e.tag + '</span>' +
+      '</div>' +
+      '<div class="dmetric note-sm">val macro-F1 ' + e.f1 + '</div>' +
+      '<p style="margin:6px 0 0">' + e.txt + '</p>';
+    bars.forEach(function (b, j) { b.classList.toggle("dim", j !== i); });
+    detail.setAttribute("tabindex", "-1");
+  }
+
+  bars.forEach(function (b) {
+    var i = parseInt(b.getAttribute("data-exp"), 10);
+    b.addEventListener("click", function () { selectExp(i); });
+    b.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); selectExp(i); }
+    });
+  });
+
+  // ---- tabs ----
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+  function showTab(tab) {
+    tabs.forEach(function (t) {
+      var sel = t === tab;
+      t.setAttribute("aria-selected", sel ? "true" : "false");
+      document.getElementById(t.getAttribute("aria-controls")).classList.toggle("show", sel);
+    });
+  }
+  tabs.forEach(function (tab, idx) {
+    tab.addEventListener("click", function () { showTab(tab); });
+    tab.addEventListener("keydown", function (ev) {
+      if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") {
+        ev.preventDefault();
+        var d = ev.key === "ArrowRight" ? 1 : -1;
+        var next = tabs[(idx + d + tabs.length) % tabs.length];
+        showTab(next); next.focus();
+      }
+    });
+  });
+
+  // ---- per-species toggle (baseline vs best) ----
+  var SPECIES = [
+    {name:"American Robin",     tier:"common",    clips:"480", base:0.79, best:0.85, d:"+0.06", dcls:"up"},
+    {name:"Northern Cardinal",  tier:"common",    clips:"421", base:0.76, best:0.83, d:"+0.07", dcls:"up"},
+    {name:"Song Sparrow",       tier:"mid",       clips:"308", base:0.68, best:0.74, d:"+0.06", dcls:"up"},
+    {name:"Wood Thrush",        tier:"rare",      clips:"92",  base:0.51, best:0.54, d:"+0.03", dcls:"up"},
+    {name:"Kirtland's Warbler", tier:"deep tail", clips:"41",  base:0.34, best:0.33, d:"−0.01", dcls:"down"}
+  ];
+  var body = document.getElementById("species-body");
+  var fcol = document.getElementById("fcol");
+  var swBase = document.getElementById("sw-base");
+  var swBest = document.getElementById("sw-best");
+  var swCap = document.getElementById("sw-caption");
+
+  function renderSpecies(which) {
+    body.innerHTML = SPECIES.map(function (s) {
+      var v = which === "base" ? s.base : s.best;
+      return '<tr><td>' + s.name + '</td>' +
+        '<td><span class="pill">' + s.tier + '</span></td>' +
+        '<td class="num">' + s.clips + '</td>' +
+        '<td class="barcell"><span class="fval">' + v.toFixed(2) + '</span>' +
+          '<span class="fmeter"><span style="width:' + (v * 100) + '%"></span></span></td>' +
+        '<td class="num delta ' + s.dcls + '">' + s.d + '</td></tr>';
+    }).join("");
+    fcol.textContent = which === "base" ? "F1 (baseline)" : "F1 (best)";
+    swBase.setAttribute("aria-pressed", which === "base" ? "true" : "false");
+    swBest.setAttribute("aria-pressed", which === "best" ? "true" : "false");
+    swCap.textContent = which === "base" ? "Showing baseline (exp-01)." : "Showing best recipe (exp-05).";
+  }
+  swBase.addEventListener("click", function () { renderSpecies("base"); });
+  swBest.addEventListener("click", function () { renderSpecies("best"); });
+  renderSpecies("best");
+})();
+</script>
+</body>
+</html>

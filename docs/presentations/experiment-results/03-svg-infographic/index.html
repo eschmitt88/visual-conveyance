@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tessel · Pathways onboarding A/B — readout</title>
+<style>
+  :root{
+    --bg:#0f1523; --panel:#182135; --line:#2a3650;
+    --ink:#e9eef7; --muted:#96a3ba;
+    --pos:#38d5a6; --neg:#ff7b6e;
+    --hero:72px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.35;
+  }
+  .poster{max-width:1120px;margin:0 auto;padding:28px 22px 40px}
+  .kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  h1{font-size:clamp(26px,3.2vw,40px);line-height:1.12;margin:10px 0 14px;max-width:22ch}
+  h2{font-size:17px;letter-spacing:.02em;margin:0 0 10px;color:var(--ink)}
+  .chip{
+    display:inline-block;border:1px solid var(--line);background:var(--panel);
+    border-radius:999px;padding:7px 14px;font-size:14px;color:var(--ink)
+  }
+  .chip .ns{color:var(--muted)}
+  .chip strong{font-weight:700}
+  .heroGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0 6px}
+  .heroCard{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;display:flex;align-items:center;gap:16px
+  }
+  .heroNum{font-size:clamp(44px,6vw,var(--hero));font-weight:800;letter-spacing:-.02em;line-height:1}
+  .up{color:var(--pos)} .down{color:var(--neg)}
+  .heroCard .sub{font-size:14px;color:var(--muted);margin-top:6px}
+  .heroCard .lab{font-size:16px;font-weight:600}
+  .cancel{color:var(--muted);font-size:15px;margin:4px 2px 0}
+  section{margin-top:30px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  svg{display:block;width:100%;height:auto}
+  .legend{font-size:13px;color:var(--muted);margin:2px 0 8px}
+  .foot-note{font-size:13.5px;color:var(--muted);margin-top:8px}
+  .caveat{
+    margin-top:12px;border:1px dashed var(--muted);border-radius:12px;
+    padding:10px 14px;font-size:13.5px;color:var(--ink);background:rgba(150,163,186,.07)
+  }
+  .caveat b{letter-spacing:.06em}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .tile .v{font-size:34px;font-weight:800;letter-spacing:-.01em}
+  .tile .l{font-size:13.5px;color:var(--muted);margin-top:4px}
+  .tag{display:inline-block;margin-top:10px;font-size:12px;border-radius:999px;padding:3px 10px;border:1px solid var(--line)}
+  .tag.ok{color:var(--pos);border-color:var(--pos)}
+  .tag.mid{color:var(--muted)}
+  .calls{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .call{border-radius:14px;padding:16px 18px;background:var(--panel);border:1.5px solid var(--line)}
+  .call.ship{border-color:var(--pos)} .call.stop{border-color:var(--neg)}
+  .call .plat{font-size:14px;color:var(--muted)}
+  .call .verdict{font-size:24px;font-weight:800;margin:2px 0 4px}
+  .call.ship .verdict{color:var(--pos)} .call.stop .verdict{color:var(--neg)}
+  .call .d{font-size:13.5px;color:var(--muted)}
+  .call svg{width:34px;height:34px;margin-bottom:8px}
+  footer{margin-top:34px;font-size:11.5px;color:var(--muted);text-align:center}
+  @media (max-width:760px){
+    .heroGrid,.tiles,.calls{grid-template-columns:1fr}
+    .heroNum{font-size:56px}
+  }
+  @media (prefers-color-scheme: light){
+    :root{--bg:#f5f7fb;--panel:#ffffff;--line:#d7deea;--ink:#16213a;--muted:#5b6a84;
+      --pos:#0b9d77;--neg:#d94f42}
+    .caveat{background:rgba(91,106,132,.08)}
+  }
+</style>
+</head>
+<body>
+<main class="poster">
+
+  <!-- ============ HERO ============ -->
+  <header>
+    <div class="kicker">tessel · Pathways onboarding A/B · 6 weeks · 13,249 trial starters</div>
+    <h1>No overall winner — the real story is a platform split</h1>
+    <div class="chip">Overall <strong>+0.8pp</strong> · CI [−0.3,&nbsp;+1.9] · p&nbsp;=&nbsp;0.16 — <span class="ns"><strong>not significant</strong>: “can’t tell”, not “B&nbsp;won”</span></div>
+
+    <div class="heroGrid">
+      <div class="heroCard">
+        <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+          <path d="M20 34 V8 M10 18 L20 8 L30 18" fill="none" stroke="var(--pos)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="heroNum up">+4.2pp</div>
+          <div class="lab">Mobile-web</div>
+          <div class="sub">CI [+2.1,&nbsp;+6.3]</div>
+        </div>
+      </div>
+      <div class="heroCard">
+        <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+          <path d="M20 6 V32 M10 22 L20 32 L30 22" fill="none" stroke="var(--neg)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="heroNum down">−1.9pp</div>
+          <div class="lab">iOS</div>
+          <div class="sub">CI [−3.6,&nbsp;−0.2]</div>
+        </div>
+      </div>
+    </div>
+    <p class="cancel">Two real, opposite effects cancel in the blend.</p>
+  </header>
+
+  <!-- ============ S1: FOREST PLOT ============ -->
+  <section>
+    <h2>Δ trial-to-paid conversion by platform (pp, 95% CI)</h2>
+    <div class="legend">solid = CI clear of zero · hollow = crosses zero (can’t tell)</div>
+    <div class="panel">
+      <!-- honest linear scale: 60 px per pp, zero at x=330 -->
+      <svg viewBox="0 0 800 300" role="img" aria-label="Forest plot of effect sizes by platform">
+        <g font-size="13" fill="var(--muted)" text-anchor="middle">
+          <text x="90"  y="20">−4</text><text x="210" y="20">−2</text>
+          <text x="330" y="20">0</text><text x="450" y="20">+2</text>
+          <text x="570" y="20">+4</text><text x="690" y="20">+6</text>
+        </g>
+        <g stroke="var(--line)" stroke-width="1">
+          <line x1="90"  y1="30" x2="90"  y2="270"/><line x1="210" y1="30" x2="210" y2="270"/>
+          <line x1="450" y1="30" x2="450" y2="270"/><line x1="570" y1="30" x2="570" y2="270"/>
+          <line x1="690" y1="30" x2="690" y2="270"/>
+        </g>
+        <line x1="330" y1="30" x2="330" y2="270" stroke="var(--muted)" stroke-width="1.5"/>
+
+        <!-- Mobile-web: +4.2 [+2.1, +6.3] -->
+        <g stroke="var(--pos)" stroke-width="3.5">
+          <line x1="456" y1="70" x2="708" y2="70"/>
+          <line x1="456" y1="63" x2="456" y2="77"/><line x1="708" y1="63" x2="708" y2="77"/>
+        </g>
+        <circle cx="582" cy="70" r="8" fill="var(--pos)"/>
+        <text x="582" y="52" text-anchor="middle" font-size="15" font-weight="700" fill="var(--pos)">+4.2</text>
+        <text x="8" y="75" font-size="15" fill="var(--ink)">Mobile-web</text>
+        <text x="794" y="75" text-anchor="end" font-size="12.5" fill="var(--muted)">p&lt;0.0001</text>
+
+        <!-- iOS: −1.9 [−3.6, −0.2] -->
+        <g stroke="var(--neg)" stroke-width="3.5">
+          <line x1="114" y1="125" x2="318" y2="125"/>
+          <line x1="114" y1="118" x2="114" y2="132"/><line x1="318" y1="118" x2="318" y2="132"/>
+        </g>
+        <circle cx="216" cy="125" r="8" fill="var(--neg)"/>
+        <text x="216" y="107" text-anchor="middle" font-size="15" font-weight="700" fill="var(--neg)">−1.9</text>
+        <text x="8" y="130" font-size="15" fill="var(--ink)">iOS</text>
+        <text x="794" y="130" text-anchor="end" font-size="12.5" fill="var(--muted)">p=0.027</text>
+
+        <!-- Android: +0.1 [−1.7, +1.9] -->
+        <g stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="5 4">
+          <line x1="228" y1="180" x2="444" y2="180"/>
+        </g>
+        <g stroke="var(--muted)" stroke-width="2.5">
+          <line x1="228" y1="173" x2="228" y2="187"/><line x1="444" y1="173" x2="444" y2="187"/>
+        </g>
+        <circle cx="336" cy="180" r="8" fill="var(--panel)" stroke="var(--muted)" stroke-width="2.5"/>
+        <text x="336" y="162" text-anchor="middle" font-size="15" font-weight="700" fill="var(--muted)">+0.1</text>
+        <text x="8" y="185" font-size="15" fill="var(--ink)">Android</text>
+        <text x="794" y="185" text-anchor="end" font-size="12.5" fill="var(--muted)">p=0.92</text>
+
+        <!-- Overall: +0.8 [−0.3, +1.9] -->
+        <g stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="5 4">
+          <line x1="312" y1="235" x2="444" y2="235"/>
+        </g>
+        <g stroke="var(--muted)" stroke-width="2.5">
+          <line x1="312" y1="228" x2="312" y2="242"/><line x1="444" y1="228" x2="444" y2="242"/>
+        </g>
+        <circle cx="378" cy="235" r="8" fill="var(--panel)" stroke="var(--muted)" stroke-width="2.5"/>
+        <text x="378" y="217" text-anchor="middle" font-size="15" font-weight="700" fill="var(--muted)">+0.8</text>
+        <text x="8" y="240" font-size="15" fill="var(--ink)">Overall</text>
+        <text x="794" y="240" text-anchor="end" font-size="12.5" fill="var(--muted)">p=0.16</text>
+      </svg>
+    </div>
+    <div class="foot-note">Platform: the only pre-registered subgroup, chosen in advance.</div>
+    <div class="caveat"><b>⚠ CAVEAT</b> — Three subgroup tests ran. iOS (p&nbsp;=&nbsp;0.027) fails Bonferroni correction (α&nbsp;=&nbsp;0.0167); mobile-web (p&nbsp;&lt;&nbsp;0.0001) passes. Pre-registration plus a coherent mechanism make iOS credible enough to act on — not proven.</div>
+  </section>
+
+  <!-- ============ S2: NOVELTY DECAY ============ -->
+  <section>
+    <h2>Early snapshots overstated B — novelty decay</h2>
+    <div class="panel">
+      <!-- honest linear scale: 25 px per pp, baseline y=140 -->
+      <svg viewBox="0 0 760 250" role="img" aria-label="Weekly overall delta, declining from +2.9 to +0.1">
+        <rect x="55" y="72.5" width="660" height="135" fill="var(--muted)" opacity="0.10"/>
+        <text x="710" y="88" text-anchor="end" font-size="12.5" fill="var(--muted)">noise ≈ ±2.7pp</text>
+
+        <rect x="77"  y="67.5"  width="56" height="72.5" fill="#7d93a8"/>
+        <rect x="187" y="102.5" width="56" height="37.5" fill="#7d93a8"/>
+        <rect x="297" y="125"   width="56" height="15"   fill="#7d93a8"/>
+        <rect x="407" y="138.5" width="56" height="1.5"  fill="#7d93a8"/>
+        <rect x="517" y="140"   width="56" height="10"   fill="#7d93a8"/>
+        <rect x="627" y="137.5" width="56" height="2.5"  fill="#7d93a8"/>
+
+        <line x1="55" y1="140" x2="715" y2="140" stroke="var(--muted)" stroke-width="1.5"/>
+
+        <g font-size="14" font-weight="700" fill="var(--ink)" text-anchor="middle">
+          <text x="105" y="58">+2.9</text><text x="215" y="93">+1.5</text>
+          <text x="325" y="116">+0.6</text><text x="435" y="130">0.0</text>
+          <text x="545" y="166">−0.4</text><text x="655" y="129">+0.1</text>
+        </g>
+        <g font-size="13" fill="var(--muted)" text-anchor="middle">
+          <text x="105" y="232">W1</text><text x="215" y="232">W2</text>
+          <text x="325" y="232">W3</text><text x="435" y="232">W4</text>
+          <text x="545" y="232">W5</text><text x="655" y="232">W6</text>
+        </g>
+      </svg>
+    </div>
+    <div class="foot-note">Weeks 4–6: mobile-web still ≈+3.8pp, iOS still ≈−2.2pp — the split isn’t novelty.</div>
+  </section>
+
+  <!-- ============ S3: iOS CULPRIT ============ -->
+  <section>
+    <h2>Likely iOS culprit — the step-3 notification prompt</h2>
+    <div class="panel">
+      <!-- honest linear scale: 40 px per percentage point, from x=150 -->
+      <svg viewBox="0 0 760 140" role="img" aria-label="iOS step-3 drop-off, 8.1 percent in A versus 12.7 percent in B">
+        <text x="8" y="46" font-size="15" fill="var(--ink)">A · old flow</text>
+        <rect x="150" y="28" width="324" height="26" rx="4" fill="#64748b"/>
+        <text x="484" y="46" font-size="16" font-weight="700" fill="var(--ink)">8.1%</text>
+
+        <text x="8" y="96" font-size="15" fill="var(--ink)">B · Pathways</text>
+        <rect x="150" y="78" width="508" height="26" rx="4" fill="var(--neg)"/>
+        <text x="668" y="96" font-size="16" font-weight="700" fill="var(--neg)">12.7%</text>
+
+        <text x="150" y="128" font-size="12.5" fill="var(--muted)">iOS drop-off at onboarding step 3</text>
+      </svg>
+    </div>
+    <div class="foot-note">Pathways moves the permission ask from day 2 to step 3, triggering the iOS system dialog. Exploratory evidence — so: fix and re-test.</div>
+  </section>
+
+  <!-- ============ S4: GUARDRAILS ============ -->
+  <section>
+    <h2>Guardrails</h2>
+    <div class="tiles">
+      <div class="tile">
+        <div class="v">+0.2pp</div>
+        <div class="l">7-day retention · CI [−0.2,&nbsp;+0.6]</div>
+        <span class="tag ok">flat — pass</span>
+      </div>
+      <div class="tile">
+        <div class="v">−38s</div>
+        <div class="l">time-to-first-lesson · CI [−45,&nbsp;−31]</div>
+        <span class="tag ok">faster, as designed</span>
+      </div>
+      <div class="tile">
+        <div class="v">+12% → 0</div>
+        <div class="l">support tickets, weeks 1–2</div>
+        <span class="tag mid">normalized after fix</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ S5: THE CALL ============ -->
+  <section>
+    <h2>The call: narrow ship</h2>
+    <div class="calls">
+      <div class="call ship">
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="16" fill="none" stroke="var(--pos)" stroke-width="2.5"/>
+          <path d="M12 20.5 L18 26 L28 14" fill="none" stroke="var(--pos)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="plat">Mobile-web</div>
+        <div class="verdict">SHIP</div>
+        <div class="d">5% holdback, 8 weeks</div>
+      </div>
+      <div class="call stop">
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="16" fill="none" stroke="var(--neg)" stroke-width="2.5"/>
+          <path d="M13 13 L27 27 M27 13 L13 27" fill="none" stroke="var(--neg)" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="plat">iOS</div>
+        <div class="verdict">DON’T SHIP</div>
+        <div class="d">fix-prompt experiment ONB-2026-019</div>
+      </div>
+      <div class="call">
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="16" fill="none" stroke="var(--muted)" stroke-width="2.5"/>
+          <path d="M16 13 V27 M24 13 V27" fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="plat">Android</div>
+        <div class="verdict" style="color:var(--muted)">HOLD</div>
+        <div class="d">null; revisit after iOS fix</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>experiment-results · svg-infographic · v1 · 2026-07-01</footer>
+</main>
+</body>
+</html>

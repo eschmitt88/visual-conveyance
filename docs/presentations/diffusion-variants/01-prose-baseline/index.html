@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion models and their variants: how modern image generators work</title>
+<style>
+  :root {
+    --text: #1a1a1a;
+    --muted: #555;
+    --bg: #ffffff;
+    --accent: #8a3800;
+    --callout-bg: #fdf3e7;
+    --callout-border: #d97a2b;
+    --rule: #d9d9d9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --text: #e6e2dc;
+      --muted: #a8a29a;
+      --bg: #191817;
+      --accent: #f0a35e;
+      --callout-bg: #2a2118;
+      --callout-border: #b06a2e;
+      --rule: #3c3a37;
+    }
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  main {
+    max-width: 70ch;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 3rem;
+  }
+  h1 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 2rem;
+    line-height: 1.2;
+    margin: 0 0 0.35rem;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--muted);
+    font-size: 1.05rem;
+    margin: 0 0 1.6rem;
+  }
+  h2 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 1.3rem;
+    line-height: 1.3;
+    margin: 2.2rem 0 0.7rem;
+    letter-spacing: -0.005em;
+  }
+  p { margin: 0 0 1rem; }
+  .exec {
+    border-top: 3px solid var(--text);
+    border-bottom: 1px solid var(--rule);
+    padding: 1.1rem 0 0.5rem;
+    margin-bottom: 1.6rem;
+  }
+  .exec p { font-size: 1.09rem; }
+  .exec .key { color: var(--accent); }
+  strong.lead-in { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 0.98em; }
+  blockquote {
+    margin: 1.2rem 0;
+    padding: 0.8rem 1.1rem;
+    background: var(--callout-bg);
+    border-left: 4px solid var(--callout-border);
+    font-size: 0.98rem;
+  }
+  blockquote p { margin: 0 0 0.6rem; }
+  blockquote p:last-child { margin-bottom: 0; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin-bottom: 0.45rem; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.92em;
+  }
+  .formula {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    text-align: center;
+    margin: 1rem 0;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.1rem 0 1.3rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th { border-bottom: 2px solid var(--text); font-weight: 600; }
+  td:nth-child(2), th:nth-child(2) { white-space: nowrap; }
+  @media (max-width: 480px) {
+    body { font-size: 1rem; }
+    h1 { font-size: 1.55rem; }
+    table { font-size: 0.82rem; }
+    th, td { padding: 0.4rem 0.45rem; }
+    td:nth-child(2), th:nth-child(2) { white-space: normal; }
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Diffusion models and their variants</h1>
+<p class="subtitle">How modern image generators actually work — and why so many versions exist</p>
+
+<div class="exec">
+  <p><strong class="key">A diffusion model generates images by learning to run a
+  destruction process backwards: a fixed procedure gradually turns real images
+  into pure random noise, a neural network is trained to undo that noising one
+  small step at a time, and every generated image begins as nothing but fresh
+  random noise — never a stored photo.</strong>
+  Naive sampling needs ~1000 sequential network passes, so nearly every major
+  variant — DDIM, ODE solvers, latent diffusion, distillation, flow matching —
+  exists to make generation cheaper: faster samplers cut ~1000 steps to 20–50,
+  then 10–20, then 1–4; latent diffusion runs the whole process in a
+  compressed space with roughly 48× fewer values; and classifier-free guidance
+  (the "CFG scale," commonly ≈7.5) steers each step toward your prompt at the
+  cost of diversity and doubled compute.</p>
+</div>
+
+<h2>Destroy carefully, learn to rebuild</h2>
+
+<p>A diffusion model is defined by two processes running in opposite
+directions. The <strong>forward (noising) process</strong> is fixed and
+involves no learning: take a real image, add a small amount of Gaussian
+noise, and repeat — about <strong>T&nbsp;=&nbsp;1000 steps</strong> in the
+original DDPM formulation, following a predefined <em>noise schedule</em>
+(the recipe for how much noise each step adds). The destruction is gradual:
+at step 200 the image is slightly grainy, at step 600 only coarse shapes
+survive, at step 1000 nothing survives — the result is statistically
+indistinguishable from pure static.</p>
+
+<p>The <strong>reverse (denoising) process</strong> is what gets learned. A
+neural network is trained to undo <em>one small step</em>: given a noisy
+image and its step number <em>t</em> (the "timestep"), estimate a slightly
+less noisy version. Removing all the noise in one jump would be nearly
+impossible — countless clean images are consistent with a very noisy input —
+but removing a little is a tractable prediction, and chaining many small
+steps is what makes the whole thing work.</p>
+
+<p><strong class="lead-in">Generation</strong> then means: sample a fresh
+image of pure random noise and apply the learned denoising step repeatedly —
+t&nbsp;=&nbsp;1000, 999, 998, … down to 0. Structure emerges gradually:
+blobs of tone, then coarse layout, then object shapes, then fine texture.
+The output is a new image that never existed anywhere; the only inputs were
+random numbers and the network's learned weights.</p>
+
+<blockquote>
+<p><strong>Two things people get wrong.</strong> Generation starts from pure
+noise, not from a photograph — the model is not "cleaning up" any real image
+(except in explicit image-to-image modes where a user supplies one). And the
+training images are not stored in the model: a network of a few billion
+parameters trained on billions of images cannot keep copies; it stores a
+statistical model of what plausible images look like at every noise level.
+(One honest nuance: rare near-duplication of training images <em>has</em> been
+demonstrated, essentially for images repeated many times in training — a real
+but exceptional memorization failure, not the mechanism.)</p>
+</blockquote>
+
+<h2>What the network predicts, and how it is trained</h2>
+
+<p>"The network denoises" hides a design choice. Three output targets are
+common and mathematically interchangeable — simple algebra converts one to
+another: <strong>noise prediction (ε)</strong>, the original DDPM choice and
+still the most common, where the network predicts the noise that was added;
+<strong>score prediction</strong>, the gradient of the log-probability
+density — the direction in pixel space that makes the image more probable
+(the predicted noise is just a negatively scaled score); and
+<strong>velocity prediction (v)</strong>, a defined mixture of image and
+noise that is numerically better behaved at very high noise levels. In
+text-to-image models the network also receives a representation of the
+prompt. Architecturally it is typically a <strong>U-Net</strong> (a
+convolutional encoder-decoder with skip connections) in the
+Stable-Diffusion-1/2 generation, or a <strong>diffusion transformer
+(DiT)</strong> in newer systems like SD3 and Flux.</p>
+
+<p><strong class="lead-in">Training is remarkably simple.</strong> Draw a
+real image; draw a random timestep; add the corresponding noise in one shot
+(a closed-form formula gives the correctly noised image for any <em>t</em>);
+ask the network to predict the added noise and penalize it with a plain
+mean-squared error. Over billions of examples the network learns denoising
+at every level — global composition at high noise, fine texture at low
+noise. No adversarial game as in GANs, where a generator and discriminator
+must be kept in delicate balance; that stability is a big reason diffusion
+displaced GANs for large-scale image generation.</p>
+
+<h2>The original sin: sampling is slow</h2>
+
+<p>Training looks at one noise level at a time, but sampling must walk the
+whole chain: naive DDPM sampling runs the full network once per step —
+<strong>~1000 sequential forward passes</strong> per image, unparallelizable
+because each step depends on the previous one. Even on a fast GPU, a single
+image took the better part of a minute in 2020. Read everything below as one
+long answer to a single question: <em>how do we take fewer steps?</em></p>
+
+<h2>DDIM: same model, fewer and deterministic steps</h2>
+
+<p>DDIM (2020) was the first big win. Using the <em>same trained network,
+unchanged</em>, one can define a <strong>deterministic</strong> sampler: fix
+the initial noise and you get exactly the same image every time. This
+sampler tolerates much larger jumps — visiting <strong>20–50 steps</strong>
+instead of all 1000 is the typical practical range, with only modest quality
+loss. Determinism also makes noise-to-image a well-defined function, so you
+can invert an image back to its noise (useful for editing) and interpolate
+between images. When a tool exposes a "steps" slider defaulting to ~30, this
+is the tradeoff it exposes.</p>
+
+<h2>One lens that unifies everything: the score/ODE view</h2>
+
+<p>In 2021, score-based generative models were shown to be the <em>same
+thing</em> as diffusion in a continuous-time limit. In this view the forward
+process is a stochastic differential equation (SDE) — a continuous random
+drift toward noise — and reversing it needs exactly one learned quantity:
+the score. There are two routes back: a random reverse-time SDE (like DDPM)
+or a fully deterministic <strong>probability flow ODE</strong>; DDIM is
+essentially a discretization of that ODE. Once sampling is "just solving an
+ODE," the numerical-solver toolbox applies: purpose-built higher-order
+solvers (DPM-Solver and successors) reach good samples in
+<strong>~10–20 steps</strong> with no retraining. This view also explains
+why so many variants coexist — they are different discretizations, paths,
+or parameterizations of the same underlying object.</p>
+
+<h2>Latent diffusion: do it in compressed space</h2>
+
+<p>Pixels are expensive: a 512×512 RGB image is 512&nbsp;×&nbsp;512&nbsp;×&nbsp;3
+= <strong>786,432 numbers</strong>, all processed at every step.
+<strong>Latent diffusion</strong> (2022) adds a compression stage: a
+separately trained <strong>variational autoencoder (VAE)</strong> — an
+encoder-decoder pair — maps each image into a much smaller <em>latent</em>
+representation and back. In Stable Diffusion the encoder downsamples 8× in
+each spatial dimension: 512×512×3 becomes a 64×64 latent with 4 channels =
+16,384 numbers — <strong>roughly 48× fewer values</strong>. The compression
+is perceptual, not lossless: the reconstruction looks essentially identical,
+with imperceptible detail discarded.</p>
+
+<p>The entire diffusion process — noising, training, sampling — then runs in
+latent space: sample random noise at 64×64×4, run the denoising loop there
+(each step ~48× cheaper), and decode the final clean latent through the VAE
+decoder in one single pass. This is the change that made
+Stable-Diffusion-class models run on consumer GPUs, and why they are called
+"latent."</p>
+
+<blockquote>
+<p><strong>Costs and division of labor.</strong> The compression bottleneck
+imposes a slight quality ceiling — historically visible in fine text and
+small faces, much improved in newer VAEs — plus one extra decode pass. And
+the VAE is only a compressor/decompressor; the diffusion model in the middle
+is what generates.</p>
+</blockquote>
+
+<h2>Classifier-free guidance: steering with the prompt</h2>
+
+<p>Text conditioning feeds the prompt into the network (as embeddings from a
+text encoder such as CLIP or T5, attended to at each step), but conditioning
+alone follows prompts only loosely. <strong>Classifier-free guidance
+(CFG)</strong> is the fix used by essentially every modern text-to-image
+system. At training time the prompt is randomly dropped for
+<strong>~10–20%</strong> of examples, so one network learns both
+prompt-conditioned and unconditional denoising. At sampling time every step
+runs the network <strong>twice</strong> — with and without the prompt — and
+extrapolates:</p>
+
+<p class="formula">guided = unconditional + s × (conditional − unconditional)</p>
+
+<p>The difference between the two predictions is "the direction the prompt
+pulls," and the guidance scale <em>s</em> exaggerates it. s&nbsp;=&nbsp;1
+means no guidance; <strong>s&nbsp;≈&nbsp;7.5 is a common default</strong> in
+Stable-Diffusion-class models.</p>
+
+<blockquote>
+<p><strong>The tradeoff is real.</strong> Higher s gives stronger prompt
+adherence and cleaner, more "typical" images, but reduces diversity — and
+pushed too far (roughly s&nbsp;&gt;&nbsp;12–15 in classic SD) produces
+oversaturated colors and burned-in artifacts. CFG is an
+adherence-vs-diversity knob, not a quality knob. It also doubles the network
+evaluations per step, which matters when counting cost.</p>
+</blockquote>
+
+<h2>Distillation and consistency models: 1–4 steps</h2>
+
+<p>Fast samplers plateau around 10–20 steps. Going lower requires
+<em>training</em> a model to take big jumps. <strong>Progressive
+distillation</strong> trains a student to match, in one step, what a teacher
+does in two — then repeats, halving the step count each round
+(1000&nbsp;→&nbsp;500&nbsp;→&nbsp;…&nbsp;→&nbsp;4). <strong>Consistency
+models</strong> (2023) train the network so that any noisy point on a
+trajectory maps directly to the same clean endpoint, allowing
+<strong>1-step generation</strong> with 2–4 steps as refinement; latent
+consistency models (LCMs) bring this to Stable-Diffusion-class latents at
+~4 steps. <strong>Adversarial distillation</strong> (SDXL-Turbo-style) adds
+a GAN-like critic to sharpen few-step outputs. The tradeoff: distilled
+few-step models trade some quality and diversity for speed — outputs tend to
+be slightly softer or less varied than the 20–50-step teacher — and the
+extra training stage adds pipeline complexity. This is the technology behind
+"real-time" demos that redraw as you type.</p>
+
+<h2>Flow matching and rectified flow: straighter paths</h2>
+
+<p>The newest mainstream reformulation asks: why follow the curved paths
+that Gaussian noising dictates at all? <strong>Flow matching</strong> trains
+a network to predict a velocity field that transports noise to data along
+prescribed paths; <strong>rectified flow</strong> chooses the simplest —
+straight lines. A training point is just a linear blend of an image and a
+noise sample, and the regression target is the constant velocity (their
+difference) along that line. Solving an ODE along nearly straight paths
+needs far fewer steps than along curved ones, and the formulation drops
+diffusion-specific scaffolding (noise schedules, timestep-dependent
+scalings). Mathematically it is a close sibling of diffusion — with Gaussian
+paths it recovers diffusion's probability-flow ODE, and the score / noise /
+velocity quantities remain interconvertible — so read it as a reframing that
+generalizes, not a rival mechanism. <strong>Stable Diffusion 3 and
+Flux-class models are trained this way</strong>, combined with transformer
+backbones and latent-space operation.</p>
+
+<h2>Variants at a glance</h2>
+
+<table>
+  <thead>
+    <tr><th>Family</th><th>Typical steps</th><th>Character</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>DDPM (ancestral)</td><td>~1000</td><td>Original formulation; excellent quality; impractically slow</td></tr>
+    <tr><td>DDIM</td><td>20–50</td><td>Same trained model; deterministic; the everyday workhorse range</td></tr>
+    <tr><td>ODE solvers (DPM-Solver++ etc.)</td><td>10–20</td><td>Better numerics, no retraining; near-DDIM quality</td></tr>
+    <tr><td>Rectified flow / flow matching</td><td>~20–30 (fewer viable)</td><td>Retrained objective; straight paths; SD3/Flux generation</td></tr>
+    <tr><td>Distilled / consistency / LCM</td><td>1–4</td><td>Retrained for big jumps; fastest; mild quality &amp; diversity cost</td></tr>
+  </tbody>
+</table>
+
+<p>Rules of thumb: below ~10 steps, undistilled models degrade visibly;
+above ~50, returns diminish rapidly. "More steps" refines the <em>same</em>
+trajectory rather than searching over more images — and for distilled
+models, the intended step count is part of the design. When counting cost,
+the honest metric is <strong>NFE</strong> (number of function evaluations —
+how many times the network runs), and CFG doubles it per step.</p>
+
+<h2>The takeaway</h2>
+
+<p>Diffusion, DDIM, score-based models, and flow matching are not competing
+technologies but one framework: identical or interconvertible training
+targets, wrapped in different samplers, paths, and parameterizations. The
+core mechanism never changes — learn to undo gradual noising, then walk from
+pure randomness back to an image. Everything else in the variant zoo is the
+field's answer, refined over five years, to a single engineering question:
+how few steps can we get away with?</p>
+
+<footer>diffusion-variants · prose-baseline · v1 · 2026-07-01</footer>
+
+</main>
+</body>
+</html>

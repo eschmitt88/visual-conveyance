@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>murmur — cheap augmentation for small-data bird calls</title>
+<style>
+  :root{
+    --bg:#0e1620; --panel:#16212e; --panel2:#1d2b3a;
+    --ink:#eef3f8; --muted:#9db0c3; --line:#2c3d4f;
+    --win:#4ade80;      /* accent 1 — gains */
+    --bad:#f87171;      /* accent 2 — regression / warning */
+    --null:#fbbf24;     /* neutral-signal amber */
+    --disp:44px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.35; -webkit-font-smoothing:antialiased;
+  }
+  .poster{max-width:1120px;margin:0 auto;padding:28px 22px 12px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  h1{margin:2px 0 0;font-size:40px;letter-spacing:.02em}
+  .tag{color:var(--muted);font-size:15px;margin-top:4px;max-width:640px}
+
+  /* Hero band */
+  .hero{
+    margin-top:20px;padding:26px 24px;border-radius:16px;
+    background:linear-gradient(135deg,#16212e,#1d2b3a);
+    border:1px solid var(--line);
+    display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:center;
+  }
+  .headline{font-size:26px;font-weight:750;line-height:1.2}
+  .headline b{color:var(--win)}
+  .hero .sub{color:var(--muted);margin-top:10px;font-size:15px}
+  .bignum{text-align:center;border-left:1px solid var(--line);padding-left:18px}
+  .bignum .disp{font-size:var(--disp);font-weight:800;color:var(--win);line-height:1}
+  .bignum .disp span{font-size:22px;color:var(--muted);font-weight:600}
+  .bignum .trail{font-size:20px;font-weight:700;margin-top:8px}
+  .bignum .trail em{font-style:normal;color:var(--muted)}
+  .bignum .cap{font-size:12px;color:var(--muted);margin-top:6px;letter-spacing:.04em}
+
+  section{margin-top:26px}
+  .sechead{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:12px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card svg{display:block;width:100%;height:auto}
+
+  .bet{font-size:16px;color:var(--ink)}
+  .bet b{color:var(--win)}
+
+  /* comparison chips */
+  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .chip{border-radius:12px;padding:14px 14px;border:1px solid var(--line);background:var(--panel)}
+  .chip .lab{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+  .chip .name{font-size:15px;font-weight:650;margin-top:6px}
+  .chip .val{font-size:22px;font-weight:800;margin-top:6px}
+  .chip.win{border-color:#2f6b47}.chip.win .lab{color:var(--win)}.chip.win .val{color:var(--win)}
+  .chip.bad{border-color:#6b3232}.chip.bad .lab{color:var(--bad)}.chip.bad .val{color:var(--bad)}
+  .chip.null{border-color:#6b5a2a}.chip.null .lab{color:var(--null)}.chip.null .val{color:var(--null)}
+  .chip .note{font-size:12px;color:var(--muted);margin-top:4px}
+
+  /* recipe stack */
+  .recipe{display:flex;flex-direction:column;gap:8px}
+  .ing{display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+  .ing.on{border-left:4px solid var(--win)}
+  .ing.off{border-left:4px solid var(--bad);color:var(--muted)}
+  .ing .k{font-weight:650}
+  .ing .m{color:var(--muted);font-size:12px;margin-left:auto;text-align:right}
+
+  /* caveat + next */
+  .caveat{border:1px solid var(--bad);background:rgba(248,113,113,.08);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+  .caveat .icon{flex:0 0 auto}
+  .caveat p{margin:0;font-size:14px}
+  .caveat b{color:var(--bad)}
+  .next{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .next li{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .next .n{font-size:22px;font-weight:800;color:var(--win)}
+  .next .t{font-size:14px;font-weight:650;margin-top:4px}
+  .next .d{font-size:12px;color:var(--muted);margin-top:4px}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+  footer{margin-top:30px;padding-top:12px;border-top:1px solid var(--line);color:#6f829a;font-size:11px}
+
+  @media (max-width:720px){
+    :root{--disp:36px}
+    .hero{grid-template-columns:1fr;gap:16px}
+    .bignum{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:16px}
+    .grid2,.chips,.next{grid-template-columns:1fr}
+    h1{font-size:32px}.headline{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<main class="poster">
+
+  <div class="kicker">Bioacoustics · state 2026-06-28</div>
+  <h1>murmur</h1>
+  <div class="tag">Hearing one bird through cheap, physically-plausible noise.</div>
+
+  <!-- HERO / GLANCE ZONE -->
+  <div class="hero">
+    <div>
+      <div class="headline">Cheap reverb-flavoured augmentation <b>partially works.</b></div>
+      <div class="sub">Lift lands on common species; the rare tail barely moves.</div>
+    </div>
+    <div class="bignum">
+      <div class="disp">+5.9<span> pts</span></div>
+      <div class="trail">0.612 <em>→</em> 0.671</div>
+      <div class="cap">val macro-F1 · baseline → best</div>
+    </div>
+  </div>
+
+  <!-- THE BET -->
+  <section>
+    <div class="sechead">The bet</div>
+    <div class="card bet">
+      Hold the small CNN <b>fixed</b>; move only the augmentation. Do near-free, reverb-flavoured transforms beat a bigger backbone when <b>data is scarce, not compute</b>? Dataset: 6,200 clips, 34 species, long-tailed (5 under 45 clips).
+    </div>
+  </section>
+
+  <!-- LEDGER TRAJECTORY -->
+  <section>
+    <div class="sechead">Experiment ledger — validation macro-F1</div>
+    <div class="card">
+      <svg viewBox="0 0 720 300" role="img" aria-label="Line chart of validation macro-F1 across six experiments, from 0.612 baseline to 0.671 best.">
+        <!-- gridlines + y ticks (scale 0.58–0.68, not from zero) -->
+        <g fill="#9db0c3" font-size="12" text-anchor="end">
+          <line x1="60" y1="20"  x2="700" y2="20"  stroke="#2c3d4f"/><text x="52" y="24">0.68</text>
+          <line x1="60" y1="100" x2="700" y2="100" stroke="#2c3d4f"/><text x="52" y="104">0.64</text>
+          <line x1="60" y1="180" x2="700" y2="180" stroke="#2c3d4f"/><text x="52" y="184">0.60</text>
+          <line x1="60" y1="220" x2="700" y2="220" stroke="#2c3d4f"/><text x="52" y="224">0.58</text>
+        </g>
+        <!-- baseline reference at 0.612 -->
+        <line x1="60" y1="156" x2="700" y2="156" stroke="#4b5f74" stroke-dasharray="5 5"/>
+        <text x="700" y="150" fill="#9db0c3" font-size="11" text-anchor="end">baseline 0.612</text>
+        <!-- connecting line: pts (60,156)(180,98)(300,202)(420,94)(540,38)(660,54) -->
+        <polyline points="60,156 180,98 300,202 420,94 540,38 660,54" fill="none" stroke="#63748a" stroke-width="2"/>
+        <!-- points -->
+        <g font-size="12" text-anchor="middle">
+          <circle cx="60"  cy="156" r="6" fill="#9db0c3"/>
+          <circle cx="180" cy="98"  r="6" fill="#4ade80"/>
+          <circle cx="300" cy="202" r="7" fill="#f87171"/>
+          <circle cx="420" cy="94"  r="6" fill="#fbbf24"/>
+          <circle cx="540" cy="38"  r="9" fill="#4ade80" stroke="#0e1620" stroke-width="2"/>
+          <circle cx="660" cy="54"  r="6" fill="#9db0c3"/>
+          <!-- value labels -->
+          <g fill="#eef3f8" font-weight="700">
+            <text x="60"  y="144">0.612</text>
+            <text x="180" y="86">0.641</text>
+            <text x="300" y="222">0.589</text>
+            <text x="420" y="82">0.643</text>
+            <text x="540" y="26">0.671</text>
+            <text x="660" y="42">0.663</text>
+          </g>
+          <!-- x labels -->
+          <g fill="#9db0c3">
+            <text x="60"  y="252">baseline</text>
+            <text x="180" y="252">+light reverb</text>
+            <text x="300" y="252" fill="#f87171">+pitch / stretch</text>
+            <text x="420" y="252">+noise mix</text>
+            <text x="540" y="252" fill="#4ade80">full stack</text>
+            <text x="660" y="252">heavy reverb</text>
+          </g>
+          <!-- annotations -->
+          <g fill="#9db0c3" font-size="11">
+            <text x="300" y="270" fill="#f87171">regression</text>
+            <text x="420" y="270" fill="#fbbf24">null (+0.002)</text>
+            <text x="540" y="286" fill="#4ade80">best</text>
+            <text x="660" y="270">common-only</text>
+          </g>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i style="background:#4ade80"></i>win</span>
+        <span><i style="background:#f87171"></i>regression</span>
+        <span><i style="background:#fbbf24"></i>null</span>
+        <span><i style="background:#9db0c3"></i>floor</span>
+        <span>Seed noise ≈ ±0.006</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT HELPED / WHAT DIDN'T -->
+  <section>
+    <div class="sechead">What helped, what didn't</div>
+    <div class="chips">
+      <div class="chip win">
+        <div class="lab">Win</div>
+        <div class="name">Light IR reverb</div>
+        <div class="val">+0.029</div>
+        <div class="note">first clear lift</div>
+      </div>
+      <div class="chip bad">
+        <div class="lab">Regression</div>
+        <div class="name">Pitch-shift / time-stretch</div>
+        <div class="val">0.589</div>
+        <div class="note">smears rare-class cues</div>
+      </div>
+      <div class="chip null">
+        <div class="lab">Null</div>
+        <div class="name">Noise-mix alone</div>
+        <div class="val">+0.002</div>
+        <div class="note">useful only with SpecAugment</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RECIPE + PER-SPECIES -->
+  <section class="grid2">
+    <div>
+      <div class="sechead">Current best recipe (0.671)</div>
+      <div class="card">
+        <div class="recipe">
+          <div class="ing on"><span class="k">Light IR reverb</span><span class="m">RT60 0.3–0.6 s, p=0.5</span></div>
+          <div class="ing on"><span class="k">Noise mix</span><span class="m">SNR 5–20 dB · wind/rain/chorus</span></div>
+          <div class="ing on"><span class="k">SpecAugment</span><span class="m">2 freq · 2 time masks</span></div>
+          <div class="ing on"><span class="k">Balanced sampler</span><span class="m">partial, 0.5</span></div>
+          <div class="ing off"><span class="k">Pitch / stretch</span><span class="m">OFF — regressed the tail</span></div>
+          <div class="ing off"><span class="k">Heavy reverb</span><span class="m">OFF — helped common only</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="sechead">Where the gain lands (per-species F1)</div>
+      <div class="card">
+        <svg viewBox="0 0 640 240" role="img" aria-label="Grouped bars of per-species F1, baseline versus best. Head classes gain 6–7 points, the deepest-tail class loses one.">
+          <!-- baseline y = 180, bar max height 140 at F1=1.0 -->
+          <line x1="40" y1="180" x2="620" y2="180" stroke="#2c3d4f"/>
+          <text x="34" y="184" fill="#9db0c3" font-size="11" text-anchor="end">0</text>
+          <text x="34" y="44" fill="#9db0c3" font-size="11" text-anchor="end">1.0</text>
+          <line x1="40" y1="40" x2="620" y2="40" stroke="#2c3d4f" stroke-dasharray="4 4"/>
+          <!-- groups: American Robin, N. Cardinal, Song Sparrow, Wood Thrush, Kirtland's -->
+          <!-- helper: bar top = 180 - f1*140 -->
+          <g font-size="11" text-anchor="middle">
+            <!-- Robin 0.79 -> 69.4 ; 0.85 -> 61 -->
+            <rect x="70"  y="69.4" width="26" height="110.6" fill="#63748a"/>
+            <rect x="100" y="61"   width="26" height="119"   fill="#4ade80"/>
+            <text x="98" y="200" fill="#eef3f8">Robin</text>
+            <text x="98" y="214" fill="#9db0c3">common · +0.06</text>
+            <!-- Cardinal 0.76->73.6 ; 0.83->63.8 -->
+            <rect x="180" y="73.6" width="26" height="106.4" fill="#63748a"/>
+            <rect x="210" y="63.8" width="26" height="116.2" fill="#4ade80"/>
+            <text x="208" y="200" fill="#eef3f8">Cardinal</text>
+            <text x="208" y="214" fill="#9db0c3">common · +0.07</text>
+            <!-- Song Sparrow 0.68->84.8 ; 0.74->76.4 -->
+            <rect x="290" y="84.8" width="26" height="95.2" fill="#63748a"/>
+            <rect x="320" y="76.4" width="26" height="103.6" fill="#4ade80"/>
+            <text x="318" y="200" fill="#eef3f8">Song Sparrow</text>
+            <text x="318" y="214" fill="#9db0c3">mid · +0.06</text>
+            <!-- Wood Thrush 0.51->108.6 ; 0.54->104.4 -->
+            <rect x="400" y="108.6" width="26" height="71.4" fill="#63748a"/>
+            <rect x="430" y="104.4" width="26" height="75.6" fill="#4ade80"/>
+            <text x="428" y="200" fill="#eef3f8">Wood Thrush</text>
+            <text x="428" y="214" fill="#9db0c3">rare · +0.03</text>
+            <!-- Kirtland's 0.34->132.4 ; 0.33->133.8 -->
+            <rect x="510" y="132.4" width="26" height="47.6" fill="#63748a"/>
+            <rect x="540" y="133.8" width="26" height="46.2" fill="#f87171"/>
+            <text x="538" y="200" fill="#eef3f8">Kirtland's</text>
+            <text x="538" y="214" fill="#f87171">deep tail · −0.01</text>
+          </g>
+          <g font-size="11">
+            <rect x="40" y="20" width="12" height="12" fill="#63748a"/><text x="58" y="30" fill="#9db0c3">baseline</text>
+            <rect x="130" y="20" width="12" height="12" fill="#4ade80"/><text x="148" y="30" fill="#9db0c3">best</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAVEAT -->
+  <section>
+    <div class="caveat">
+      <svg class="icon" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3 L22 20 H2 Z" fill="none" stroke="#f87171" stroke-width="2" stroke-linejoin="round"/>
+        <line x1="12" y1="9" x2="12" y2="15" stroke="#f87171" stroke-width="2"/>
+        <circle cx="12" cy="17.5" r="1.2" fill="#f87171"/>
+      </svg>
+      <p><b>Efficiency unproven.</b> The fair bigger-backbone comparison was never run, so H2 is asserted, not shown.</p>
+    </div>
+  </section>
+
+  <!-- NEXT -->
+  <section>
+    <div class="sechead">Next three experiments</div>
+    <ul class="next">
+      <li><div class="n">1</div><div class="t">Class-conditional augmentation</div><div class="d">apply transforms only where they help; protect the tail. ≈1 h</div></li>
+      <li><div class="n">2</div><div class="t">Sampler-vs-aug 2×2 ablation</div><div class="d">de-confound sampler from augmentations. ~4 runs</div></li>
+      <li><div class="n">3</div><div class="t">Bigger-backbone fairness arm</div><div class="d">the architecture control; settles H2. ~6 h</div></li>
+    </ul>
+  </section>
+
+  <footer>research-project · svg-infographic · v1 · generated 2026-07-01</footer>
+
+</main>
+</body>
+</html>

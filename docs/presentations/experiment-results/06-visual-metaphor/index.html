@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tessel Pathways A/B — the lukewarm river</title>
+<style>
+  :root {
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --border: rgba(11,11,11,0.10);
+    --warm: #e34948;          /* warm water = B converts better (CI excludes 0) */
+    --cold: #2a78d6;          /* cold water = B converts worse (CI excludes 0) */
+    --neutral-water: #a3a29a; /* gray water = can't tell (CI straddles 0) */
+    --neutral-hatch: #6f6e67;
+    --band: rgba(137,135,129,0.16);
+    --bank: rgba(11,11,11,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --border: rgba(255,255,255,0.12);
+      --warm: #e66767;
+      --cold: #3987e5;
+      --neutral-water: #55544e;
+      --neutral-hatch: #8b8a82;
+      --band: rgba(137,135,129,0.18);
+      --bank: rgba(255,255,255,0.06);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 20px 20px 40px; }
+  header.top { padding-top: 6px; }
+  .kicker {
+    font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 4px;
+  }
+  h1 {
+    font-size: clamp(24px, 3.2vw, 33px); line-height: 1.15;
+    margin: 0 0 10px; font-weight: 750;
+  }
+  .verdict { margin: 0 0 12px; max-width: 65rem; color: var(--ink2); }
+  .verdict strong { color: var(--ink); }
+  .decisions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; padding: 0; list-style: none; }
+  .decisions li {
+    border: 1px solid var(--border); background: var(--surface);
+    border-radius: 8px; padding: 5px 12px; font-size: 13.5px; color: var(--ink2);
+  }
+  .decisions b { color: var(--ink); }
+  figure { margin: 0; }
+  .scene-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 8px 8px 2px; overflow: hidden;
+  }
+  .scene-scroll { overflow-x: auto; }
+  .scene-scroll svg { display: block; min-width: 940px; width: 100%; height: auto; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 6px 20px;
+    padding: 10px 6px 10px; font-size: 13.5px; color: var(--ink2);
+    border-top: 1px solid var(--grid); margin-top: 4px;
+  }
+  .legend .lg { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 22px; height: 12px; border-radius: 3px; display: inline-block; flex: none; }
+  .sw-warm { background: var(--warm); }
+  .sw-cold { background: var(--cold); }
+  .sw-neutral {
+    background: repeating-linear-gradient(45deg, var(--neutral-water), var(--neutral-water) 4px,
+      var(--neutral-hatch) 4px, var(--neutral-hatch) 6px);
+  }
+  .sw-width {
+    background: var(--muted); height: 4px; border-radius: 2px; position: relative; top: 0;
+  }
+  .sw-boulder { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); }
+  .sw-levee { background: none; border-top: 3px dashed var(--ink2); height: 0; border-radius: 0; }
+  main section { margin-top: 34px; }
+  h2 { font-size: 21px; margin: 0 0 8px; }
+  h2 .loc { color: var(--muted); font-weight: 600; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; display: block; }
+  p { max-width: 62rem; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+  ul.tight { margin: 8px 0; padding-left: 20px; }
+  ul.tight li { margin: 5px 0; max-width: 58rem; }
+  .note {
+    border: 1px solid var(--border); border-left: 4px solid var(--muted);
+    background: var(--surface); border-radius: 8px; padding: 12px 16px; max-width: 62rem;
+  }
+  .gloss { color: var(--muted); font-size: 14px; }
+  table {
+    border-collapse: collapse; font-size: 14.5px; margin: 12px 0;
+    font-variant-numeric: tabular-nums; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+  .tbl-scroll { overflow-x: auto; }
+  th, td { padding: 6px 12px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--ink2); font-weight: 650; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px; margin: 14px 0;
+  }
+  .chart-scroll { overflow-x: auto; }
+  .chart-scroll svg { display: block; min-width: 720px; width: 100%; height: auto; }
+  .plan { counter-reset: step; list-style: none; padding: 0; margin: 10px 0; max-width: 62rem; }
+  .plan li {
+    counter-increment: step; position: relative; padding: 8px 0 8px 44px;
+    border-bottom: 1px solid var(--grid);
+  }
+  .plan li::before {
+    content: counter(step); position: absolute; left: 0; top: 8px;
+    width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--surface); color: var(--ink); font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 10; display: none;
+    background: var(--ink); color: var(--page); font-size: 13px; line-height: 1.4;
+    padding: 7px 10px; border-radius: 6px; max-width: 300px;
+  }
+  footer {
+    margin-top: 44px; padding-top: 12px; border-top: 1px solid var(--grid);
+    font-size: 12px; color: var(--muted);
+  }
+  /* SVG text */
+  svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink2); }
+  svg .t-name { fill: var(--ink); font-weight: 700; font-size: 16px; }
+  svg .t-stat { font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  svg .t-muted { fill: var(--muted); font-size: 12.5px; }
+  svg .t-onwater {
+    fill: var(--ink); font-weight: 700; font-size: 15px;
+    paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round;
+  }
+  svg .t-lg { font-size: 13px; }
+  svg .t-axis { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  svg .t-bar { fill: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="kicker">tessel · onboarding redesign "Pathways" (B) vs current flow (A) · experiment ONB-2026-014 · final readout, 6-week run (2026-05-04 → 2026-06-14)</p>
+  <h1>The lukewarm river: why the overall number can't decide this ship</h1>
+  <p class="verdict">
+    <strong>Overall trial-to-paid conversion moved 11.4% → 12.2% (+0.8pp, 95% CI [−0.3, +1.9], p&nbsp;=&nbsp;0.16) — not statistically significant. Do not read this as "B won."</strong>
+    The blended number is lukewarm river water: a genuinely warm tributary (mobile-web, +4.2pp) and a genuinely cold one (iOS, −1.9pp) mixing into an average no one actually swims in.
+    The map below is the whole readout.
+    <span class="gloss">(pp = percentage points; a 95% CI is the range of effects consistent with the data — if it includes 0, the data can't distinguish the effect from nothing.)</span>
+  </p>
+  <ul class="decisions">
+    <li><b>Mobile-web:</b> ship B (with a 5% holdback)</li>
+    <li><b>iOS:</b> do NOT ship — run a fix experiment on the step-3 permission prompt</li>
+    <li><b>Android:</b> do NOT ship — null result, revisit after the iOS fix</li>
+  </ul>
+</header>
+
+<figure class="scene-card" aria-label="River-system map of the experiment">
+  <div class="scene-scroll">
+  <svg viewBox="0 0 1200 620" role="img"
+       aria-label="A river map. Three tributaries — mobile-web running warm at plus 4.2 points, iOS running cold at minus 1.9 points, Android still and gray at plus 0.1 — merge into one gray, hatched main river whose mouth gauge reads plus 0.8 points, a reading that cannot be told from zero. Rapids on the iOS tributary mark the step-3 permission prompt; a levee along the main river marks the flat 7-day retention guardrail.">
+    <defs>
+      <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="10" height="10" fill="var(--neutral-water)"/>
+        <line x1="0" y1="0" x2="0" y2="10" stroke="var(--neutral-hatch)" stroke-width="2.5"/>
+      </pattern>
+    </defs>
+
+    <!-- headwaters caption -->
+    <text x="60" y="40" class="t-muted">HEADWATERS — 13,249 users who started a free trial (A: 6,602 · B: 6,647), split by platform</text>
+    <text x="60" y="614" class="t-muted">water flows left → right: from trial start toward payment · the map shows effects of B relative to A</text>
+
+    <!-- main stem (drawn first, under tributaries) -->
+    <path class="tip" data-tip="Blended overall result: 11.4% (A) → 12.2% (B). +0.8pp, 95% CI [−0.3, +1.9], p = 0.16 — not statistically significant."
+          d="M 655 332 C 800 336, 950 338, 1168 338"
+          fill="none" stroke="url(#hatch)" stroke-width="72" stroke-linecap="round"/>
+    <!-- flow chevrons on stem (direction only) -->
+    <path d="M 722 326 l 14 12 l -14 12 M 1062 326 l 14 12 l -14 12"
+          fill="none" stroke="var(--page)" stroke-width="3" opacity="0.7"/>
+    <text x="920" y="344" text-anchor="middle" class="t-onwater">+0.8pp — can't be told from zero</text>
+
+    <!-- mobile-web tributary (warm) -->
+    <path class="tip" data-tip="Mobile-web: 13.9% → 18.1%. +4.2pp, 95% CI [+2.1, +6.3], p < 0.0001. A ~30% relative lift; survives multiple-comparison correction; persists in weeks 4–6 (+3.8pp)."
+          d="M 60 134 C 300 134, 505 218, 668 318"
+          fill="none" stroke="var(--warm)" stroke-width="26" stroke-linecap="round"/>
+    <circle cx="60" cy="66" r="6" fill="var(--warm)"/>
+    <text x="74" y="72" class="t-name">MOBILE-WEB — runs warm (a real gain)</text>
+    <text x="74" y="92" class="t-stat">+4.2pp · 95% CI [+2.1, +6.3] · p &lt; 0.0001</text>
+    <text x="74" y="110" class="t-muted">13.9% → 18.1% · trials 2,341 (A) / 2,367 (B) · web checkout, no app-store friction</text>
+
+    <!-- iOS tributary (cold) -->
+    <path class="tip" data-tip="iOS: 11.6% → 9.7%. −1.9pp, 95% CI [−3.6, −0.2], p = 0.027. A ~16% relative loss. Funnel evidence points at the new step-3 permission prompt."
+          d="M 60 312 C 260 312, 480 326, 662 332"
+          fill="none" stroke="var(--cold)" stroke-width="28" stroke-linecap="round"/>
+    <circle cx="60" cy="240" r="6" fill="var(--cold)"/>
+    <text x="74" y="246" class="t-name">iOS — runs cold (a real loss)</text>
+    <text x="74" y="266" class="t-stat">−1.9pp · 95% CI [−3.6, −0.2] · p = 0.027</text>
+    <text x="74" y="284" class="t-muted">11.6% → 9.7% · trials 2,528 (A) / 2,541 (B) · highest-friction payment surface</text>
+
+    <!-- step-3 rapids on the iOS tributary -->
+    <g class="tip" data-tip="Pathways moved the notification-permission ask from a day-2 soft card to onboarding step 3, where iOS fires the system dialog. Step-3 drop-off: 8.1% (A) → 12.7% (B). No comparable shift on mobile-web (3.2% → 3.4%) or Android (5.0% → 5.6%).">
+      <circle cx="388" cy="315" r="8" fill="var(--muted)"/>
+      <circle cx="404" cy="322" r="6.5" fill="var(--muted)"/>
+      <circle cx="396" cy="329" r="5" fill="var(--muted)"/>
+      <path d="M 412 312 q 8 4 0 9 M 420 319 q 8 4 0 9" fill="none" stroke="var(--page)" stroke-width="2.5"/>
+    </g>
+    <line x1="396" y1="340" x2="396" y2="362" stroke="var(--muted)" stroke-width="1.5"/>
+    <text x="190" y="384" class="t-name" style="font-size:14px">STEP-3 RAPIDS — the permission prompt (new in B)</text>
+    <text x="190" y="403" class="t-stat">iOS drop-off at step 3: 8.1% (A) → 12.7% (B)</text>
+    <text x="190" y="421" class="t-muted">mobile-web 3.2% → 3.4% · Android 5.0% → 5.6%</text>
+
+    <!-- android tributary (neutral, hatched) -->
+    <path class="tip" data-tip="Android: 7.8% → 7.9%. +0.1pp, 95% CI [−1.7, +1.9], p = 0.92. No evidence of an effect in either direction."
+          d="M 60 540 C 320 540, 560 470, 668 350"
+          fill="none" stroke="url(#hatch)" stroke-width="19" stroke-linecap="round"/>
+    <circle cx="60" cy="566" r="6" fill="var(--neutral-water)" stroke="var(--neutral-hatch)"/>
+    <text x="74" y="572" class="t-name">ANDROID — still water (can't tell)</text>
+    <text x="74" y="592" class="t-stat">+0.1pp · 95% CI [−1.7, +1.9] · p = 0.92 · 7.8% → 7.9% · trials 1,733 (A) / 1,739 (B)</text>
+
+    <!-- legend (in-scene, top right) -->
+    <g aria-hidden="true">
+      <rect x="716" y="34" width="472" height="172" rx="10" fill="var(--surface)" stroke="var(--grid)"/>
+      <text x="732" y="58" class="t-muted" style="font-weight:700; letter-spacing:0.05em">HOW TO READ THIS MAP</text>
+      <rect x="732" y="70" width="24" height="12" rx="3" fill="var(--warm)"/>
+      <text x="766" y="80" class="t-lg">warm water — B converts better (95% CI excludes 0)</text>
+      <rect x="732" y="92" width="24" height="12" rx="3" fill="var(--cold)"/>
+      <text x="766" y="102" class="t-lg">cold water — B converts worse (CI excludes 0)</text>
+      <rect x="732" y="114" width="24" height="12" rx="3" fill="url(#hatch)"/>
+      <text x="766" y="124" class="t-lg">gray hatched — CI straddles 0: can't tell</text>
+      <rect x="732" y="138" width="24" height="7" rx="3" fill="var(--muted)"/>
+      <rect x="732" y="147" width="13" height="3" rx="1.5" fill="var(--muted)"/>
+      <text x="766" y="148" class="t-lg">channel width — number of trial starters</text>
+      <circle cx="744" cy="164" r="6" fill="var(--muted)"/>
+      <text x="766" y="169" class="t-lg">rapids — onboarding step where users drop out</text>
+      <line x1="732" y1="186" x2="756" y2="186" stroke="var(--ink2)" stroke-width="3" stroke-dasharray="7 4"/>
+      <text x="766" y="190" class="t-lg">levee — guardrail metric</text>
+    </g>
+
+    <!-- levee (guardrail) -->
+    <line x1="700" y1="284" x2="1150" y2="286" stroke="var(--ink2)" stroke-width="3" stroke-dasharray="10 6"/>
+    <text x="700" y="248" class="t-muted">LEVEE (guardrail): 7-day retention +0.2pp · 95% CI [−0.2, +0.6] — flat: held</text>
+    <text x="700" y="266" class="t-muted">(measured on all 184,204 randomized users)</text>
+
+    <!-- mouth gauge -->
+    <g class="tip" data-tip="The mouth gauge averages the tributaries, weighted by channel width. It is not a property of any real user's experience — every user stands in exactly one tributary.">
+      <circle cx="1140" cy="338" r="13" fill="var(--surface)" stroke="var(--ink2)" stroke-width="2.5"/>
+      <line x1="1140" y1="338" x2="1148" y2="329" stroke="var(--ink2)" stroke-width="2.5"/>
+      <line x1="1140" y1="378" x2="1140" y2="404" stroke="var(--muted)" stroke-width="1.5"/>
+    </g>
+    <text x="722" y="426" class="t-name" style="font-size:14px">MOUTH GAUGE — the blended reading: 11.4% → 12.2%</text>
+    <text x="722" y="445" class="t-stat">+0.8pp · 95% CI [−0.3, +1.9] · p = 0.16 — NOT statistically significant</text>
+    <text x="722" y="463" class="t-muted">warm +4.2, cold −1.9, still +0.1 — width-weighted — mix to ≈ +0.8</text>
+    <text x="722" y="481" class="t-muted">not "B won" — and not "no effect" either: the honest reading is "can't tell"</text>
+
+    <!-- confluence marker -->
+    <text x="648" y="524" class="t-muted" text-anchor="middle">confluence: the only place</text>
+    <text x="648" y="540" class="t-muted" text-anchor="middle">"+0.8pp" exists is in the mix</text>
+    <line x1="652" y1="385" x2="650" y2="508" stroke="var(--muted)" stroke-width="1.5"/>
+  </svg>
+  </div>
+  <figcaption class="legend" aria-label="Legend">
+    <span class="lg"><span class="swatch sw-warm"></span> warm water = B converts <em>better</em> than A (95% CI excludes 0)</span>
+    <span class="lg"><span class="swatch sw-cold"></span> cold water = B converts <em>worse</em> than A (CI excludes 0)</span>
+    <span class="lg"><span class="swatch sw-neutral"></span> gray hatched = CI straddles 0 — can't tell</span>
+    <span class="lg"><span class="swatch sw-width" style="width:30px"></span><span class="swatch sw-width" style="width:14px;height:8px"></span> channel width = number of trial starters</span>
+    <span class="lg"><span class="swatch sw-boulder"></span> rapids = onboarding step where users drop out</span>
+    <span class="lg"><span class="swatch sw-levee" style="width:26px"></span> levee = guardrail metric</span>
+  </figcaption>
+</figure>
+
+<main>
+
+<section id="reading">
+  <h2>Reading this map</h2>
+  <div class="cols">
+    <ul class="tight">
+      <li><strong>The water is people:</strong> the 13,249 new signups who started a free trial during the six-week run, flowing from signup toward a first payment (the metric: share of trial starters whose first payment succeeds within 14 days).</li>
+      <li><strong>Temperature is the effect:</strong> how B's conversion compares to A's on that platform. Warm = better, cold = worse, gray = the confidence interval straddles zero, so the data can't tell.</li>
+      <li><strong>Color is earned, not decorative:</strong> a channel gets solid color only when its 95% CI excludes zero. Everything hatched gray — including the entire blended river — is statistically indistinguishable from "no effect."</li>
+    </ul>
+    <ul class="tight">
+      <li><strong>Width is sample size:</strong> wider channels carry more trial starters, and the mouth gauge averages the tributaries <em>weighted by width</em> — which is exactly why +4.2 and −1.9 net out near +0.8.</li>
+      <li><strong>Platform was the one pre-registered subgroup</strong> (declared 2026-04-28, before launch, because the three platforms pay through different surfaces: web checkout vs App Store vs Play Store). These tributaries were mapped before anyone saw water — not fished out of the data afterward.</li>
+      <li><strong>The decision is made tributary by tributary,</strong> never at the mouth.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="mouth">
+  <h2><span class="loc">At the mouth</span> Why +0.8pp must not be quoted as a win</h2>
+  <p>The gauge at the mouth reads +0.8pp with a 95% CI of [−0.3, +1.9] and p&nbsp;=&nbsp;0.16. The CI includes zero and effects as negative as −0.3pp, so the correct overall verdict is <strong>inconclusive</strong> — but it also includes +1.9pp, so "no effect" is equally wrong. Two more reasons the mouth can't carry the decision:</p>
+  <ul class="tight">
+    <li><strong>It's a mix, not a measurement of anything real.</strong> Weighting the tributary effects by their trial counts reconciles to the blended number ((2,354 × 4.2 − 2,535 × 1.9 + 1,736 × 0.1) / 6,625 ≈ +0.8pp). The overall figure is not "a modest win everywhere" — it is a strong win and a real loss averaging each other out.</li>
+    <li><strong>The gauge wasn't built to read this fine.</strong> The experiment had 80% power to detect an overall lift of +1.55pp; it was not powered to confirm effects smaller than ~1.5pp. A +0.8pp blip is below what this instrument can resolve. <span class="gloss">(Power = the chance the experiment would detect an effect of a given size if it were real.)</span></li>
+  </ul>
+  <div class="tbl-scroll">
+  <table>
+    <caption class="gloss" style="text-align:left; padding:4px 0">Primary result — trial-to-paid conversion</caption>
+    <thead><tr><th>Arm</th><th>Trial starts</th><th>Paid conversions</th><th>Conversion</th></tr></thead>
+    <tbody>
+      <tr><td>A (current)</td><td>6,602</td><td>753</td><td>11.4%</td></tr>
+      <tr><td>B (Pathways)</td><td>6,647</td><td>811</td><td>12.2%</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="warm">
+  <h2><span class="loc">The warm tributary</span> Mobile-web: a large, unambiguous improvement</h2>
+  <p><strong>+4.2pp on a 13.9% base is a ~30% relative lift</strong> (CI [+2.1, +6.3], p&nbsp;&lt;&nbsp;0.0001) — significant at any reasonable threshold, and it survives the multiple-comparison correction (Bonferroni-adjusted α&nbsp;=&nbsp;0.0167 for the three platform tests). It also makes mechanical sense: mobile-web converts through a web checkout with no app-store friction, and it is where the old flow was clumsiest — the 9-screen flow was designed for native and ported to web. Pathways cuts it to 6 screens. Crucially, this warmth is not novelty: pooled over weeks 4–6 the mobile-web effect is still <strong>+3.8pp</strong> (CI ≈ [+0.8, +6.8]).</p>
+</section>
+
+<section id="cold">
+  <h2><span class="loc">The cold tributary and its rapids</span> iOS: a significant regression, with a suspect</h2>
+  <p><strong>−1.9pp on an 11.6% base is a ~16% relative loss</strong> (CI [−3.6, −0.2], p&nbsp;=&nbsp;0.027). Honest caveat first: under the strict Bonferroni correction (α&nbsp;=&nbsp;0.0167), p&nbsp;=&nbsp;0.027 does <em>not</em> survive. Cutting the other way: platform was the single pre-registered subgroup dimension, chosen in advance for a stated mechanistic reason. Pre-registration plus a coherent mechanism makes this a <strong>credible signal that warrants action — a targeted follow-up experiment — while stopping short of proof.</strong></p>
+  <p>The rapids mark the suspected mechanism. Pathways moved the notification-permission ask from a day-2 soft in-product card to <strong>onboarding step 3</strong>, where iOS fires the system permission dialog. Funnel evidence (exploratory, but aimed directly at the hypothesized mechanism):</p>
+  <ul class="tight">
+    <li><strong>iOS step-3 drop-off jumped from 8.1% (A) to 12.7% (B)</strong> — of iOS users reaching step 3, A: 31,240 reached / 2,530 dropped; B: 31,020 reached / 3,940 dropped.</li>
+    <li>No comparable shift where the dialog is soft or gentler: mobile-web 3.2% → 3.4% (step 3 is an email opt-in, no OS dialog); Android 5.0% → 5.6% (lower-friction dialog). The regression concentrates at exactly the changed step, on exactly the highest-friction platform.</li>
+    <li>iOS users in B who dismissed the dialog converted at 7.9% vs 10.4% for those who accepted — consistent with the prompt souring or filtering marginal users, though this comparison is confounded by user intent and is <em>not</em> causal evidence on its own.</li>
+  </ul>
+  <p>This is why the plan is "fix and re-test on iOS," not "abandon iOS."</p>
+</section>
+
+<section id="still">
+  <h2><span class="loc">The still tributary</span> Android: no evidence either way</h2>
+  <p>+0.1pp with a CI spanning [−1.7, +1.9] (p&nbsp;=&nbsp;0.92): null. Android shares the flow with iOS, so it stays unshipped until the iOS fix experiment settles the permission-prompt question.</p>
+</section>
+
+<section id="season">
+  <h2><span class="loc">The season log</span> Early readings ran warm — novelty, decaying</h2>
+  <p>Gauge readings of the <em>blended</em> river, week by week. The overall effect decayed from <strong>+2.9pp in week 1 to +0.1pp in week 6</strong> — consistent with a novelty effect. Any decision made on a week-1 or week-2 snapshot would have materially overstated B: a mid-flight readout at the end of week 2 (blended +2.2pp, nominally significant at the time) circulated internally, and <strong>this final readout supersedes it</strong>.</p>
+  <div class="chart-card">
+    <div class="chart-scroll">
+    <svg viewBox="0 0 1100 260" role="img" aria-label="Weekly blended conversion delta, B minus A, in percentage points: week 1 plus 2.9, week 2 plus 1.5, week 3 plus 0.6, week 4 zero, week 5 minus 0.4, week 6 plus 0.1. A shaded band of plus or minus 2.7 points marks weekly measurement noise; every individual week sits within or barely outside it.">
+      <!-- noise band ±2.7pp around zero (clipped at plot bottom) -->
+      <rect x="70" y="58.8" width="990" height="151.2" fill="var(--band)"/>
+      <text x="1055" y="74" text-anchor="end" class="t-muted">weekly measurement noise ≈ ±2.7pp — single weeks can't be trusted; the decaying pattern is the signal</text>
+      <!-- gridlines & axis -->
+      <line x1="70" y1="48"  x2="1060" y2="48"  stroke="var(--grid)"/>
+      <line x1="70" y1="84"  x2="1060" y2="84"  stroke="var(--grid)"/>
+      <line x1="70" y1="120" x2="1060" y2="120" stroke="var(--grid)"/>
+      <line x1="70" y1="192" x2="1060" y2="192" stroke="var(--grid)"/>
+      <line x1="70" y1="156" x2="1060" y2="156" stroke="var(--muted)" stroke-width="1.5"/>
+      <text x="62" y="52"  text-anchor="end" class="t-axis">+3</text>
+      <text x="62" y="88"  text-anchor="end" class="t-axis">+2</text>
+      <text x="62" y="124" text-anchor="end" class="t-axis">+1</text>
+      <text x="62" y="160" text-anchor="end" class="t-axis">0</text>
+      <text x="62" y="196" text-anchor="end" class="t-axis">−1</text>
+      <text x="30" y="130" class="t-axis" transform="rotate(-90 30 130)" text-anchor="middle">Δ conversion (pp)</text>
+      <!-- bars: all hatched gray — each week individually indistinguishable from zero -->
+      <rect class="tip" data-tip="Week 1 (May 4–10): A 11.2% · B 14.1% · Δ +2.9pp · trials 1,104 / 1,118" x="124.5" y="51.6" width="56" height="104.4" rx="4" fill="url(#hatch)"/>
+      <rect class="tip" data-tip="Week 2 (May 11–17): A 11.5% · B 13.0% · Δ +1.5pp · trials 1,092 / 1,102" x="289.5" y="102" width="56" height="54" rx="4" fill="url(#hatch)"/>
+      <rect class="tip" data-tip="Week 3 (May 18–24): A 11.3% · B 11.9% · Δ +0.6pp · trials 1,110 / 1,109" x="454.5" y="134.4" width="56" height="21.6" rx="4" fill="url(#hatch)"/>
+      <line class="tip" data-tip="Week 4 (May 25–31): A 11.6% · B 11.6% · Δ 0.0pp · trials 1,098 / 1,105" x1="619.5" y1="156" x2="675.5" y2="156" stroke="var(--neutral-hatch)" stroke-width="4"/>
+      <rect class="tip" data-tip="Week 5 (Jun 1–7): A 11.5% · B 11.1% · Δ −0.4pp · trials 1,101 / 1,111" x="784.5" y="156" width="56" height="14.4" rx="4" fill="url(#hatch)"/>
+      <rect class="tip" data-tip="Week 6 (Jun 8–14): A 11.3% · B 11.4% · Δ +0.1pp · trials 1,097 / 1,102" x="949.5" y="152.4" width="56" height="3.6" rx="4" fill="url(#hatch)"/>
+      <!-- value labels -->
+      <text x="152.5" y="44"  text-anchor="middle" class="t-bar" style="font-weight:700; fill: var(--ink)">+2.9</text>
+      <text x="317.5" y="96"  text-anchor="middle" class="t-bar">+1.5</text>
+      <text x="482.5" y="129" text-anchor="middle" class="t-bar">+0.6</text>
+      <text x="647.5" y="150" text-anchor="middle" class="t-bar">0.0</text>
+      <text x="812.5" y="184" text-anchor="middle" class="t-bar">−0.4</text>
+      <text x="977.5" y="147" text-anchor="middle" class="t-bar" style="font-weight:700; fill: var(--ink)">+0.1</text>
+      <!-- x labels -->
+      <text x="152.5" y="230" text-anchor="middle" class="t-axis">wk 1 · May 4</text>
+      <text x="317.5" y="230" text-anchor="middle" class="t-axis">wk 2 · May 11</text>
+      <text x="482.5" y="230" text-anchor="middle" class="t-axis">wk 3 · May 18</text>
+      <text x="647.5" y="230" text-anchor="middle" class="t-axis">wk 4 · May 25</text>
+      <text x="812.5" y="230" text-anchor="middle" class="t-axis">wk 5 · Jun 1</text>
+      <text x="977.5" y="230" text-anchor="middle" class="t-axis">wk 6 · Jun 8</text>
+      <text x="70" y="252" class="t-muted">Blended Δ (B − A), by enrollment week. Hatched gray throughout: at ~±2.7pp weekly noise, no single week clears zero on its own.</text>
+    </svg>
+    </div>
+  </div>
+  <p><strong>But the platform split is not explained by novelty.</strong> Pooled over the late window (weeks 4–6, exploratory): mobile-web remains <strong>+3.8pp</strong> (CI ≈ [+0.8, +6.8]) — still warm after the novelty washed out — while iOS remains negative at <strong>−2.2pp</strong> (CI ≈ [−4.6, +0.2], no longer individually significant at this halved sample). The warm tributary is durable; the cold one does not recover.</p>
+  <details>
+    <summary class="gloss">Weekly readings as a table</summary>
+    <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>Week</th><th>Trial starts (A / B)</th><th>Conv. A</th><th>Conv. B</th><th>Δ (pp)</th></tr></thead>
+      <tbody>
+        <tr><td>1 (May 4–10)</td><td>1,104 / 1,118</td><td>11.2%</td><td>14.1%</td><td>+2.9</td></tr>
+        <tr><td>2 (May 11–17)</td><td>1,092 / 1,102</td><td>11.5%</td><td>13.0%</td><td>+1.5</td></tr>
+        <tr><td>3 (May 18–24)</td><td>1,110 / 1,109</td><td>11.3%</td><td>11.9%</td><td>+0.6</td></tr>
+        <tr><td>4 (May 25–31)</td><td>1,098 / 1,105</td><td>11.6%</td><td>11.6%</td><td>0.0</td></tr>
+        <tr><td>5 (Jun 1–7)</td><td>1,101 / 1,111</td><td>11.5%</td><td>11.1%</td><td>−0.4</td></tr>
+        <tr><td>6 (Jun 8–14)</td><td>1,097 / 1,102</td><td>11.3%</td><td>11.4%</td><td>+0.1</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </details>
+</section>
+
+<section id="levee">
+  <h2><span class="loc">The levee and the other gauges</span> Guardrails held; the plumbing is sound</h2>
+  <ul class="tight">
+    <li><strong>7-day retention is flat:</strong> 31.2% (A) vs 31.4% (B), +0.2pp, CI [−0.2, +0.6], measured on all 184,204 randomized users. The conversion story does not come at a retention cost — and equally, the mobile-web conversion gain is <em>not</em> accompanied by a retention gain.</li>
+    <li><strong>Support tickets rose +12% in weeks 1–2</strong> (4.1 → 4.6 per 1k signups, driven by confusion around the goal-quiz "skip" affordance). A copy fix shipped 2026-05-15 and volume normalized from week 3 on (4.0 vs 4.0) — a launch-quality blip, not a standing cost.</li>
+    <li><strong>Time-to-first-lesson improved by 38 seconds</strong> (median 4m 52s → 4m 14s, CI [−45, −31], p&nbsp;&lt;&nbsp;0.001) — the one clearly significant secondary. The shorter flow does what it was designed to do mechanically, but that speed did not translate into a blended conversion or retention win (lessons completed in the first 7 days: 3.9 vs 4.0, CI [−0.1, +0.3], p&nbsp;=&nbsp;0.24 — flat).</li>
+    <li><strong>The channels weren't rigged:</strong> randomization split cleanly (92,114 vs 92,090; χ² p&nbsp;=&nbsp;0.96, no sample-ratio mismatch); a 2% instrumentation audit (n&nbsp;=&nbsp;3,684) found zero cross-arm contamination and conversions reconciled within 0.1%. And because the metric conditions on starting a trial, it matters that trial-start rate is flat between arms (7.17% vs 7.22%, p&nbsp;=&nbsp;0.69) with platform mix among trialists within 0.4pp per platform — so comparing conversion among trial starters is sound.</li>
+    <li><strong>One deviation from the pre-registered plan:</strong> a supplementary Bayesian shrinkage estimate of weekly deltas was dropped for time, replaced by the pooled late-window checks above. No registered primary or subgroup analysis was altered.</li>
+  </ul>
+</section>
+
+<section id="breaks">
+  <h2>Where the metaphor breaks</h2>
+  <div class="note">
+    <p style="margin:0"><strong>Rivers actually merge; these platforms never do.</strong> Downstream of a real confluence there is water everyone shares — here, every user stands in exactly one tributary from signup to payment, and no one ever experiences the "+0.8pp blend." The mouth gauge is an artifact of averaging, not a place. If the map tempts you to ask "but how is the river doing overall?", that is the metaphor misleading you: there is no overall river, only three separate streams and a decision to make on each. Likewise, real water temperature is a physical fact; these "temperatures" are noisy statistical estimates — which is why uncertainty is painted on as hatching that no real river would carry.</p>
+  </div>
+</section>
+
+<section id="plan">
+  <h2><span class="loc">The engineering plan</span> Recommendation: a narrow ship, not a rollout and not a kill</h2>
+  <ol class="plan">
+    <li><strong>Ship Pathways to mobile-web only</strong>, target 2026-07-06, with a <strong>5% holdback</strong> for 8 weeks to confirm the +4.2pp effect out-of-experiment and monitor for post-novelty drift. <span class="gloss">(Holdback = a small slice kept on the old flow as an ongoing control.)</span></li>
+    <li><strong>Do not ship iOS.</strong> Launch a follow-up experiment (ONB-2026-019, draft) testing Pathways-on-iOS with the permission prompt reverted to the day-2 soft ask, plus a second arm with a pre-permission explainer screen. Same primary metric; powered for a ±1.5pp iOS-only effect; est. 8 weeks.</li>
+    <li><strong>Do not ship Android.</strong> Null result; revisit after the iOS fix experiment settles the prompt question, since Android shares the flow.</li>
+    <li><strong>Retire the week-2 interim readout</strong> from internal decks; this readout supersedes it.</li>
+    <li><strong>Re-estimate revenue impact</strong> for the mobile-web ship using the late-window +3.8pp (conservative) to full-run +4.2pp range.</li>
+  </ol>
+</section>
+
+<section id="full-table">
+  <h2>Gauge readings in full</h2>
+  <div class="tbl-scroll">
+  <table>
+    <thead><tr><th>Scope</th><th>Trials (A / B)</th><th>Conversions (A / B)</th><th>Conv. A</th><th>Conv. B</th><th>Δ (pp)</th><th>95% CI</th><th>p</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Overall (the mouth)</strong></td><td>6,602 / 6,647</td><td>753 / 811</td><td>11.4%</td><td>12.2%</td><td>+0.8</td><td>[−0.3, +1.9]</td><td>0.16</td></tr>
+      <tr><td>Mobile-web (warm)</td><td>2,341 / 2,367</td><td>325 / 428</td><td>13.9%</td><td>18.1%</td><td><strong>+4.2</strong></td><td>[+2.1, +6.3]</td><td>&lt;0.0001</td></tr>
+      <tr><td>iOS (cold)</td><td>2,528 / 2,541</td><td>293 / 246</td><td>11.6%</td><td>9.7%</td><td><strong>−1.9</strong></td><td>[−3.6, −0.2]</td><td>0.027</td></tr>
+      <tr><td>Android (still)</td><td>1,733 / 1,739</td><td>135 / 137</td><td>7.8%</td><td>7.9%</td><td>+0.1</td><td>[−1.7, +1.9]</td><td>0.92</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="gloss">Platform conversion counts sum to the overall counts: 325 + 293 + 135 = 753; 428 + 246 + 137 = 811. All names, users, and numbers are fictional (test fixture).</p>
+</section>
+
+</main>
+
+<footer>experiment-results · visual-metaphor · v1 · 2026-07-01</footer>
+</div>
+
+<div id="tooltip" role="tooltip"></div>
+<script>
+(function () {
+  var tip = document.getElementById('tooltip');
+  function show(e) {
+    var t = e.currentTarget.getAttribute('data-tip');
+    if (!t) return;
+    tip.textContent = t;
+    tip.style.display = 'block';
+    move(e);
+  }
+  function move(e) {
+    var pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = e.clientX + pad, y = e.clientY + pad;
+    if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+    if (y + h > window.innerHeight - 8) y = e.clientY - h - pad;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  function hide() { tip.style.display = 'none'; }
+  Array.prototype.forEach.call(document.querySelectorAll('.tip'), function (el) {
+    el.addEventListener('mouseenter', show);
+    el.addEventListener('mousemove', move);
+    el.addEventListener('mouseleave', hide);
+    el.style.cursor = 'default';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>murmur — an expedition map</title>
+<style>
+  :root {
+    --bg: #f3efe6;
+    --panel: #fbf9f3;
+    --ink: #23201a;
+    --muted: #6a6355;
+    --line: #d8d0bf;
+    --trail: #b45a2b;      /* the kept route */
+    --trail-dk: #8a4420;
+    --spur: #a0968a;       /* abandoned / turned-back */
+    --plan: #3d7a6b;       /* planned routes */
+    --best: #b8892a;       /* high camp / best */
+    --sky: #e7eef2;
+    --rock: #e6e0d2;
+    --rock2: #ded7c6;
+    --good: #2f7d4f;
+    --bad: #b23a3a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17150f;
+      --panel: #201d16;
+      --ink: #ece7db;
+      --muted: #a49b88;
+      --line: #3a352a;
+      --trail: #e07a44;
+      --trail-dk: #f0996a;
+      --spur: #7d7466;
+      --plan: #62b7a1;
+      --best: #e2b24d;
+      --sky: #202b31;
+      --rock: #2a2619;
+      --rock2: #322d1f;
+      --good: #5cc07f;
+      --bad: #e07070;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 22px 20px 60px; }
+
+  header .kicker {
+    font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 4px;
+  }
+  h1 { font-size: clamp(1.7rem, 3.6vw, 2.5rem); margin: 0 0 6px; line-height: 1.1; }
+  .lede { font-size: clamp(1rem, 1.9vw, 1.18rem); margin: 0 0 4px; max-width: 66ch; }
+  .lede b { color: var(--trail-dk); }
+  .goal {
+    font-size: 0.95rem; color: var(--muted); margin: 8px 0 0; max-width: 72ch;
+    border-left: 3px solid var(--line); padding-left: 12px;
+  }
+
+  /* ---- the scene ---- */
+  .scene {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 10px 4px;
+    margin: 18px 0 14px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+  }
+  .scene svg { width: 100%; height: auto; display: block; }
+
+  /* ---- legend ---- */
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+    gap: 6px 20px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+  }
+  .legend h2 { font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 2px; grid-column: 1 / -1; }
+  .leg { display: flex; gap: 10px; align-items: baseline; }
+  .leg .sym { flex: 0 0 34px; padding-top: 3px; }
+  .leg .txt b { display: block; }
+  .leg .txt span { color: var(--muted); font-size: 0.85rem; }
+  .swatch { display:inline-block; width: 30px; height: 0; vertical-align: middle; }
+
+  /* ---- body sections ---- */
+  section { margin: 30px 0 0; }
+  h2.sec { font-size: 1.28rem; margin: 0 0 2px; }
+  h2.sec .loc { color: var(--trail-dk); font-weight: 700; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 10px; }
+  p { max-width: 72ch; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; gap: 4px; } .legend .leg .sym { flex-basis: 34px; } }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 16px; margin: 10px 0;
+  }
+  .tag { display:inline-block; font-size:0.72rem; letter-spacing:0.06em; text-transform:uppercase;
+    padding: 2px 8px; border-radius: 999px; border:1px solid var(--line); color: var(--muted); }
+  .tag.win { color: var(--good); border-color: var(--good); }
+  .tag.bad { color: var(--bad); border-color: var(--bad); }
+  .tag.flat { color: var(--muted); }
+  .tag.best { color: var(--best); border-color: var(--best); font-weight:700; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; margin: 6px 0; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.best td { background: color-mix(in srgb, var(--best) 12%, transparent); font-weight: 600; }
+  .delta.up { color: var(--good); } .delta.dn { color: var(--bad); } .delta.zero { color: var(--muted); }
+  .fnote { font-size: 0.85rem; color: var(--muted); }
+
+  .breaks {
+    background: color-mix(in srgb, var(--bad) 8%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--line));
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .breaks h2 { margin-top: 0; }
+  .verdict {
+    background: color-mix(in srgb, var(--trail) 9%, var(--panel));
+    border: 1px solid color-mix(in srgb, var(--trail) 32%, var(--line));
+    border-radius: 12px; padding: 16px 18px; font-size: 1.02rem;
+  }
+  ol.routes { padding-left: 0; list-style: none; counter-reset: r; margin: 6px 0; }
+  ol.routes li { counter-increment: r; position: relative; padding: 10px 0 10px 44px; border-bottom: 1px solid var(--line); }
+  ol.routes li::before {
+    content: counter(r); position: absolute; left: 0; top: 10px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: transparent; border: 2px dashed var(--plan); color: var(--plan);
+    display: grid; place-items: center; font-weight: 700; font-size: 0.9rem;
+  }
+  ol.routes li:last-child { border-bottom: none; }
+
+  footer { margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--line);
+    font-size: 0.78rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="kicker">murmur · a small-data bioacoustics project</p>
+    <h1>An expedition up the macro-F1 slope</h1>
+    <p class="lede">Teaching a small classifier to hear a single bird through cheap,
+      physically-plausible noise. The bet — that near-free reverb-flavoured
+      augmentations beat reaching for a bigger model — <b>partially works</b>:
+      the route climbed +5.9 points, but the summit that matters is still in cloud.</p>
+    <p class="goal"><b>The wager:</b> ultra-cheap augmentations inspired by natural
+      reverberation lift validation macro-F1 on a small, long-tailed dataset (6,200
+      clips, 34 species) more per unit of compute than a bigger or pretrained
+      backbone would. Architecture is held fixed (a small CNN on log-mel
+      spectrograms) — only the augmentation pipeline moves.</p>
+  </header>
+
+  <!-- ================= THE SCENE ================= -->
+  <div class="scene">
+    <svg viewBox="0 0 1120 540" role="img"
+         aria-label="An expedition map: a trail climbing from a trailhead through numbered camps toward a clouded summit. Height on the map is validation macro-F1. Two dashed downhill spurs mark abandoned experiments; dashed uphill routes mark the three planned next experiments; the clouded summit is the rare-tail ceiling.">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="var(--sky)"/>
+          <stop offset="1" stop-color="var(--panel)"/>
+        </linearGradient>
+      </defs>
+
+      <!-- sky -->
+      <rect x="0" y="0" width="1120" height="540" fill="url(#sky)"/>
+
+      <!-- decorative background ridgeline (scenery, not data) -->
+      <polygon points="0,540 120,300 240,360 360,250 520,330 700,210 860,300 1010,180 1120,260 1120,540"
+               fill="var(--rock2)" opacity="0.55"/>
+      <polygon points="0,540 180,380 380,420 560,340 760,400 960,320 1120,380 1120,540"
+               fill="var(--rock)" opacity="0.7"/>
+
+      <!-- elevation axis = validation macro-F1 -->
+      <g font-size="12" fill="var(--muted)" font-variant-numeric="tabular-nums">
+        <text x="16" y="70" font-size="11" font-weight="700">macro-F1</text>
+        <!-- gridlines + ticks: y(f)=470-(f-0.58)/0.1*390 -->
+        <g stroke="var(--line)" stroke-dasharray="2 5">
+          <line x1="70" y1="119" x2="1090" y2="119"/>
+          <line x1="70" y1="197" x2="1090" y2="197"/>
+          <line x1="70" y1="275" x2="1090" y2="275"/>
+          <line x1="70" y1="353" x2="1090" y2="353"/>
+          <line x1="70" y1="431" x2="1090" y2="431"/>
+        </g>
+        <text x="34" y="123">0.67</text>
+        <text x="34" y="201">0.65</text>
+        <text x="34" y="279">0.63</text>
+        <text x="34" y="357">0.61</text>
+        <text x="34" y="435">0.59</text>
+      </g>
+
+      <!-- clouded summit: the rare-tail ceiling -->
+      <g>
+        <ellipse cx="985" cy="86" rx="92" ry="34" fill="var(--panel)" opacity="0.92"/>
+        <ellipse cx="935" cy="98" rx="52" ry="24" fill="var(--panel)" opacity="0.85"/>
+        <ellipse cx="1035" cy="98" rx="52" ry="22" fill="var(--panel)" opacity="0.85"/>
+        <text x="985" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">Summit — in cloud</text>
+        <text x="985" y="100" text-anchor="middle" font-size="11" fill="var(--muted)">the rare-tail ceiling</text>
+        <text x="985" y="114" text-anchor="middle" font-size="11" fill="var(--muted)">(is 41 clips even learnable?)</text>
+      </g>
+
+      <!-- planned dashed routes from High Camp toward the summit -->
+      <g stroke="var(--plan)" stroke-width="2.5" fill="none" stroke-dasharray="3 7" opacity="0.9" stroke-linecap="round">
+        <path d="M830,115 C880,108 905,120 918,130"/>
+        <path d="M830,115 C890,95 945,108 960,120"/>
+        <path d="M830,115 C900,80 980,96 1000,112"/>
+      </g>
+
+      <!-- abandoned spur: exp-03 (from camp 02, down into a ravine) -->
+      <path d="M360,232 C405,300 430,380 470,432" stroke="var(--spur)" stroke-width="3"
+            fill="none" stroke-dasharray="6 6" stroke-linecap="round"/>
+      <!-- abandoned spur: exp-06 (from High Camp, a step back down) -->
+      <path d="M830,115 C875,120 910,135 940,146" stroke="var(--spur)" stroke-width="3"
+            fill="none" stroke-dasharray="6 6" stroke-linecap="round"/>
+
+      <!-- the KEPT trail: 01 -> 02 -> 04 -> 05 -->
+      <path d="M150,345 L360,232 L620,224 L830,115" stroke="var(--trail)" stroke-width="4.5"
+            fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+
+      <!-- flat-stretch marker between 02 and 04 -->
+      <text x="490" y="212" text-anchor="middle" font-size="11" fill="var(--muted)" font-style="italic">flat stretch (null)</text>
+
+      <!-- camps -->
+      <g font-size="12" font-variant-numeric="tabular-nums" text-anchor="middle">
+        <!-- 01 trailhead -->
+        <circle cx="150" cy="345" r="12" fill="var(--panel)" stroke="var(--trail-dk)" stroke-width="3"/>
+        <text x="150" y="349" font-size="12" font-weight="700" fill="var(--ink)">1</text>
+        <text x="150" y="378" fill="var(--ink)" font-weight="600">Trailhead</text>
+        <text x="150" y="393" fill="var(--muted)">no aug · 0.612</text>
+
+        <!-- 02 -->
+        <circle cx="360" cy="232" r="12" fill="var(--panel)" stroke="var(--trail-dk)" stroke-width="3"/>
+        <text x="360" y="236" font-size="12" font-weight="700" fill="var(--ink)">2</text>
+        <text x="360" y="209" fill="var(--ink)" font-weight="600">Camp 2 · light reverb</text>
+        <text x="308" y="252" fill="var(--muted)" text-anchor="start">0.641</text>
+
+        <!-- 03 abandoned -->
+        <circle cx="470" cy="432" r="10" fill="var(--panel)" stroke="var(--spur)" stroke-width="3"/>
+        <text x="470" y="436" font-size="11" font-weight="700" fill="var(--muted)">3</text>
+        <text x="470" y="458" fill="var(--bad)" font-weight="600">Ravine — turned back</text>
+        <text x="470" y="473" fill="var(--muted)">pitch/stretch · 0.589</text>
+
+        <!-- 04 -->
+        <circle cx="620" cy="224" r="12" fill="var(--panel)" stroke="var(--trail-dk)" stroke-width="3"/>
+        <text x="620" y="228" font-size="12" font-weight="700" fill="var(--ink)">4</text>
+        <text x="620" y="201" fill="var(--ink)" font-weight="600">Camp 4 · + noise mix</text>
+        <text x="672" y="240" fill="var(--muted)" text-anchor="start">0.643</text>
+
+        <!-- 05 high camp / best -->
+        <circle cx="830" cy="115" r="14" fill="var(--best)" stroke="var(--trail-dk)" stroke-width="3"/>
+        <text x="830" y="119" font-size="12" font-weight="700" fill="#1a1509">5</text>
+        <text x="830" y="140" fill="var(--ink)" font-weight="700">High Camp · the stack</text>
+        <text x="742" y="107" fill="var(--best)" text-anchor="start" font-weight="700">0.671 — best</text>
+
+        <!-- 06 abandoned spur -->
+        <circle cx="940" cy="146" r="10" fill="var(--panel)" stroke="var(--spur)" stroke-width="3"/>
+        <text x="940" y="150" font-size="11" font-weight="700" fill="var(--muted)">6</text>
+        <text x="998" y="150" fill="var(--muted)" text-anchor="start">heavy reverb · 0.663</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ================= LEGEND ================= -->
+  <div class="legend">
+    <h2>How to read this map</h2>
+    <div class="leg"><span class="sym"><svg width="34" height="14"><line x1="1" y1="7" x2="33" y2="7" stroke="var(--muted)" stroke-dasharray="2 5"/></svg></span>
+      <span class="txt"><b>Height on the map</b><span>= validation macro-F1 (the score; higher = better). It weights the rare tail equally with the common head.</span></span></div>
+    <div class="leg"><span class="sym"><svg width="34" height="16"><line x1="1" y1="8" x2="33" y2="8" stroke="var(--trail)" stroke-width="4.5"/></svg></span>
+      <span class="txt"><b>Solid trail</b><span>= the recipe lineage that was kept: 1 → 2 → 4 → 5.</span></span></div>
+    <div class="leg"><span class="sym"><svg width="34" height="18"><circle cx="12" cy="9" r="8" fill="var(--panel)" stroke="var(--trail-dk)" stroke-width="3"/></svg></span>
+      <span class="txt"><b>Camp (numbered)</b><span>= one experiment, placed at the score it reached.</span></span></div>
+    <div class="leg"><span class="sym"><svg width="34" height="16"><line x1="1" y1="8" x2="33" y2="8" stroke="var(--spur)" stroke-width="3" stroke-dasharray="6 6"/></svg></span>
+      <span class="txt"><b>Dashed downhill spur</b><span>= a direction explored and abandoned (it lost height).</span></span></div>
+    <div class="leg"><span class="sym"><svg width="34" height="18"><circle cx="12" cy="9" r="8" fill="var(--best)" stroke="var(--trail-dk)" stroke-width="3"/></svg></span>
+      <span class="txt"><b>High Camp (gold)</b><span>= the current best recipe (exp-05, 0.671).</span></span></div>
+    <div class="leg"><span class="sym"><svg width="34" height="16"><line x1="1" y1="8" x2="33" y2="8" stroke="var(--plan)" stroke-width="2.5" stroke-dasharray="3 7"/></svg></span>
+      <span class="txt"><b>Dashed uphill routes</b><span>= the three planned next experiments, not yet walked.</span></span></div>
+    <div class="leg"><span class="sym"><svg width="34" height="20"><ellipse cx="17" cy="10" rx="15" ry="8" fill="var(--panel)" stroke="var(--line)"/></svg></span>
+      <span class="txt"><b>Clouded summit</b><span>= the rare-tail ceiling — how high the deep-tail classes can actually go is unknown.</span></span></div>
+    <div class="leg"><span class="sym" style="color:var(--muted); font-size:0.8rem; padding-top:0;">▲▲</span>
+      <span class="txt"><b>Faded ridges behind</b><span>= scenery only, no meaning. Only the labelled trail and axis carry data.</span></span></div>
+  </div>
+
+  <!-- ================= READING SECTIONS ================= -->
+
+  <section>
+    <h2 class="sec">Reading the map in one glance</h2>
+    <p>Six experiments, March–June 2026, same seed and split and backbone unless
+      noted. The trail climbs when an idea helps and drops when it hurts. It rose
+      quickly off the trailhead, walked a nearly flat stretch, then reached its
+      highest point at Camp 5. Two side-trips led downhill and were abandoned. The
+      summit — good scores on the rarest species — stays in cloud. Note the scale
+      of the whole picture: the entire climb spans just <b>0.082 macro-F1</b>, and
+      seed-to-seed wobble on this setup is ≈ ±0.006, so small steps deserve
+      suspicion.</p>
+  </section>
+
+  <section>
+    <table>
+      <caption class="fnote" style="text-align:left; margin-bottom:6px;">The full ledger (validation macro-F1).</caption>
+      <thead><tr><th>#</th><th>Camp / recipe</th><th>Date</th><th class="n">macro-F1</th><th class="n">Δ vs baseline</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>01</td><td>baseline-clean</td><td>2026-03-08</td><td class="n">0.612</td><td class="n delta zero">—</td><td>floor</td></tr>
+        <tr><td>02</td><td>reverb-light-ir</td><td>2026-03-24</td><td class="n">0.641</td><td class="n delta up">+0.029</td><td>first win</td></tr>
+        <tr><td>03</td><td>pitchshift-timestretch</td><td>2026-04-11</td><td class="n">0.589</td><td class="n delta dn">−0.023</td><td>regression</td></tr>
+        <tr><td>04</td><td>noise-mix-snr</td><td>2026-04-29</td><td class="n">0.643</td><td class="n delta up">+0.031</td><td>null vs exp-02</td></tr>
+        <tr class="best"><td>05</td><td>stack-reverb-noise-specaug</td><td>2026-05-20</td><td class="n">0.671</td><td class="n delta up">+0.059</td><td>best</td></tr>
+        <tr><td>06</td><td>reverb-heavy-longrt60</td><td>2026-06-14</td><td class="n">0.663</td><td class="n delta up">+0.051</td><td>common-only</td></tr>
+      </tbody>
+    </table>
+    <p class="fnote">Δ vs exp-02 for exp-04 is only +0.002 — inside the ±0.006 seed noise, which is why it reads as a null result.</p>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="loc">Trailhead ·</span> the floor <span class="tag">exp-01</span></h2>
+    <p class="sub">Small CNN on log-mel spectrograms, no augmentation at all. LR 3e-4, batch 32, 60 epochs, cosine decay. 41 min.</p>
+    <p>Establishes where the climb starts: <b>0.612</b>. Trains cleanly but overfits
+      by about epoch 35; the common head is already near-saturated while the tail
+      classes carry almost all the error. The lesson that shapes everything after:
+      the problem is generalization on scarce classes, not model capacity.</p>
+  </section>
+
+  <div class="cols">
+    <section>
+      <h2 class="sec"><span class="loc">Camp 2 ·</span> the first ascent <span class="tag win">exp-02</span></h2>
+      <p class="sub">Add light impulse-response reverb (short measured rooms, RT60 ≈ 0.3–0.6 s), p=0.5. 47 min.</p>
+      <p>The first clear win: <b>0.641</b> (+0.029). The gain is broad but skews to
+        the mid and common tiers; the deep tail barely moves. Encouraging enough to
+        make light reverb the spine of every recipe that follows.</p>
+    </section>
+
+    <section>
+      <h2 class="sec"><span class="loc">The ravine ·</span> turned back <span class="tag bad">exp-03</span></h2>
+      <p class="sub">On top of Camp 2, add pitch-shift (±2 semitones) and time-stretch (0.9–1.1×). 58 min.</p>
+      <p>A regression, all the way down to <b>0.589</b> — <b>below the no-aug
+        baseline</b>. Warping pitch and tempo smears the fine formant and timing
+        cues the rare classes depend on, pushing synthetic examples across the very
+        decision boundaries the model needs to keep sharp; several deep-tail species
+        collapse toward zero recall. Common classes shrug it off, hiding the
+        asymmetric harm in the average. <span class="fnote">Honest caveat: only one
+        strength (±2 st) was tested — a gentler ±0.5 st might be neutral. The claim
+        is "at this strength it hurt the tail," not "pitch aug is useless." Dropped
+        from the pipeline.</span></p>
+    </section>
+  </div>
+
+  <div class="cols">
+    <section>
+      <h2 class="sec"><span class="loc">Camp 4 ·</span> the flat stretch <span class="tag flat">exp-04</span></h2>
+      <p class="sub">Drop pitch/stretch; add SNR-controlled background-noise mixing (wind, rain, chorus) at 5–20 dB, on top of Camp 2. 52 min.</p>
+      <p>Lands at <b>0.643</b> — just +0.002 over Camp 2, inside run-to-run noise.
+        A <b>null result</b>: noise mixing neither helps nor hurts on its own at this
+        scale. Kept in the pack anyway on the hunch that it would compose with
+        SpecAugment further up — a hunch Camp 5 vindicates.</p>
+    </section>
+
+    <section>
+      <h2 class="sec"><span class="loc">The spur ·</span> a step back down <span class="tag bad">exp-06</span></h2>
+      <p class="sub">From High Camp, push reverb hard — long RT60 (0.8–1.5 s), p=0.7, replacing the light setting. 1 h 18 min.</p>
+      <p>Lands at <b>0.663</b> — below the 0.671 of the light-reverb stack. Long
+        reverb tails wash short, quiet rare-class calls into the spectrogram's noise
+        floor, while long, loud common-class songs stay legible and even benefit.
+        Common up, rare down, small net loss. <span class="fnote">Caveat: this is a
+        per-tier read on validation, not a controlled per-class ablation — the
+        mechanism is inferred. Keep reverb light.</span></p>
+    </section>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="loc">High Camp ·</span> the current best recipe <span class="tag best">exp-05 · 0.671</span></h2>
+    <p class="sub">The full stack: light reverb + noise mixing + SpecAugment (2 freq / 2 time masks) + a mildly class-balanced sampler (0.5). 1 h 12 min.</p>
+    <p>The highest point reached: <b>0.671</b>, <b>+0.059 over the trailhead</b>. The
+      components <em>compose</em> — noise mixing that was null alone becomes useful
+      once SpecAugment is present, and the partial balanced sampler recovers a little
+      tail recall. But a decomposition shows ~4.5 of those 5.9 points come from the
+      common and mid tiers. <b>The view from up here is the real story: the climb
+      lifted the well-trodden lower slopes, and the summit ridge barely moved.</b></p>
+
+    <table>
+      <caption class="fnote" style="text-align:left; margin-bottom:6px;">Per-species F1, trailhead (exp-01) → High Camp (exp-05).</caption>
+      <thead><tr><th>Species</th><th>Tier</th><th class="n">Clips</th><th class="n">exp-01</th><th class="n">exp-05</th><th class="n">Δ</th></tr></thead>
+      <tbody>
+        <tr><td>American Robin</td><td>common</td><td class="n">480</td><td class="n">0.79</td><td class="n">0.85</td><td class="n delta up">+0.06</td></tr>
+        <tr><td>Northern Cardinal</td><td>common</td><td class="n">421</td><td class="n">0.76</td><td class="n">0.83</td><td class="n delta up">+0.07</td></tr>
+        <tr><td>Song Sparrow</td><td>mid</td><td class="n">308</td><td class="n">0.68</td><td class="n">0.74</td><td class="n delta up">+0.06</td></tr>
+        <tr><td>Wood Thrush</td><td>rare</td><td class="n">92</td><td class="n">0.51</td><td class="n">0.54</td><td class="n delta up">+0.03</td></tr>
+        <tr><td>Kirtland's Warbler</td><td>deep tail</td><td class="n">41</td><td class="n">0.34</td><td class="n">0.33</td><td class="n delta dn">−0.01</td></tr>
+      </tbody>
+    </table>
+    <p class="fnote">The shape of the table <em>is</em> the result: +6–7 points to the head,
+      a few to the mid, almost nothing to the rare tail, and a slight <em>regression</em> on
+      the single deepest-tail class. Global augmentation has run out of road exactly where
+      help is needed most.</p>
+
+    <div class="card">
+      <p style="margin:0 0 6px"><b>The recipe at High Camp</b> — nothing expensive; the augmentations add well under a minute of wall-clock over the clean baseline.</p>
+      <table style="margin:0">
+        <tbody>
+          <tr><td>backbone</td><td>small_cnn (unchanged control across all experiments)</td></tr>
+          <tr><td>input</td><td>log-mel, 128 mels, 25 ms / 10 ms</td></tr>
+          <tr><td>train</td><td>lr 3e-4, batch 32, 60 epochs, cosine</td></tr>
+          <tr><td>sampler</td><td>class_balanced 0.5 (partial reweight toward the tail)</td></tr>
+          <tr><td>reverb_ir</td><td>p 0.5, rt60 [0.3, 0.6] — light, measured IRs</td></tr>
+          <tr><td>noise_mix</td><td>snr_db [5, 20]; beds: wind, rain, chorus</td></tr>
+          <tr><td>specaugment</td><td>2 freq masks, 2 time masks</td></tr>
+          <tr><td>OFF</td><td>pitch_shift / time_stretch (regressed, exp-03) · heavy reverb (common-only, exp-06)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="loc">The clouded summit ·</span> what we can't yet see</h2>
+    <p>Height still to be gained sits mostly on the rarest species, and it's honestly
+      unknown how much is reachable. The open questions the map can't answer:</p>
+    <ul>
+      <li><b>Is the tail even learnable from 41 clips?</b> The ceiling is unknown — it needs a small oracle study varying clips-per-class to separate "augmentation can't help the tail" from "nothing can, at this n."</li>
+      <li><b>Does noise-mix only help <em>through</em> SpecAugment?</b> exp-04 vs exp-05 hints at composition, but that's one comparison; it wants a proper 2×2 ablation.</li>
+      <li><b>How much of Camp 5's gain is the balanced sampler vs the augmentations?</b> Confounded — the sampler arrived in the same run.</li>
+      <li><b>Does the efficiency claim (H2) survive a fair backbone baseline?</b> The "bigger / pretrained backbone" arm has never actually been run. Until it is, H2 is asserted, not shown.</li>
+      <li><b>Do measured IRs generalize to unseen environments?</b> All impulse responses come from one small room library; field conditions may differ.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="loc">Routes planned from High Camp</span></h2>
+    <p class="sub">The three next experiments — the dashed uphill lines on the map.</p>
+    <ol class="routes">
+      <li><b>class-conditional-aug</b> — stop augmenting globally. Apply each transform only in the tiers where the ledger shows it helps: light reverb everywhere, but pitch/stretch and heavy reverb <em>excluded</em> from the rare and deep-tail classes. The direct test of the "condition on class" thesis. Est. ~1 h.</li>
+      <li><b>sampler-vs-aug-ablation</b> — a clean 2×2, (balanced sampler on/off) × (aug stack on/off), to de-confound Camp 5. ~4 runs × ~50 min.</li>
+      <li><b>backbone-fairness-arm</b> — finally run the architecture control: a larger / AudioSet-pretrained backbone with <em>no</em> augmentation, matched compute, to see whether the +5.9 augmentation points beat what a bigger model buys. Settles H2. The heaviest run on the docket, est. up to ~6 h, overnight in a worktree.</li>
+    </ol>
+  </section>
+
+  <section class="breaks">
+    <h2 class="sec">Where this map lies</h2>
+    <p style="margin:0">A mountain has <b>one</b> elevation, but macro-F1 is an average
+      over 34 very differently-placed species. Drawing the route as a single line
+      hides that the common head is already far up the slope while the rare tail
+      never left base camp — the same "height" is stitched from wildly unequal
+      climbs. And on a real mountain higher is simply harder; here the relationship
+      between augmentation strength and score is <b>non-monotone and class-dependent</b>
+      (more reverb helped the head and hurt the tail). Treat the trail as a story of
+      one number over time, not as terrain you could actually stand on.</p>
+  </section>
+
+  <section class="verdict">
+    <p style="margin:0"><b>The verdict.</b> murmur's core bet is <b>partially
+      supported</b>. Cheap reverb-flavoured augmentation does lift a small bird-call
+      classifier — +5.9 validation macro-F1 points, 0.612 → 0.671, at negligible
+      extra compute — but the gain is concentrated in the common and mid classes and
+      barely reaches the rare tail, and not every member of the family helps
+      (pitch/stretch regressed, heavy reverb helped only the head). The efficiency
+      half of the hypothesis (H2) is still asserted, not shown, because the fair
+      bigger-backbone comparison hasn't been run. The clear next step is to stop
+      augmenting globally and start augmenting <b>per class</b> — protect the tail
+      from the transforms that smear it while keeping the head's gains.
+      <span class="fnote">All figures are validation macro-F1; the ~930-clip test split has not been touched during search.</span></p>
+  </section>
+
+  <footer>
+    research-project · visual-metaphor · v1 · generated 2026-07-01
+  </footer>
+
+</div>
+</body>
+</html>

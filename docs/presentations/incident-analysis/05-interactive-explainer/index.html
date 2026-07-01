@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INC-1194 — the June 24 outage, explained</title>
+<style>
+:root{
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --mut:#898781;
+  --line:#e1e0d9; --hairline:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#1baf7a; --s3:#eda100; --s4:#008300; --s5:#4a3aa7; --s6:#e34948;
+  --crit:#d03b3b; --serious:#ec835a; --goodtext:#006300; --good:#0ca30c;
+  --accent:#2a78d6; --tipbg:#0b0b0b; --tipink:#ffffff;
+  --crit-wash:rgba(208,59,59,.07); --serious-wash:rgba(236,131,90,.09); --good-wash:rgba(12,163,12,.08);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --mut:#898781;
+    --line:#2c2c2a; --hairline:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#199e70; --s3:#c98500; --s4:#008300; --s5:#9085e9; --s6:#e66767;
+    --crit:#d03b3b; --serious:#ec835a; --goodtext:#0ca30c;
+    --accent:#3987e5; --tipbg:#f0efec; --tipink:#0b0b0b;
+    --crit-wash:rgba(208,59,59,.14); --serious-wash:rgba(236,131,90,.13); --good-wash:rgba(12,163,12,.12);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--page); color:var(--ink);
+  font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-text-size-adjust:100%;
+}
+main{max-width:1060px; margin:0 auto; padding:28px 20px 12px}
+h1,h2,h3{line-height:1.2; margin:0 0 .4em}
+h1{font-size:clamp(26px,3.2vw,38px); letter-spacing:-.01em}
+h2{font-size:22px; margin-top:0}
+h3{font-size:17px}
+p{margin:.5em 0}
+small{color:var(--ink2)}
+section{margin:34px 0}
+.kicker{font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink2); margin-bottom:10px}
+.kicker b{color:var(--ink); font-weight:600}
+.lede{font-size:17.5px; color:var(--ink2); max-width:62em; margin:.2em 0 1em}
+.lede strong{color:var(--ink)}
+
+/* ---------- stat tiles ---------- */
+.stats{display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 20px}
+.stat{flex:1 1 150px; min-width:140px; background:var(--surface); border:1px solid var(--hairline);
+  border-radius:10px; padding:10px 14px}
+.stat .v{font-size:26px; font-weight:600}
+.stat .l{font-size:12.5px; color:var(--ink2); margin-top:2px}
+.stat .v.ok{color:var(--goodtext)}
+
+/* ---------- causal chain ---------- */
+.chain{display:flex; align-items:stretch; gap:8px; flex-wrap:wrap}
+.plus,.arrow{align-self:center; font-size:22px; color:var(--mut); font-weight:600; padding:0 2px; user-select:none}
+.cause{flex:1 1 200px; min-width:190px; text-align:left; background:var(--surface);
+  border:1px solid var(--hairline); border-left:4px solid var(--serious); border-radius:10px;
+  padding:12px 14px; cursor:pointer; color:inherit; font:inherit; line-height:1.45;
+  box-shadow:0 1px 2px rgba(0,0,0,.06); transition:box-shadow .15s, transform .15s, opacity .2s}
+.cause:hover{box-shadow:0 3px 10px rgba(0,0,0,.12); transform:translateY(-1px)}
+.cause:focus-visible,.tab:focus-visible,.gloss:focus-visible,a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.cause.trigger{border-left-color:var(--crit)}
+.cause .role{font-size:11px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:var(--serious)}
+.cause.trigger .role{color:var(--crit)}
+.cause h3{margin:.15em 0 .25em; font-size:16px}
+.cause p{font-size:13.5px; color:var(--ink2); margin:0}
+.cause .chev{float:right; color:var(--mut); transition:transform .15s}
+html.js .cause[aria-expanded="true"]{box-shadow:0 3px 10px rgba(0,0,0,.14)}
+html.js .cause[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.cause.off{opacity:.38}
+.cause.off h3{text-decoration:line-through}
+.outcome{flex:1 1 170px; min-width:160px; align-self:stretch; display:flex; flex-direction:column; justify-content:center;
+  border-radius:10px; padding:12px 14px; border:1px solid var(--crit); background:var(--crit-wash)}
+.outcome .role{font-size:11px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; color:var(--crit)}
+.outcome .t{font-weight:600; font-size:15.5px; margin-top:2px}
+.outcome.warn{border-color:var(--serious); background:var(--serious-wash)}
+.outcome.warn .role{color:var(--serious)}
+.outcome.good{border-color:var(--good); background:var(--good-wash)}
+.outcome.good .role{color:var(--goodtext)}
+.hint{font-size:13px; color:var(--mut); margin-top:8px}
+html:not(.js) .hint{display:none}
+.hint .key{border:1px solid var(--hairline); border-radius:4px; padding:0 5px; font-size:12px; background:var(--surface)}
+
+/* ---------- cause detail panels ---------- */
+.cause-detail{background:var(--surface); border:1px solid var(--hairline); border-radius:10px;
+  padding:16px 18px; margin-top:12px}
+html.js .cause-detail{display:none}
+html.js .cause-detail.open{display:block}
+.cause-detail h3{margin-top:0}
+.evidence{background:var(--page); border:1px solid var(--hairline); border-radius:8px; padding:10px 12px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; line-height:1.6;
+  overflow-x:auto; color:var(--ink2); margin:.6em 0}
+.evidence b{color:var(--ink)}
+.two-col{display:grid; grid-template-columns:1fr 1fr; gap:8px 20px}
+@media (max-width:700px){.two-col{grid-template-columns:1fr}}
+
+/* ---------- takeaway pills ---------- */
+.pills{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px}
+.pill{flex:1 1 260px; min-width:240px; background:var(--surface); border:1px solid var(--hairline);
+  border-radius:10px; padding:10px 14px; font-size:14px; color:var(--ink2)}
+.pill b{color:var(--ink)}
+.pill .n{font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--mut); display:block; margin-bottom:2px}
+
+/* ---------- toggles ---------- */
+.legs{display:grid; gap:10px; margin:14px 0}
+.leg{background:var(--surface); border:1px solid var(--hairline); border-radius:10px; padding:10px 14px}
+.leg-row{display:flex; align-items:center; gap:12px}
+.leg-row .name{flex:1; font-weight:600; font-size:15px}
+.leg-row .name small{display:block; font-weight:400; color:var(--ink2)}
+.switch{position:relative; display:inline-flex; align-items:center; cursor:pointer; flex:none}
+html:not(.js) .switch{display:none}
+.switch input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
+.switch .track{width:46px; height:26px; border-radius:13px; background:var(--crit); transition:background .15s; flex:none}
+.switch .thumb{position:absolute; top:3px; left:23px; width:20px; height:20px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.35); transition:left .15s}
+.switch input:not(:checked) ~ .track{background:var(--mut)}
+.switch input:not(:checked) ~ .thumb{left:3px}
+.switch input:focus-visible ~ .track{outline:2px solid var(--accent); outline-offset:2px}
+.switch .sw-label{font-size:12px; color:var(--ink2); margin-left:8px; width:64px}
+.leg .cf{font-size:14px; color:var(--ink2); margin:.5em 0 0}
+html.js .leg .cf{display:none}
+.readout{display:none}
+html.js .readout{display:block; border-radius:10px; padding:14px 16px; margin-top:12px;
+  border:1px solid var(--crit); background:var(--crit-wash)}
+html.js .readout.warn{border-color:var(--serious); background:var(--serious-wash)}
+html.js .readout.good{border-color:var(--good); background:var(--good-wash)}
+.readout .verdict{font-weight:700}
+.readout p{margin:.3em 0 0; color:var(--ink2)}
+
+/* ---------- tabs ---------- */
+.tabbar{display:none}
+html.js .tabbar{display:flex; flex-wrap:wrap; gap:6px; border-bottom:1px solid var(--line); padding-bottom:0; margin-bottom:16px}
+.tab{font:inherit; font-size:14.5px; color:var(--ink2); background:none; border:none; border-bottom:3px solid transparent;
+  padding:8px 12px 9px; cursor:pointer; border-radius:6px 6px 0 0}
+.tab:hover{background:var(--surface); color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink); font-weight:600; border-bottom-color:var(--accent)}
+.tabpanel{margin-top:6px}
+html.js .tabpanel{display:none}
+html.js .tabpanel.active{display:block}
+.tabpanel > h3:first-child{font-size:19px}
+html.js .tabpanel > h3:first-child{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
+/* ---------- time bar ---------- */
+.timebar{display:flex; gap:2px; height:22px; margin:14px 0 10px}
+.seg{position:relative; border-radius:4px; min-width:6px; cursor:default}
+.seg .inlbl{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:11.5px; font-weight:600; color:#fff; pointer-events:none}
+.legend{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; color:var(--ink2); margin-bottom:14px}
+.legend li{list-style:none; display:flex; align-items:center; gap:7px}
+.legend{padding:0; margin-top:0}
+.sw{width:11px; height:11px; border-radius:3px; flex:none}
+.c1{background:var(--s1)} .c2{background:var(--s2)} .c3{background:var(--s3)}
+.c4{background:var(--s4)} .c5{background:var(--s5)} .c6{background:var(--s6)}
+
+/* ---------- timeline list ---------- */
+.tl{margin:14px 0 0; padding:0}
+.tl li{list-style:none; display:flex; gap:12px; padding:5px 0; border-bottom:1px solid var(--line); font-size:14px}
+.tl li:last-child{border-bottom:none}
+.tl .t{flex:none; width:92px; font-variant-numeric:tabular-nums; color:var(--ink2); font-weight:600; font-size:13px; padding-top:1px}
+.tl .dot{flex:none; width:9px; height:9px; border-radius:50%; margin-top:6px}
+.tl .e{color:var(--ink2)}
+.tl .e b{color:var(--ink)}
+.tl li.mark .e{color:var(--ink)}
+
+/* ---------- cards / tables ---------- */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px; margin:14px 0}
+.card{background:var(--surface); border:1px solid var(--hairline); border-radius:10px; padding:12px 14px}
+.card h4{margin:0 0 .3em; font-size:14.5px}
+.card p{font-size:13.5px; color:var(--ink2); margin:0}
+.card .big{font-size:24px; font-weight:600; color:var(--ink)}
+.no,.yes{font-weight:700; font-size:12px; letter-spacing:.05em}
+.no{color:var(--crit)} .yes{color:var(--goodtext)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; margin:12px 0}
+th{text-align:left; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--mut); font-weight:600}
+th,td{padding:7px 10px 7px 0; border-bottom:1px solid var(--line); vertical-align:top}
+td.pri{font-weight:700; white-space:nowrap}
+tr.p0 td{background:var(--crit-wash)}
+tr.p0 td:first-child{border-radius:6px 0 0 6px} tr.p0 td:last-child{border-radius:0 6px 6px 0}
+.table-wrap{overflow-x:auto}
+.callout{border:1px solid var(--hairline); border-left:4px solid var(--good); background:var(--surface);
+  border-radius:10px; padding:12px 16px; margin:14px 0}
+.callout.neutral{border-left-color:var(--accent)}
+.notes{font-size:13px; color:var(--ink2); margin-top:10px}
+.notes li{margin:.25em 0}
+
+/* ---------- gloss tooltips ---------- */
+.gloss{border-bottom:1px dotted var(--mut); cursor:help; position:relative}
+.gloss:hover::after,.gloss:focus::after{
+  content:attr(data-tip); position:absolute; left:50%; transform:translateX(-50%);
+  bottom:calc(100% + 7px); background:var(--tipbg); color:var(--tipink);
+  padding:8px 11px; border-radius:7px; width:max-content; max-width:min(300px,78vw);
+  font-size:12.5px; line-height:1.5; font-weight:400; text-transform:none; letter-spacing:0;
+  z-index:40; box-shadow:0 4px 14px rgba(0,0,0,.25); white-space:normal}
+.seg.gloss{border-bottom:none}
+
+footer{max-width:1060px; margin:30px auto 0; padding:14px 20px 20px; border-top:1px solid var(--line);
+  font-size:11.5px; color:var(--mut)}
+
+@media (max-width:640px){
+  .chain{flex-direction:column}
+  .plus,.arrow{align-self:flex-start; padding-left:14px}
+  .arrow::before{content:"↓"} .arrow span{display:none}
+  .stat .v{font-size:22px}
+  .tl .t{width:76px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body data-palette="#2a78d6,#1baf7a,#eda100,#008300,#4a3aa7,#e34948">
+<script>document.documentElement.classList.add('js');</script>
+<main>
+
+<!-- ============ GLANCE ZONE ============ -->
+<header>
+  <p class="kicker"><b>INC-1194</b> · post-incident analysis · SEV-1 partial API outage · June 24, 2026, 14:02–18:19 UTC · blameless review — systems and tooling, not people</p>
+  <h1>Three failures had to align. On June 24, all three did.</h1>
+  <p class="lede">A rewritten search query triggered it — but two <strong>pre-existing, individually harmless</strong> weaknesses turned a one-endpoint slowdown into a platform-wide partial outage of ledgerline's invoicing API. Remove any one leg and June 24 is a degradation, not an outage.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="v">4 h 17 m</div><div class="l">outage duration (257 min)</div></div>
+    <div class="stat"><div class="v">31.2%</div><div class="l">peak API error rate, 15:47 (19.1% avg)</div></div>
+    <div class="stat"><div class="v">2,312</div><div class="l">customer orgs affected (24.4% of 9,480)</div></div>
+    <div class="stat"><div class="v">≈$41,300</div><div class="l">expected SLA credits (216 contracts)</div></div>
+    <div class="stat"><div class="v ok">Zero</div><div class="l">data lost — availability, not integrity</div></div>
+  </div>
+
+  <div class="chain" id="chain">
+    <button class="cause trigger" id="card-q" aria-expanded="false" aria-controls="detail-q">
+      <span class="chev">▸</span><span class="role">Trigger — 14:02 deploy</span>
+      <h3>Search query regression</h3>
+      <p>PR #8841 rewrote invoice search to a <span class="gloss" tabindex="0" data-tip="A pattern like '%…%'. A B-tree index matches from the start of a string; a wildcard first gives it nothing to anchor on, so the index can't be used at all.">leading-wildcard LIKE</span> that no index can serve. Every search: full scan of 274 M rows — 0.4 ms became 24–31 s.</p>
+    </button>
+    <span class="plus" aria-hidden="true">+</span>
+    <button class="cause" id="card-b" aria-expanded="false" aria-controls="detail-b">
+      <span class="chev">▸</span><span class="role">Amplifier — latent since Jun 22</span>
+      <h3>Autovacuum debt</h3>
+      <p>A backfill left 38.1 M <span class="gloss" tabindex="0" data-tip="In Postgres, an UPDATE writes a new row version and leaves the old one behind as a 'dead tuple'. A background process, autovacuum, reclaims them; until then the table is physically larger ('bloat').">dead tuples</span>; cleanup never triggered. The bloat pushed scans past the 30 s timeout — slow became <em>failing</em>.</p>
+    </button>
+    <span class="plus" aria-hidden="true">+</span>
+    <button class="cause" id="card-r" aria-expanded="false" aria-controls="detail-r">
+      <span class="chev">▸</span><span class="role">Amplifier — latent for months</span>
+      <h3>Jitterless retries → pool exhaustion</h3>
+      <p>Clients retried failures every 1 s in phase, multiplying traffic <b>4.7×</b> and pinning the shared 80-connection <span class="gloss" tabindex="0" data-tip="Requests don't open their own database connections; they borrow from a fixed pool of 80 managed by pgbouncer. When all are busy, new requests wait in a queue.">database pool</span> — taking down every endpoint behind it.</p>
+    </button>
+    <span class="arrow" aria-hidden="true"><span>→</span></span>
+    <div class="outcome" id="outcome">
+      <span class="role" id="outcome-role">Result</span>
+      <span class="t" id="outcome-text">4 h 17 m platform-wide partial outage</span>
+    </div>
+  </div>
+  <p class="hint">Click a cause card for the evidence <span class="key">Enter</span> · flip the switches in “Remove any one leg” below · dotted terms have plain-English definitions on hover.</p>
+
+  <div class="pills">
+    <div class="pill"><span class="n">Detection &amp; diagnosis</span><b>68 minutes</b> passed between the first alert (14:11) and the correct diagnosis (15:19) — 50 of them chasing a wrong <b>network theory</b>. Alerting watched error rate, not latency.</div>
+    <div class="pill"><span class="n">Mitigation</span><b>Rollback was impossible</b> — the release's migration had irreversibly dropped the old index (≈6 h to rebuild). A <b>feature flag</b>, not the deploy pipeline, stopped the bleeding at <b>17:05</b>.</div>
+    <div class="pill"><span class="n">Remediation</span><b>Three P0 fixes land in Q3 2026</b> — latency SLO alerts, pool-saturation alerting, and standardized retries with backoff + jitter — each aimed at a different leg of the failure.</div>
+  </div>
+</header>
+
+<!-- ============ CAUSE DETAILS ============ -->
+<section aria-label="Cause evidence">
+  <div class="cause-detail" id="detail-q" role="region" aria-label="Trigger: search query regression">
+    <h3>Trigger — the search query regression (deployed 14:02)</h3>
+    <div class="two-col">
+      <div>
+        <p><b>What changed.</b> PR #8841 upgraded invoice search from prefix matching (“starts with”) to contains matching (“anywhere in the number”) — a long-requested feature. Two things changed at once in the ORM layer:</p>
+        <p>• The pattern gained a leading wildcard: <code>LIKE $1 || '%'</code> became <code>LIKE '%' || $1 || '%'</code>. A B-tree index can serve a prefix (it's a range scan), but a leading wildcard gives it nothing to anchor on — Postgres cannot use the index at all.</p>
+        <p>• Org scoping moved out of the SQL into application-side post-filtering, so the query ran <b>unscoped across all organizations</b>. Results were identical after filtering — which is exactly why the change passed review and its behavioral tests.</p>
+        <p>The planner's only remaining option was a <span class="gloss" tabindex="0" data-tip="Read every row of the table, start to finish, for every query.">sequential scan</span> of the entire <code>invoices</code> table for every search.</p>
+      </div>
+      <div>
+        <p><b>Evidence — representative query plans:</b></p>
+        <div class="evidence">Before: <b>Index Only Scan</b> using idx_invoices_org_number (cost=0.56..8.44)<br>→ mean <b>0.4 ms</b>, p99 2.1 ms (the index <i>covered</i> the query — the table itself was never touched)<br><br>After: <b>Seq Scan</b> on invoices (cost=0.00..6,214,891)<br>Filter: invoice_number ~~ '%…%'<br>Rows Removed by Filter: 312,344,806<br>→ actual time <b>24,000–31,000 ms</b> per query<br>(274.2 M live rows + 38.1 M dead ≈ 213 GB of heap)</div>
+        <p><b>Why canary didn't catch it.</b> The canary's <code>invoices</code> table holds ~2 M rows; the same scan there takes ~180 ms — slow, but under every alert threshold. The regression is invisible until it meets production-scale data.</p>
+        <p><b>Two mercies</b> kept it from being worse: Postgres let concurrent scans share one pass over the table, and the heap was partially cached. Otherwise, scans would have taken minutes, not tens of seconds.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="cause-detail" id="detail-b" role="region" aria-label="Amplifier: autovacuum debt">
+    <h3>Amplifier 1 — autovacuum debt from the June 22 backfill</h3>
+    <div class="two-col">
+      <div>
+        <p><b>What happened.</b> Two days before the incident, a backfill populated the new <code>tax_region</code> column on 38.1 M historical invoices. In Postgres, each UPDATE leaves the old row version behind as a dead tuple — so that one job created <b>38.1 M dead tuples</b>, growing the table from 190 GB to 213 GB (+12%); 12.2% of all tuples were bloat.</p>
+        <p><b>Why cleanup never ran.</b> <span class="gloss" tabindex="0" data-tip="Postgres's background janitor: it reclaims dead tuples once they exceed a configured fraction (default 20%) of the table's live rows.">Autovacuum</span> triggers at 20% of live rows — on a 274.2 M-row table, that's ≈54.9 M dead tuples. The backfill's 38.1 M fell short, so autovacuum — correctly, by its configuration — did nothing. The default is sized for small tables; on very large ones it permits tens of gigabytes of bloat. Statistics were likewise never refreshed.</p>
+      </div>
+      <div>
+        <p><b>Why it mattered.</b> Alone, the bloat was harmless — index-backed queries skip dead tuples cheaply, and nothing scans this table in normal operation. But once every search became a full-table scan, each scan read 312.3 M tuples instead of 274.2 M — ~23 GB of extra heap. That pushed scan times from an estimated ~26 s (bloat-free) to the observed 24–31 s: <b>straddling the 30-second <span class="gloss" tabindex="0" data-tip="A server-side kill switch: any query running longer than 30 seconds is cancelled.">statement timeout</span></b>.</p>
+        <p>During the incident, <b>~57% of search queries were killed by the timeout</b>, surfacing to clients as 5xx errors. Bloat converted “slow” into “failing” — and a killed query still held its pooled connection for the full 30 seconds first.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="cause-detail" id="detail-r" role="region" aria-label="Amplifier: retry storm and pool exhaustion">
+    <h3>Amplifier 2 — pool exhaustion, multiplied by a retry storm</h3>
+    <div class="two-col">
+      <div>
+        <p><b>The arithmetic of exhaustion.</b> The <span class="gloss" tabindex="0" data-tip="A connection pooler that sits between the API and Postgres, lending out a fixed set of server connections.">pgbouncer</span> pool to the primary holds <b>80 connections</b>, shared by invoice reads, writes, PDF rendering, and webhook dispatch. Pre-incident, search used a negligible share (1.2 searches/s × 0.4 ms). After the deploy, each search held a connection for up to 30 s:</p>
+        <p>• 14:07–15:00 — organic search traffic alone (≈1.2/s × ~28 s) occupied ~34 of 80 connections: heavily degraded, but the pool held.</p>
+        <p>• Around 15:00 the day's largest cohort of hourly invoice-generation jobs landed, and retries multiplied search arrivals to ≈5.6/s — demand of ≈160+ concurrent connections against a pool of 80. <b>Saturation at 15:12.</b> From then on, <i>every</i> endpoint sharing the pool queued behind 30-second scans — invoice creation, PDF rendering, webhook dispatch. The blast radius stopped being “search”. The client wait queue peaked at <b>1,437</b> at 15:58.</p>
+      </div>
+      <div>
+        <p><b>The retry storm.</b> SDKs and internal clients retried 5xx responses on a <b>fixed 1-second interval, 3 attempts, no <span class="gloss" tabindex="0" data-tip="Randomness added to retry delays so clients don't all retry at the same instant. Without it, retry waves arrive in phase, like a crowd stomping in rhythm.">jitter</span>, no retry budget</b>. Under sustained failure that is traffic multiplication: gateway inbound rose from 3,200 rpm baseline to 15,020 rpm at peak — <b>4.7×</b> — with visible 1-second oscillation as retry waves arrived in phase. The retries queued on the same exhausted pool, so the extra load produced <b>zero extra successes</b>; it only kept the pool pinned for nearly two hours (15:12–17:18).</p>
+        <p><b>Why the pool bump backfired.</b> At 16:20 the pool was raised 80 → 200 as an experiment. That admitted more concurrent scans to the database, worsening I/O contention and write latency; it was reverted at 16:31. The pool size wasn't the problem — the 30-second connection holds were.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COUNTERFACTUAL TOGGLES ============ -->
+<section aria-label="Remove any one leg">
+  <h2>Remove any one leg — what would June 24 have looked like?</h2>
+  <p class="lede">The review's central finding: <strong>there is no single root cause.</strong> Each leg was necessary; only together were they sufficient. Flip a leg off to see the counterfactual — it's why the fix plan targets all three, not just the trigger.</p>
+
+  <div class="legs">
+    <div class="leg">
+      <div class="leg-row">
+        <span class="name">Query regression <small>the trigger — leading-wildcard, unscoped search</small></span>
+        <label class="switch"><input type="checkbox" id="leg-q" checked data-card="card-q"><span class="track"></span><span class="thumb"></span><span class="sw-label">present</span></label>
+      </div>
+      <p class="cf">Without the query change: <b>nothing happens at all.</b> The bloat and the retry behavior stay what they had been for months — latent, individually harmless risks.</p>
+    </div>
+    <div class="leg">
+      <div class="leg-row">
+        <span class="name">Autovacuum debt <small>amplifier — 38.1 M dead tuples from the Jun 22 backfill</small></span>
+        <label class="switch"><input type="checkbox" id="leg-b" checked data-card="card-b"><span class="track"></span><span class="thumb"></span><span class="sw-label">present</span></label>
+      </div>
+      <p class="cf">Without the bloat: scans come in around an estimated ~26 s — painfully slow but mostly <b>under</b> the 30 s timeout, so searches <b>succeed</b>. Retries stay rare, the pool holds at ≈34 of 80 connections: a one-endpoint degradation, not an outage.</p>
+    </div>
+    <div class="leg">
+      <div class="leg-row">
+        <span class="name">Jitterless retries <small>amplifier — fixed 1 s interval, 3 attempts, no budget</small></span>
+        <label class="switch"><input type="checkbox" id="leg-r" checked data-card="card-r"><span class="track"></span><span class="thumb"></span><span class="sw-label">present</span></label>
+      </div>
+      <p class="cf">Without the retry storm: demand stays near organic levels and the pool holds through the 15:00 spike of scheduled invoice jobs. Search suffers; the rest of the platform stands.</p>
+    </div>
+  </div>
+
+  <div class="readout" id="readout" aria-live="polite">
+    <span class="verdict" id="readout-verdict"></span>
+    <p id="readout-body"></p>
+  </div>
+</section>
+
+<!-- ============ DEEP DIVES ============ -->
+<section aria-label="Deep dives">
+  <h2>The response, minute by minute</h2>
+  <div class="tabbar" role="tablist" aria-label="Deep dives">
+    <button class="tab" role="tab" id="tab-1" aria-selected="true" aria-controls="panel-1">Where the time went</button>
+    <button class="tab" role="tab" id="tab-2" aria-selected="false" aria-controls="panel-2" tabindex="-1">The 68-minute detour</button>
+    <button class="tab" role="tab" id="tab-3" aria-selected="false" aria-controls="panel-3" tabindex="-1">Why rollback failed</button>
+    <button class="tab" role="tab" id="tab-4" aria-selected="false" aria-controls="panel-4" tabindex="-1">The fix plan</button>
+  </div>
+
+  <!-- ---- Tab 1: timeline ---- -->
+  <div class="tabpanel active" id="panel-1" role="tabpanel" aria-labelledby="tab-1">
+    <h3>Where the time went</h3>
+    <p>257 minutes on the incident clock, 14:02–18:19 UTC. The two widest bands are the story: a 50-minute detour on a wrong hypothesis, then 106 minutes finding a mitigation after rollback proved impossible. (Hover or focus a band for detail — durations derived from the incident timeline.)</p>
+    <div class="timebar" role="img" aria-label="How the 257 incident minutes were spent: silent regression 9, initial triage 9, network detour 50, re-diagnosis 9, finding a mitigation 106, recovery and stable close 74.">
+      <div class="seg gloss c1" style="flex:9" tabindex="0" data-tip="Silent regression — 14:02–14:11 (9 min). Search p99 exploded at 14:07, but no alert watched that signal."></div>
+      <div class="seg gloss c2" style="flex:9" tabindex="0" data-tip="Initial triage — 14:11–14:20 (9 min). 5xx alert fires; on-call acknowledges at 14:16 with errors at 4.1% and climbing."></div>
+      <div class="seg gloss c3" style="flex:50" tabindex="0" data-tip="Network detour — 14:20–15:10 (50 min). A coincident cloud-provider advisory anchors a network hypothesis; a zone failover at 14:38 changes nothing."><span class="inlbl">50 m</span></div>
+      <div class="seg gloss c4" style="flex:9" tabindex="0" data-tip="Re-diagnosis — 15:10–15:19 (9 min). Packet captures come back clean; the pool queue and pg_stat_activity point at the database."></div>
+      <div class="seg gloss c5" style="flex:106" tabindex="0" data-tip="Finding a mitigation — 15:19–17:05 (106 min). Rollback abandoned 15:40; pool bump backfires 16:20; staging verification 16:35; flag-off approved 17:03."><span class="inlbl">106 m</span></div>
+      <div class="seg gloss c6" style="flex:74" tabindex="0" data-tip="Recovery to stable close — 17:05–18:19 (74 min). Flag off, VACUUM, caches re-warm; SLOs met from 17:53; closed after 26 stable minutes."><span class="inlbl">74 m</span></div>
+    </div>
+    <ul class="legend">
+      <li><span class="sw c1"></span>Silent regression 14:02–14:11 · 9 m</li>
+      <li><span class="sw c2"></span>Initial triage 14:11–14:20 · 9 m</li>
+      <li><span class="sw c3"></span>Network detour 14:20–15:10 · 50 m</li>
+      <li><span class="sw c4"></span>Re-diagnosis 15:10–15:19 · 9 m</li>
+      <li><span class="sw c5"></span>Finding a mitigation 15:19–17:05 · 106 m</li>
+      <li><span class="sw c6"></span>Recovery &amp; close 17:05–18:19 · 74 m</li>
+    </ul>
+
+    <ul class="tl">
+      <li><span class="t">Jun 22 09:04</span><span class="dot c1" style="opacity:.35"></span><span class="e">Prologue: <code>tax_region</code> backfill begins — bulk UPDATE of 38.1 M historical rows in <code>invoices</code>.</span></li>
+      <li><span class="t">Jun 22 14:37</span><span class="dot c1" style="opacity:.35"></span><span class="e">Backfill completes. 38.1 M dead tuples; autovacuum threshold (≈54.9 M for this table) not crossed — no vacuum scheduled.</span></li>
+      <li class="mark"><span class="t">Jun 24 14:02</span><span class="dot c1"></span><span class="e"><b>Incident clock starts.</b> Release <code>2026-06-24.3</code> reaches 100%: PR #8841 + migration 0412. Canary was green.</span></li>
+      <li><span class="t">14:07</span><span class="dot c1"></span><span class="e">(Seen only in retrospect) search p99 jumps from 2.1 ms to &gt;20 s in trace data. No alert exists on this signal.</span></li>
+      <li class="mark"><span class="t">14:11</span><span class="dot c2"></span><span class="e"><b>First alert:</b> gateway 5xx rate crosses 2% / 5 min. On-call paged.</span></li>
+      <li><span class="t">14:16</span><span class="dot c2"></span><span class="e">On-call acknowledges. Error rate 4.1% and climbing; 504s across several endpoint groups, not just search.</span></li>
+      <li class="mark"><span class="t">14:20</span><span class="dot c3"></span><span class="e"><b>Misdiagnosis begins.</b> A 14:05 cloud-provider advisory (“elevated packet loss”) plus the timeout pattern anchor a network hypothesis.</span></li>
+      <li><span class="t">14:38</span><span class="dot c3"></span><span class="e">Gateway/NAT failover to the unaffected zone executed. No improvement.</span></li>
+      <li><span class="t">14:55</span><span class="dot c3"></span><span class="e">Status page: “Degraded performance — invoicing API” (updated every 30 min thereafter).</span></li>
+      <li><span class="t">15:10</span><span class="dot c4"></span><span class="e">Packet captures clean; provider confirms the zone was not impacted. Network theory ruled out — 50 minutes after it was adopted.</span></li>
+      <li><span class="t">15:12</span><span class="dot c4"></span><span class="e">(Retrospective) pgbouncer pool saturates: 80/80 connections busy; the client wait queue begins to grow.</span></li>
+      <li><span class="t">15:15</span><span class="dot c4"></span><span class="e">A responder notices the pgbouncer wait queue above 900 and climbing.</span></li>
+      <li class="mark"><span class="t">15:19</span><span class="dot c5"></span><span class="e"><b>Database identified as the bottleneck</b> — dozens of concurrent sequential scans from invoice search. 68 min after the first alert.</span></li>
+      <li><span class="t">15:40</span><span class="dot c5"></span><span class="e">Rollback attempted — and abandoned: migration 0412 dropped the index the old query needs (≈6 h to recreate).</span></li>
+      <li><span class="t">15:47</span><span class="dot c5"></span><span class="e"><b>Peak:</b> 31.2% error rate; gateway inbound 15,020 rpm vs 3,200 baseline (4.7×) as retry waves compound.</span></li>
+      <li><span class="t">16:05</span><span class="dot c5"></span><span class="e"><code>CREATE INDEX CONCURRENTLY</code> started as insurance (completes 21:48, after close). Flag-off chosen as primary path.</span></li>
+      <li><span class="t">16:12</span><span class="dot c5"></span><span class="e">Retry storm quantified: fixed 1 s interval, 3 attempts, no jitter, no budget — 4.7× request multiplication.</span></li>
+      <li><span class="t">16:20</span><span class="dot c5"></span><span class="e">Emergency pool bump 80 → 200 tried; write latency worsens. Reverted 16:31.</span></li>
+      <li><span class="t">16:35</span><span class="dot c5"></span><span class="e">Staging verifies the exact-match search fallback uses the untouched unique index, not the dropped one.</span></li>
+      <li class="mark"><span class="t">17:05</span><span class="dot c6"></span><span class="e"><b>Mitigation:</b> feature flag <code>invoice_search_contains</code> → 0% (approved 17:03). Search falls back to exact match; errors fall immediately.</span></li>
+      <li><span class="t">17:12</span><span class="dot c6"></span><span class="e">Manual <code>VACUUM (ANALYZE)</code> starts, cost limits disabled. Errors &lt; 3% by 17:15; wait queue drained by 17:18.</span></li>
+      <li><span class="t">17:50</span><span class="dot c6"></span><span class="e">VACUUM completes: 38.1 M dead tuples removed, statistics refreshed.</span></li>
+      <li><span class="t">17:53</span><span class="dot c6"></span><span class="e">All endpoint groups back within SLO (p99 &lt; 1 s, error rate &lt; 0.5%).</span></li>
+      <li class="mark"><span class="t">18:19</span><span class="dot c6"></span><span class="e"><b>Incident closed</b> after 26 minutes of stable, in-SLO metrics. Total: 4 h 17 m.</span></li>
+    </ul>
+
+    <ul class="notes">
+      <li>≈362,000 of ≈1.9 M requests in the window failed. Latency on affected endpoint groups, <i>completed requests only</i>: p50 85 ms → 2.9 s; <span class="gloss" tabindex="0" data-tip="p99 = the 99th-percentile latency: 99% of requests were faster than this.">p99</span> 420 ms → 28.4 s. Requests that hit the 30 s gateway timeout count as errors, not in these percentiles.</li>
+      <li>“Affected” = an organization saw at least one failed API request or dashboard action. Endpoints on read replicas (reporting) and the separately pooled auth service stayed healthy — which is why the platform-wide error rate peaked at 31.2% rather than higher.</li>
+      <li>Invoice writes were never lost (they ride a durable queue); 37,400 webhook deliveries queued during the outage were all replayed by 19:05 with zero drops.</li>
+    </ul>
+  </div>
+
+  <!-- ---- Tab 2: detour ---- -->
+  <div class="tabpanel" id="panel-2" role="tabpanel" aria-labelledby="tab-2">
+    <h3>The 68-minute detour</h3>
+    <p><b>68 minutes</b> elapsed between the first alert (14:11) and the correct diagnosis (15:19) — <b>50 of them (14:20–15:10) actively pursuing a network hypothesis.</b> Detection and diagnosis lag cost more minutes than any technical failure that day. Four systemic gaps, no individual errors:</p>
+    <div class="cards">
+      <div class="card"><h4>Alerts watched error rate, not latency</h4><p>The only firing signal was “gateway 5xx &gt; 2% over 5 min”. Search p99 exploded at 14:07 — four minutes before that alert — but no latency SLO alert existed for the invoicing endpoint group (checkout had one; invoicing did not).</p></div>
+      <div class="card"><h4>Dashboards sampled 1 in 100 requests</h4><p>At 1.2 searches/s, that's ~0.7 samples per minute — the search-latency panel looked like sparse noise, not a cliff, exactly when it mattered.</p></div>
+      <div class="card"><h4>The deploy marker was broken</h4><p>The dashboard integration that annotates deploys had been broken since June 10 (a known ticket). The 14:02 deploy was invisible on every graph responders looked at — removing the single strongest hint.</p></div>
+      <div class="card"><h4>A plausible distractor arrived on cue</h4><p>The cloud provider's 14:05 packet-loss advisory, plus gateway 504s that <i>look</i> like network timeouts, anchored the team. Given the missing deploy marker, the network theory was the most reasonable available explanation.</p></div>
+    </div>
+    <p>In retrospect, <code>pg_stat_activity</code> would have shown rows of identical sequential scans as early as ~14:15. Nothing routed responders toward the database until the pool queue became impossible to miss at 15:15. The review's stance is blameless: the responders did the right things in the wrong order <b>because the system hid the right order</b> — with a working deploy marker and a latency alert, the 14:20 detour likely never happens. The fixes target the instruments, not the people who flew with them.</p>
+  </div>
+
+  <!-- ---- Tab 3: rollback ---- -->
+  <div class="tabpanel" id="panel-3" role="tabpanel" aria-labelledby="tab-3">
+    <h3>Why rollback failed — and what worked instead</h3>
+    <p>Release <code>2026-06-24.3</code> bundled migration 0412, which <b>dropped</b> <code>idx_invoices_org_number</code> — the <span class="gloss" tabindex="0" data-tip="An index that contains every column a query needs, so the query can be answered from the index alone without touching the table.">covering index</span> the <i>old</i> query depended on. The rationale was reasonable at review time: the new query no longer used it, and it cost 31 GB plus write overhead. In practice, that made the deploy irreversible:</p>
+    <div class="cards">
+      <div class="card"><h4><span class="no">✕ Code rollback</span></h4><p>Restores the old prefix query — which now also has no index, and would seq-scan just the same. Abandoned 15:40.</p></div>
+      <div class="card"><h4><span class="no">✕ Rebuild the index</span></h4><p>≈6 hours on 274 M rows. Started at 16:05 as insurance; finished 21:48 — well after incident close.</p></div>
+      <div class="card"><h4><span class="no">✕ Roll forward with a fix</span></h4><p>Estimated 50+ minutes of build and deploy under storm conditions, with its own risk.</p></div>
+      <div class="card"><h4><span class="no">✕ Bigger pool</span></h4><p>Tried 16:20 (80 → 200): more concurrent scans, worse I/O contention and write latency. Reverted 16:31.</p></div>
+      <div class="card"><h4><span class="yes">✓ Feature flag</span></h4><p>Contains-search had shipped behind <code>invoice_search_contains</code>. After staging verified (16:35) that the exact-match fallback used the untouched unique index, the flag went to 0% at <b>17:05</b>. Errors below 3% within ten minutes. The flip itself took <b>90 seconds</b> once approved.</p></div>
+    </div>
+    <p><b>The remaining recovery was cleanup.</b> A manual VACUUM (17:12–17:50) removed the 38.1 M dead tuples and refreshed statistics (disk space marked reusable, not returned — a <code>pg_repack</code> is scheduled separately), and buffer caches evicted by hours of 200-GB scans re-warmed. All SLOs were met from 17:53; the incident closed at 18:19. Search ran in degraded, exact-match-only mode until the index rebuild completed that evening; full contains search — with the fixed, org-scoped query — was re-enabled June 26.</p>
+    <div class="callout">
+      <h3>What went well</h3>
+      <p><b>Feature-flag discipline paid for itself.</b> Mitigation required no build, no deploy, no schema change. On June 24, flags — not the deploy pipeline — were the working safety net.</p>
+      <p><b>No data was lost.</b> Invoice writes ride a durable queue; all 37,400 delayed webhooks were delivered by 19:05, and no customer record was dropped or corrupted. The blast radius was availability, not integrity.</p>
+    </div>
+  </div>
+
+  <!-- ---- Tab 4: fixes ---- -->
+  <div class="tabpanel" id="panel-4" role="tabpanel" aria-labelledby="tab-4">
+    <h3>The fix plan</h3>
+    <p>Nine action items with named owners and dates — <b>three P0s landing in Q3 2026</b>, tracked weekly at the ops review, each targeting a different leg of the failure. Then three P1s and three P2s.</p>
+    <div class="cards">
+      <div class="card"><h4>P0 · See the trigger sooner</h4><p>Per-endpoint-group p99 latency SLO alerts (invoicing first) — alert on what customers feel, not only error rate. <i>Priya N. · Q3 2026</i></p></div>
+      <div class="card"><h4>P0 · Protect the shared pool</h4><p>pgbouncer saturation alerting (wait queue &gt; 50 for 2 min) plus a pool sizing/isolation review, so one endpoint can't starve everyone else. <i>Marcus T. · Q3 2026</i></p></div>
+      <div class="card"><h4>P0 · Defuse the retry storm</h4><p>Standardize retries in all SDKs and internal clients: exponential backoff, full jitter, retry budgets — turning clients from amplifiers into dampers. <i>Dana K. · Q3 2026</i></p></div>
+    </div>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Pri</th><th>Action</th><th>Owner</th><th>Target</th></tr></thead>
+      <tbody>
+        <tr class="p0"><td>1</td><td class="pri">P0</td><td>Per-endpoint-group p99 latency SLO alerts (invoicing first); alert on latency, not only error rate</td><td>Priya N. (Observability)</td><td>Q3 2026</td></tr>
+        <tr class="p0"><td>2</td><td class="pri">P0</td><td>pgbouncer saturation alerting (<code>cl_waiting</code> &gt; 50 for 2 min) + pool sizing/isolation review so one endpoint can't starve the shared pool</td><td>Marcus T. (Infrastructure)</td><td>Q3 2026</td></tr>
+        <tr class="p0"><td>3</td><td class="pri">P0</td><td>Standardize retries in all SDKs and internal clients: exponential backoff, full jitter, retry budgets</td><td>Dana K. (Platform)</td><td>Q3 2026</td></tr>
+        <tr><td>4</td><td class="pri">P1</td><td>Per-table autovacuum tuning for tables &gt; 50 M rows (scale factor 0.2 → 0.01) + dead-tuple/bloat monitoring with alerts</td><td>Yuki O. (Data Eng)</td><td>Q3 2026</td></tr>
+        <tr><td>5</td><td class="pri">P1</td><td>Migration reversibility policy: destructive migrations (index/column drops) ship at least one release <b>after</b> the code that stops using them — never bundled</td><td>Marcus T. (Infrastructure)</td><td>Q3 2026</td></tr>
+        <tr><td>6</td><td class="pri">P1</td><td>CI query-plan regression check: EXPLAIN hot queries against production-scale statistics; block plans that flip to sequential scan</td><td>Alé G. (Billing Experience)</td><td>Q4 2026</td></tr>
+        <tr><td>7</td><td class="pri">P2</td><td>Production-scale query replay in canary (shadow traffic against a full-size dataset) so data-dependent regressions surface pre-deploy</td><td>Yuki O. (Data Eng)</td><td>Q4 2026</td></tr>
+        <tr><td>8</td><td class="pri">P2</td><td>Fix deploy markers on dashboards (broken since June 10); raise latency-panel sampling 1/100 → 1/10 on tier-1 endpoints</td><td>Priya N. (Observability)</td><td>Q3 2026</td></tr>
+        <tr><td>9</td><td class="pri">P2</td><td>IC-guild training: hypothesis board + an explicit deploy-correlation step in the first 15 minutes, to counter anchoring</td><td>Rotimi O. (IC guild)</td><td>Q4 2026</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="callout neutral">
+      <h3>The lessons behind the plan</h3>
+      <ul class="notes">
+        <li><b>Latent conditions are part of the system.</b> The bloat and the retry configuration were known-shaped risks, individually harmless for months. Outages of this class are conjunctions — reviews that stop at the trigger fix one third of the problem.</li>
+        <li><b>Alert on what the customer feels.</b> Customers felt latency at 14:07; the first signal was an error-rate threshold at 14:11, and the dashboards couldn't show the latency cliff at all.</li>
+        <li><b>Treat irreversible changes as a category.</b> The engineers who bundled migration 0412 followed existing norms; the norms were wrong. Schema changes that foreclose rollback need their own release policy, not more reviewer vigilance.</li>
+        <li><b>Retries without jitter are a denial-of-service you ship to yourself.</b> A 4.7× traffic multiplier during failure is the worst possible time to add load.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer>incident-analysis · interactive-explainer · v1 · 2026-07-01</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ----- cause cards: click to expand evidence ----- */
+  var cards = ["q", "b", "r"].map(function (k) {
+    return { card: document.getElementById("card-" + k), panel: document.getElementById("detail-" + k) };
+  });
+  function setCause(open) {
+    cards.forEach(function (c) {
+      var on = c === open;
+      c.card.setAttribute("aria-expanded", on ? "true" : "false");
+      c.panel.classList.toggle("open", on);
+    });
+    if (open) open.panel.scrollIntoView({ block: "nearest" });
+  }
+  cards.forEach(function (c) {
+    c.card.addEventListener("click", function () {
+      setCause(c.card.getAttribute("aria-expanded") === "true" ? null : c);
+    });
+  });
+
+  /* ----- counterfactual toggles ----- */
+  var legQ = document.getElementById("leg-q"),
+      legB = document.getElementById("leg-b"),
+      legR = document.getElementById("leg-r");
+  var outcome = document.getElementById("outcome"),
+      outcomeText = document.getElementById("outcome-text"),
+      readout = document.getElementById("readout"),
+      verdictEl = document.getElementById("readout-verdict"),
+      bodyEl = document.getElementById("readout-body");
+
+  function verdict(q, b, r) {
+    if (!q) return { cls: "good", title: "No incident at all", chip: "Nothing happens",
+      body: "Without the query change, nothing happens. The bloat and the retry behavior stay what they had been for months — latent, individually harmless risks." };
+    if (q && b && r) return { cls: "", title: "What actually happened: a 4 h 17 m platform-wide partial outage", chip: "4 h 17 m platform-wide partial outage",
+      body: "Peak 31.2% error rate, 2,312 organizations affected, ≈$41,300 in SLA credits. All three legs present — remove any one and the story below changes." };
+    if (!b && !r) return { cls: "warn", title: "A slow-search degradation, at most", chip: "One-endpoint degradation",
+      body: "Slow searches on one endpoint, few failures, no traffic multiplication, and a pool with headroom. The June 24 outage needed all three legs." };
+    if (!b) return { cls: "warn", title: "A one-endpoint degradation — not an outage", chip: "One-endpoint degradation",
+      body: "Without the bloat, scans come in around an estimated ~26 s — painfully slow, but mostly under the 30 s timeout, so searches succeed. Retries stay rare and the pool holds at ≈34 of 80 connections." };
+    return { cls: "warn", title: "Search suffers; the platform stands", chip: "One-endpoint degradation",
+      body: "Without the retry storm, demand stays near organic levels and the pool holds through the 15:00 spike of scheduled invoice jobs. The failure stays contained to search." };
+  }
+  function updateLegs() {
+    var v = verdict(legQ.checked, legB.checked, legR.checked);
+    readout.className = "readout " + v.cls;
+    verdictEl.textContent = v.title;
+    bodyEl.textContent = v.body;
+    outcome.className = "outcome " + (v.cls || "");
+    outcomeText.textContent = v.chip;
+    document.getElementById("outcome-role").textContent = (legQ.checked && legB.checked && legR.checked) ? "Result" : "Counterfactual";
+    [legQ, legB, legR].forEach(function (input) {
+      var card = document.getElementById(input.getAttribute("data-card"));
+      card.classList.toggle("off", !input.checked);
+      input.parentNode.querySelector(".sw-label").textContent = input.checked ? "present" : "removed";
+    });
+  }
+  [legQ, legB, legR].forEach(function (i) { i.addEventListener("change", updateLegs); });
+  updateLegs();
+
+  /* ----- tabs ----- */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+  var panels = Array.prototype.slice.call(document.querySelectorAll(".tabpanel"));
+  function selectTab(tab, focus) {
+    tabs.forEach(function (t) {
+      var on = t === tab;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+    });
+    panels.forEach(function (p) {
+      p.classList.toggle("active", p.id === tab.getAttribute("aria-controls"));
+    });
+    if (focus) tab.focus();
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { selectTab(t, false); });
+    t.addEventListener("keydown", function (e) {
+      var j = null;
+      if (e.key === "ArrowRight") j = (i + 1) % tabs.length;
+      else if (e.key === "ArrowLeft") j = (i - 1 + tabs.length) % tabs.length;
+      else if (e.key === "Home") j = 0;
+      else if (e.key === "End") j = tabs.length - 1;
+      if (j !== null) { e.preventDefault(); selectTab(tabs[j], true); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

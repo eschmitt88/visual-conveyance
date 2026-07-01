@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>murmur — the state of the project</title>
+<style>
+  :root{
+    --bg:#0e1116; --bg2:#161b22; --fg:#e6edf3; --muted:#9aa7b4;
+    --line:#2b333d; --accent:#10b981; --win:#34d399; --best:#10b981;
+    --reg:#f87171; --null:#fbbf24; --base:#94a3b8; --heavy:#60a5fa;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f7f9fb; --bg2:#ffffff; --fg:#0f172a; --muted:#4b5563;
+      --line:#d7dee6; --accent:#0f9d63;
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; scroll-snap-type:y mandatory; overflow-x:hidden;
+  }
+  main{scroll-snap-type:y mandatory}
+  section.slide{
+    min-height:100vh; scroll-snap-align:start;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:64px 22px 80px; position:relative;
+  }
+  .wrap{max-width:860px; margin:0 auto; width:100%}
+  .kicker{
+    font-size:.78rem; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 12px; font-weight:600;
+  }
+  .slide-title{font-size:clamp(1.5rem,3.4vw,2.4rem); line-height:1.15; margin:0 0 20px; font-weight:700}
+  .caption{color:var(--muted); font-size:clamp(.95rem,1.6vw,1.08rem); max-width:60ch; margin:18px 0 0}
+  .statement{font-size:clamp(1.4rem,3vw,2rem); font-weight:600; line-height:1.3; margin:0}
+  .bignum{font-size:clamp(3.2rem,10vw,6rem); font-weight:800; line-height:1; letter-spacing:-.02em}
+  .bignum .delta{display:block; font-size:clamp(1rem,2.4vw,1.4rem); font-weight:600; margin-top:8px}
+  .good{color:var(--win)} .bad{color:var(--reg)} .flat{color:var(--null)} .blue{color:var(--heavy)}
+  .visual{margin:8px 0 4px}
+  svg{width:100%; height:auto; display:block}
+  .statgrid{display:flex; flex-wrap:wrap; gap:26px; margin:6px 0}
+  .statgrid .stat{min-width:120px}
+  .statgrid .stat b{display:block; font-size:clamp(2rem,5vw,3.2rem); font-weight:800; line-height:1}
+  .statgrid .stat span{color:var(--muted); font-size:.9rem}
+
+  /* cover */
+  .cover .slide-title{font-size:clamp(1.8rem,4.6vw,3.2rem); margin-bottom:24px}
+  .cover .lead{font-size:clamp(1.05rem,2.2vw,1.4rem); color:var(--fg); max-width:34ch; margin:0}
+  .metricline{margin:26px 0 0; font-size:clamp(1.1rem,2.6vw,1.6rem); font-weight:700}
+  .metricline .arrow{color:var(--muted); padding:0 .3em}
+  .cue{
+    position:absolute; left:0; right:0; bottom:26px; text-align:center;
+    color:var(--muted); font-size:.85rem;
+  }
+  .cue .chev{display:block; font-size:1.4rem; animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+
+  /* recap */
+  ul.takeaways{list-style:none; padding:0; margin:0}
+  ul.takeaways li{
+    padding:12px 0 12px 30px; border-top:1px solid var(--line); position:relative;
+    font-size:clamp(.95rem,1.7vw,1.08rem);
+  }
+  ul.takeaways li:before{content:"›"; position:absolute; left:4px; color:var(--accent); font-weight:800}
+  .deeper{margin-top:22px; color:var(--muted); font-size:.92rem}
+  .deeper a{color:var(--accent); text-decoration:none; border-bottom:1px dotted var(--accent)}
+  .nextthree{display:flex; flex-wrap:wrap; gap:10px; margin:16px 0 0}
+  .nextthree span{background:var(--bg2); border:1px solid var(--line); border-radius:20px; padding:6px 14px; font-size:.85rem}
+
+  /* progress rail */
+  .rail{position:fixed; top:50%; right:14px; transform:translateY(-50%); z-index:20;
+    display:flex; flex-direction:column; gap:12px; align-items:flex-end}
+  .rail a{position:relative; width:11px; height:11px; border-radius:50%; background:var(--line);
+    display:block; transition:background .2s,transform .2s}
+  .rail a:hover,.rail a.active{background:var(--accent); transform:scale(1.25)}
+  .rail a .lbl{position:absolute; right:20px; top:50%; transform:translateY(-50%);
+    white-space:nowrap; background:var(--bg2); color:var(--fg); border:1px solid var(--line);
+    padding:3px 9px; border-radius:6px; font-size:.75rem; opacity:0; pointer-events:none;
+    transition:opacity .15s}
+  .rail a:hover .lbl{opacity:1}
+  .progress{position:fixed; top:0; left:0; width:4px; height:100vh; background:transparent; z-index:20}
+  .progress-fill{width:100%; height:0; background:var(--accent); transition:height .25s}
+
+  footer{color:var(--muted); font-size:.72rem; margin-top:34px}
+  .legend{display:flex; flex-wrap:wrap; gap:14px; margin:10px 0 0; font-size:.8rem; color:var(--muted)}
+  .legend i{display:inline-block; width:11px; height:11px; border-radius:2px; margin-right:5px; vertical-align:baseline}
+  @media (max-width:600px){ .rail{display:none} }
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="progress-fill"></div></div>
+
+<nav class="rail" aria-label="slide navigation">
+  <a href="#s1" class="active"><span class="lbl">Headline</span></a>
+  <a href="#s2"><span class="lbl">The bet</span></a>
+  <a href="#s3"><span class="lbl">The data</span></a>
+  <a href="#s4"><span class="lbl">The trajectory</span></a>
+  <a href="#s5"><span class="lbl">First win</span></a>
+  <a href="#s6"><span class="lbl">The regression</span></a>
+  <a href="#s7"><span class="lbl">The null result</span></a>
+  <a href="#s8"><span class="lbl">Best recipe</span></a>
+  <a href="#s9"><span class="lbl">Heavy reverb</span></a>
+  <a href="#s10"><span class="lbl">The shape</span></a>
+  <a href="#s11"><span class="lbl">Verdict</span></a>
+  <a href="#s12"><span class="lbl">Recap &amp; next</span></a>
+</nav>
+
+<main>
+
+  <!-- 1 · COVER -->
+  <section class="slide cover" id="s1">
+    <div class="wrap">
+      <p class="kicker">murmur · state of the project · 2026-06-28</p>
+      <h1 class="slide-title">Cheap reverb augmentation works — but mostly for the birds that were already easy.</h1>
+      <p class="lead">A small bird-call classifier, moved only by near-free augmentation.</p>
+      <p class="metricline">
+        baseline <b>0.612</b><span class="arrow">→</span>best <b>0.671</b>
+        <span class="good">&nbsp;+5.9 macro-F1 pts</span>
+      </p>
+    </div>
+    <div class="cue">
+      scroll for the story · 12 slides
+      <span class="chev">⌄</span>
+    </div>
+  </section>
+
+  <!-- 2 · THE BET -->
+  <section class="slide" id="s2">
+    <div class="wrap">
+      <p class="kicker">2 · The bet</p>
+      <h2 class="slide-title">Data is scarce; compute is merely finite. Which do you spend on?</h2>
+      <p class="statement">Do ultra-cheap, natural-reverb-flavoured augmentations lift a small classifier more per unit of compute than reaching for a bigger model would?</p>
+      <p class="caption">The architecture is the control — a small CNN on log-mel spectrograms, held fixed. Only the augmentation pipeline moves.</p>
+    </div>
+  </section>
+
+  <!-- 3 · THE DATA -->
+  <section class="slide" id="s3">
+    <div class="wrap">
+      <p class="kicker">3 · The data, and the difficulty</p>
+      <h2 class="slide-title">A small, heavily long-tailed dataset</h2>
+      <div class="statgrid">
+        <div class="stat"><b>6,200</b><span>call-centred clips</span></div>
+        <div class="stat"><b>34</b><span>species (classes)</span></div>
+        <div class="stat"><b>5</b><span>species under 45 clips</span></div>
+      </div>
+      <p class="caption">The top class has 480 clips; the deep tail sits under 45. The primary metric is validation macro-F1 — it weights the rare tail equally with the common head. That gap is the point.</p>
+    </div>
+  </section>
+
+  <!-- 4 · THE TRAJECTORY -->
+  <section class="slide" id="s4">
+    <div class="wrap">
+      <p class="kicker">4 · Six experiments, one metric</p>
+      <h2 class="slide-title">The ledger, as a trajectory</h2>
+      <div class="visual">
+        <svg viewBox="0 0 640 360" role="img" aria-label="Validation macro-F1 across six experiments">
+          <!-- gridlines + y labels -->
+          <g stroke="var(--line)" stroke-width="1" fill="var(--muted)" font-size="12" font-family="sans-serif">
+            <line x1="60" y1="30"  x2="620" y2="30"/>  <text x="52" y="34"  text-anchor="end">0.68</text>
+            <line x1="60" y1="80"  x2="620" y2="80"/>  <text x="52" y="84"  text-anchor="end">0.66</text>
+            <line x1="60" y1="130" x2="620" y2="130"/> <text x="52" y="134" text-anchor="end">0.64</text>
+            <line x1="60" y1="180" x2="620" y2="180"/> <text x="52" y="184" text-anchor="end">0.62</text>
+            <line x1="60" y1="230" x2="620" y2="230"/> <text x="52" y="234" text-anchor="end">0.60</text>
+            <line x1="60" y1="280" x2="620" y2="280"/> <text x="52" y="284" text-anchor="end">0.58</text>
+          </g>
+          <!-- baseline reference -->
+          <line x1="60" y1="200" x2="620" y2="200" stroke="var(--base)" stroke-width="1.5" stroke-dasharray="5 5"/>
+          <text x="620" y="196" text-anchor="end" fill="var(--base)" font-size="11" font-family="sans-serif">baseline 0.612</text>
+          <!-- connecting line -->
+          <polyline points="60,200 172,127.5 284,257.5 396,122.5 508,52.5 620,72.5"
+                    fill="none" stroke="var(--muted)" stroke-width="2" opacity="0.55"/>
+          <!-- points -->
+          <g font-family="sans-serif">
+            <circle cx="60"  cy="200"   r="7" fill="var(--base)"/>
+            <circle cx="172" cy="127.5" r="7" fill="var(--win)"/>
+            <circle cx="284" cy="257.5" r="7" fill="var(--reg)"/>
+            <circle cx="396" cy="122.5" r="7" fill="var(--null)"/>
+            <circle cx="508" cy="52.5"  r="9" fill="var(--best)" stroke="var(--fg)" stroke-width="2"/>
+            <circle cx="620" cy="72.5"  r="7" fill="var(--heavy)"/>
+            <!-- value labels -->
+            <g font-size="12" font-weight="700" fill="var(--fg)" text-anchor="middle">
+              <text x="60"  y="188">0.612</text>
+              <text x="172" y="115">0.641</text>
+              <text x="284" y="277">0.589</text>
+              <text x="396" y="110">0.643</text>
+              <text x="508" y="40">0.671</text>
+              <text x="620" y="60">0.663</text>
+            </g>
+            <!-- exp labels -->
+            <g font-size="11" fill="var(--muted)" text-anchor="middle">
+              <text x="60"  y="308">01</text><text x="60"  y="322">clean</text>
+              <text x="172" y="308">02</text><text x="172" y="322">reverb</text>
+              <text x="284" y="308">03</text><text x="284" y="322">pitch</text>
+              <text x="396" y="308">04</text><text x="396" y="322">noise</text>
+              <text x="508" y="308">05</text><text x="508" y="322">stack</text>
+              <text x="620" y="308">06</text><text x="620" y="322">heavy</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--base)"></i>baseline</span>
+        <span><i style="background:var(--win)"></i>win</span>
+        <span><i style="background:var(--reg)"></i>regression</span>
+        <span><i style="background:var(--null)"></i>null</span>
+        <span><i style="background:var(--best)"></i>best</span>
+        <span><i style="background:var(--heavy)"></i>common-only</span>
+      </div>
+      <p class="caption">Validation macro-F1 across the ledger. One dip below baseline, one flat step, and a peak at exp-05. Seed-to-seed variability is ≈ ±0.006.</p>
+    </div>
+  </section>
+
+  <!-- 5 · FIRST WIN -->
+  <section class="slide" id="s5">
+    <div class="wrap">
+      <p class="kicker">5 · exp-02 · reverb-light-ir</p>
+      <h2 class="slide-title">First win: light reverb</h2>
+      <div class="bignum good">0.641<span class="delta good">+0.029 vs baseline</span></div>
+      <p class="caption">Convolve waveforms with short measured room impulse responses (RT60 ≈ 0.3–0.6 s). The gain is broad but skews to common and mid tiers — the deep tail barely moves. Enough to make reverb the spine of the pipeline.</p>
+    </div>
+  </section>
+
+  <!-- 6 · REGRESSION -->
+  <section class="slide" id="s6">
+    <div class="wrap">
+      <p class="kicker">6 · exp-03 · pitchshift-timestretch</p>
+      <h2 class="slide-title">The regression: pitch &amp; time stretch</h2>
+      <div class="bignum bad">0.589<span class="delta bad">−0.023 below the no-aug baseline</span></div>
+      <p class="caption">±2-semitone pitch-shift and 0.9–1.1× time-stretch smear the fine formant and timing cues rare classes depend on — several deep-tail species collapse toward zero recall. Common classes are unbothered, which hides the asymmetric harm.</p>
+    </div>
+  </section>
+
+  <!-- 7 · NULL -->
+  <section class="slide" id="s7">
+    <div class="wrap">
+      <p class="kicker">7 · exp-04 · noise-mix-snr</p>
+      <h2 class="slide-title">The null result: noise mixing</h2>
+      <div class="bignum flat">+0.002<span class="delta flat">vs reverb-only — inside run-to-run noise (±0.006)</span></div>
+      <p class="caption">SNR-controlled background beds (wind, rain, distant chorus) at 5–20 dB. On its own, neither helps nor hurts at this scale. Kept in the stack only on the hypothesis that it composes with SpecAugment.</p>
+    </div>
+  </section>
+
+  <!-- 8 · BEST -->
+  <section class="slide" id="s8">
+    <div class="wrap">
+      <p class="kicker">8 · exp-05 · stack-reverb-noise-specaug</p>
+      <h2 class="slide-title">The best recipe is a stack, not a single trick</h2>
+      <div class="bignum best">0.671<span class="delta good">+0.059 vs baseline · current best</span></div>
+      <p class="caption">Light reverb + noise mixing + SpecAugment + a partial class-balanced sampler. The components compose: noise mixing that was null alone becomes useful once SpecAugment is present. Yet ~4.5 of the 5.9 points still come from common and mid tiers.</p>
+    </div>
+  </section>
+
+  <!-- 9 · HEAVY REVERB -->
+  <section class="slide" id="s9">
+    <div class="wrap">
+      <p class="kicker">9 · exp-06 · reverb-heavy-longrt60</p>
+      <h2 class="slide-title">More reverb isn't more gain</h2>
+      <div class="bignum blue">0.663<span class="delta bad">−0.008 vs the light-reverb stack</span></div>
+      <p class="caption">Long-RT60, high-probability reverb helps common classes further — they have the data to absorb it — but washes short, quiet rare calls into the noise floor. The effect is class-dependent, not monotone in reverb strength.</p>
+    </div>
+  </section>
+
+  <!-- 10 · THE SHAPE -->
+  <section class="slide" id="s10">
+    <div class="wrap">
+      <p class="kicker">10 · Per-species F1: baseline vs best</p>
+      <h2 class="slide-title">The shape of the table is the result</h2>
+      <div class="visual">
+        <svg viewBox="0 0 640 340" role="img" aria-label="Per-species F1, baseline versus best recipe">
+          <!-- baseline axis -->
+          <line x1="40" y1="300" x2="620" y2="300" stroke="var(--line)" stroke-width="1"/>
+          <g font-family="sans-serif">
+            <!-- American Robin -->
+            <rect x="45"  y="94.6"  width="22" height="205.4" fill="var(--base)"/>
+            <rect x="73"  y="79"    width="22" height="221"   fill="var(--best)"/>
+            <text x="70"  y="70"  text-anchor="middle" font-size="11" font-weight="700" fill="var(--win)">+0.06</text>
+            <!-- Northern Cardinal -->
+            <rect x="160" y="102.4" width="22" height="197.6" fill="var(--base)"/>
+            <rect x="188" y="84.2"  width="22" height="215.8" fill="var(--best)"/>
+            <text x="185" y="75"  text-anchor="middle" font-size="11" font-weight="700" fill="var(--win)">+0.07</text>
+            <!-- Song Sparrow -->
+            <rect x="275" y="123.2" width="22" height="176.8" fill="var(--base)"/>
+            <rect x="303" y="107.6" width="22" height="192.4" fill="var(--best)"/>
+            <text x="300" y="98"  text-anchor="middle" font-size="11" font-weight="700" fill="var(--win)">+0.06</text>
+            <!-- Wood Thrush -->
+            <rect x="390" y="167.4" width="22" height="132.6" fill="var(--base)"/>
+            <rect x="418" y="159.6" width="22" height="140.4" fill="var(--best)"/>
+            <text x="415" y="150" text-anchor="middle" font-size="11" font-weight="700" fill="var(--null)">+0.03</text>
+            <!-- Kirtland's Warbler -->
+            <rect x="505" y="211.6" width="22" height="88.4"  fill="var(--base)"/>
+            <rect x="533" y="214.2" width="22" height="85.8"  fill="var(--best)"/>
+            <text x="530" y="202" text-anchor="middle" font-size="11" font-weight="700" fill="var(--reg)">−0.01</text>
+            <!-- x labels -->
+            <g font-size="11" fill="var(--muted)" text-anchor="middle">
+              <text x="70"  y="316">Am. Robin</text>   <text x="70"  y="330">480 · common</text>
+              <text x="185" y="316">N. Cardinal</text>  <text x="185" y="330">421 · common</text>
+              <text x="300" y="316">Song Sparrow</text> <text x="300" y="330">308 · mid</text>
+              <text x="415" y="316">Wood Thrush</text>  <text x="415" y="330">92 · rare</text>
+              <text x="530" y="316">Kirtland's W.</text><text x="530" y="330">41 · deep tail</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--base)"></i>exp-01 baseline F1</span>
+        <span><i style="background:var(--best)"></i>exp-05 best F1</span>
+      </div>
+      <p class="caption">6–7 points added to the head, a few to the mid, almost nothing to the rare tail — and a slight regression on the single deepest class. Global augmentation has run out of road where it's needed most.</p>
+    </div>
+  </section>
+
+  <!-- 11 · VERDICT -->
+  <section class="slide" id="s11">
+    <div class="wrap">
+      <p class="kicker">11 · Honest verdict</p>
+      <h2 class="slide-title">Partially supported — not cleanly confirmed.</h2>
+      <p class="statement">Cheap reverb augmentation does lift the classifier at negligible extra compute. But the gain skews to common classes, and the efficiency half of the bet (H2) is still <em>asserted, not shown</em>: the fair bigger-backbone arm has never been run.</p>
+    </div>
+  </section>
+
+  <!-- 12 · RECAP -->
+  <section class="slide" id="s12">
+    <div class="wrap">
+      <p class="kicker">12 · Recap &amp; what's next</p>
+      <h2 class="slide-title">The takeaways</h2>
+      <ul class="takeaways">
+        <li>Reverb augmentation lifts macro-F1 <b>0.612 → 0.671 (+5.9)</b> — but mostly on common species; the rare tail barely moves.</li>
+        <li>Not all of the family helps: pitch/time-stretch <b>regressed</b> to 0.589; noise-mix alone was a <b>null</b> (+0.002).</li>
+        <li>The best result is a <b>stack</b> — light reverb + noise + SpecAugment — not any single augmentation.</li>
+        <li>Heavy reverb helped the head only; the effect is class-dependent, not monotone.</li>
+        <li><b>Next move:</b> class-conditional augmentation — apply each transform only where the ledger shows it helps.</li>
+      </ul>
+      <div class="nextthree">
+        <span>next · class-conditional-aug (~1 h)</span>
+        <span>next · sampler-vs-aug 2×2 ablation</span>
+        <span>next · backbone fairness arm (~6 h, settles H2)</span>
+      </div>
+      <p class="deeper">Look deeper: the metric journey on
+        <a href="#s4">slide 4</a>, the per-species shape on
+        <a href="#s10">slide 10</a>, the verdict on
+        <a href="#s11">slide 11</a>.</p>
+      <footer>research-project · scrolly-slides · v1 · generated 2026-07-01</footer>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const secs = [...document.querySelectorAll('section.slide')];
+  const dots = [...document.querySelectorAll('.rail a')];
+  const fill = document.querySelector('.progress-fill');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        const i = secs.indexOf(e.target);
+        dots.forEach((d) => d.classList.remove('active'));
+        if (dots[i]) dots[i].classList.add('active');
+        fill.style.height = ((i + 1) / secs.length * 100) + '%';
+      }
+    });
+  }, { threshold: 0.55 });
+  secs.forEach((s) => io.observe(s));
+</script>
+</body>
+</html>

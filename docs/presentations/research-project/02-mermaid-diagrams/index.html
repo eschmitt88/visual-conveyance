@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>murmur — the state of the project, in diagrams</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --fg: #1c2128;
+    --muted: #55606e;
+    --card: #ffffff;
+    --line: #e2e6eb;
+    --accent: #2f6f4f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c;
+      --fg: #e8ecf1;
+      --muted: #a4adba;
+      --card: #1c2129;
+      --line: #2c333d;
+      --accent: #63c08c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 28px 20px 8px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 8px; }
+  h1 { font-size: 1.7rem; line-height: 1.2; margin: 0 0 8px; }
+  .framing { font-size: 1.05rem; color: var(--muted); margin: 0; max-width: 70ch; }
+  section { margin: 26px 0; }
+  h2 { font-size: 1.15rem; margin: 0 0 6px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 12px 8px;
+    overflow-x: auto;
+  }
+  .mermaid { display: flex; justify-content: center; }
+  .caption { font-size: 0.92rem; color: var(--muted); margin: 8px 4px 0; }
+  footer {
+    margin-top: 34px; padding: 14px 0 24px;
+    border-top: 1px solid var(--line);
+    font-size: 0.72rem; color: var(--muted);
+  }
+  @media (max-width: 480px) {
+    h1 { font-size: 1.35rem; }
+    .framing { font-size: 0.98rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>murmur — cheap augmentation vs a bigger model</h1>
+    <p class="framing">
+      murmur bets that near-free, natural-reverb-flavoured audio augmentations
+      beat reaching for a bigger model on small-data bird-call classification;
+      below are the ledger, the two failures, and the honest verdict.
+    </p>
+  </header>
+
+  <!-- OVERVIEW (glance zone) -->
+  <section>
+    <h2>The whole story</h2>
+    <div class="card">
+      <pre class="mermaid">
+flowchart LR
+    A["Small data, long-tailed"] -->|34 species| B["Bet: cheap reverb aug"]
+    B --> C["6 experiments"]
+    C --> D["Best: 0.612 to 0.671, +5.9"]
+    D --> E["Verdict: partially works"]
+    E --> F["Next: augment per class"]
+    class D best
+    class E verdict
+    classDef best fill:#2f6f4f,stroke:#1d4a34,color:#ffffff
+    classDef verdict fill:#f0d9a8,stroke:#c9a24b,color:#3a2f10
+      </pre>
+    </div>
+    <p class="caption">
+      The gain is real but modest and concentrated in common species; the
+      rare tail barely moves, which is why the next move is class-conditional.
+    </p>
+  </section>
+
+  <!-- TRAJECTORY -->
+  <section>
+    <h2>Metric trajectory (validation macro-F1)</h2>
+    <div class="card">
+      <pre class="mermaid">
+xychart-beta
+    title "Validation macro-F1 across experiments"
+    x-axis ["exp01", "exp02", "exp03", "exp04", "exp05", "exp06"]
+    y-axis "macro-F1" 0.55 --> 0.70
+    bar [0.612, 0.641, 0.589, 0.643, 0.671, 0.663]
+    line [0.612, 0.641, 0.589, 0.643, 0.671, 0.663]
+      </pre>
+    </div>
+    <p class="caption">
+      Baseline 0.612, first win at exp-02, the dip at exp-03 is the regression,
+      the flat step at exp-04 is null, and the peak 0.671 is exp-05 (the best).
+      Seed-to-seed noise is about &plusmn;0.006.
+    </p>
+  </section>
+
+  <!-- LEDGER -->
+  <section>
+    <h2>The ledger — what each run added</h2>
+    <div class="card">
+      <pre class="mermaid">
+flowchart TD
+    e1["exp-01 baseline no aug &middot; 0.612"] --> e2["exp-02 light reverb &middot; 0.641 win"]
+    e2 -->|dropped| e3["exp-03 pitch + stretch &middot; 0.589 regression"]
+    e2 --> e4["exp-04 noise mixing &middot; 0.643 null"]
+    e4 --> e5["exp-05 full stack &middot; 0.671 BEST"]
+    e5 --> e6["exp-06 heavy reverb &middot; 0.663 common-only"]
+    class e2 win
+    class e5 best
+    class e3 bad
+    class e4 null
+    class e6 mixed
+    classDef win fill:#d7eadd,stroke:#2f6f4f,color:#173324
+    classDef best fill:#2f6f4f,stroke:#1d4a34,color:#ffffff
+    classDef bad fill:#f3d2d2,stroke:#b23c3c,color:#4a1414
+    classDef null fill:#e6e9ee,stroke:#9aa4b0,color:#2a2f37
+    classDef mixed fill:#f0d9a8,stroke:#c9a24b,color:#3a2f10
+      </pre>
+    </div>
+    <p class="caption">
+      exp-03 (pitch/time warp) regressed below baseline by smearing rare-class
+      cues; exp-04's noise mixing was null alone but composed usefully inside
+      exp-05's stack (reverb + noise + SpecAugment + a partial balanced sampler).
+    </p>
+  </section>
+
+  <!-- PER-SPECIES -->
+  <section>
+    <h2>Where the gain lands (F1 by species)</h2>
+    <div class="card">
+      <pre class="mermaid">
+xychart-beta
+    title "Per-species F1: baseline (line) vs best (bars)"
+    x-axis ["Robin", "Cardinal", "Sparrow", "WoodThrush", "Kirtland"]
+    y-axis "F1" 0 --> 1
+    bar [0.85, 0.83, 0.74, 0.54, 0.33]
+    line [0.79, 0.76, 0.68, 0.51, 0.34]
+      </pre>
+    </div>
+    <p class="caption">
+      Bars are the best recipe, the line is the baseline: +6&ndash;7 points on the
+      common head, a few on the mid, +0.03 on the rare Wood Thrush, and a slight
+      regression on the deepest-tail Kirtland's Warbler (0.34 to 0.33).
+    </p>
+  </section>
+
+  <!-- NEXT -->
+  <section>
+    <h2>The next three experiments</h2>
+    <div class="card">
+      <pre class="mermaid">
+flowchart TD
+    best["Best recipe 0.671, plateaued on tail"] -->|help where it helps| n1["1. Class-conditional aug &middot; ~1h"]
+    best -->|de-confound exp-05| n2["2. Sampler vs aug 2x2 &middot; ~4 runs"]
+    best -->|settle H2| n3["3. Backbone fairness arm &middot; up to ~6h"]
+    class best best
+    classDef best fill:#2f6f4f,stroke:#1d4a34,color:#ffffff
+      </pre>
+    </div>
+    <p class="caption">
+      Efficiency claim H2 (aug beats a bigger model per unit compute) is still
+      asserted, not shown, until the backbone arm runs; the test split stays
+      untouched until the recipe is frozen.
+    </p>
+  </section>
+
+  <footer>
+    research-project &middot; mermaid-diagrams &middot; v1 &middot; generated 2026-07-01
+  </footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: dark ? 'dark' : 'neutral',
+    flowchart: { htmlLabels: true, curve: 'basis' }
+  });
+</script>
+</body>
+</html>

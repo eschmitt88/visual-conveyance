@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tessel — Pathways onboarding A/B: final readout</title>
+<style>
+:root{
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e;
+  --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --good:#0ca30c; --bad:#d03b3b; --good-ink:#006300; --bad-ink:#d03b3b;
+  --blue:#2a78d6; --band:#f0efec;
+  --wash-good:rgba(12,163,12,.10); --wash-bad:rgba(208,59,59,.10);
+  --wash-neut:rgba(11,11,11,.06); --wash-hover:rgba(42,120,214,.07);
+  --tipbg:#22221f; --tipink:#f5f5f2;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7;
+    --muted:#898781; --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --good:#0ca30c; --bad:#d03b3b; --good-ink:#0ca30c; --bad-ink:#e66767;
+    --blue:#3987e5; --band:#232322;
+    --wash-good:rgba(12,163,12,.16); --wash-bad:rgba(230,103,103,.14);
+    --wash-neut:rgba(255,255,255,.07); --wash-hover:rgba(57,135,229,.12);
+    --tipbg:#f0efec; --tipink:#141412;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--page); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.5;
+}
+.wrap{max-width:1160px; margin:0 auto; padding:20px 20px 8px}
+a{color:var(--blue)}
+b,strong{font-weight:650}
+
+/* ---------- header ---------- */
+.kicker{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 6px}
+h1{font-size:29px; line-height:1.15; margin:0 0 8px; letter-spacing:-.01em}
+.lede{max-width:66rem; color:var(--ink2); margin:0 0 16px; font-size:15.5px}
+.lede b{color:var(--ink)}
+h2{font-size:19px; margin:34px 0 10px}
+h3{font-size:15.5px; margin:0 0 8px}
+
+/* ---------- cards & tiles ---------- */
+.card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px}
+.tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px}
+.tile .lbl{font-size:12px; color:var(--ink2); margin-bottom:2px}
+.tile .val{font-size:30px; font-weight:650; line-height:1.1}
+.tile .val.g{color:var(--good-ink)} .tile .val.b{color:var(--bad-ink)} .tile .val.n{color:var(--ink2)}
+.tile .sub{font-size:11.5px; color:var(--muted); margin:3px 0 7px}
+.badge{display:inline-block; font-size:10px; font-weight:700; letter-spacing:.05em; padding:2.5px 9px; border-radius:999px}
+.badge.g{color:var(--good-ink); background:var(--wash-good)}
+.badge.b{color:var(--bad-ink); background:var(--wash-bad)}
+.badge.n{color:var(--ink2); background:var(--wash-neut)}
+
+/* ---------- hero grid ---------- */
+.hero{display:grid; grid-template-columns:1.45fr 1fr; gap:16px; align-items:start}
+.hero .col{display:grid; gap:16px}
+.cardhead{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px}
+.hint{display:none; font-size:11px; color:var(--muted); background:var(--wash-neut); border-radius:999px; padding:3px 10px; white-space:nowrap}
+.js .hint{display:inline-block}
+figure{margin:0}
+figcaption{font-size:12px; color:var(--muted); margin-top:8px; line-height:1.45}
+svg{display:block; width:100%; height:auto}
+
+/* switch (segmented, shown only with JS) */
+.switch{display:none; border:1px solid var(--border); background:var(--wash-neut); border-radius:999px; padding:2px; cursor:pointer; font:inherit; color:var(--ink2); gap:0}
+.js .switch{display:inline-flex}
+.switch .opt{font-size:12px; padding:4px 12px; border-radius:999px}
+.switch[aria-checked="false"] .opt:first-child,
+.switch[aria-checked="true"] .opt:last-child{background:var(--surface); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.switch:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+.js #figLate{display:none}
+.js #forestCard.late #figLate{display:block}
+.js #forestCard.late #figFull{display:none}
+
+/* ---------- SVG chart styles ---------- */
+.wh{stroke-width:2; stroke-linecap:round}
+.wh.g{stroke:var(--good)} .wh.b{stroke:var(--bad)} .wh.n{stroke:var(--muted)}
+.pt{stroke-width:2}
+.pt.g{fill:var(--good); stroke:var(--surface)}
+.pt.b{fill:var(--bad); stroke:var(--surface)}
+.pt.n{fill:var(--surface); stroke:var(--muted)}
+.zline{stroke:var(--axis); stroke-width:1.5}
+.gridl{stroke:var(--grid); stroke-width:1}
+.axisl{stroke:var(--axis); stroke-width:1}
+.t-name{font-size:13px; font-weight:600; fill:var(--ink)}
+.t-n{font-size:10.5px; fill:var(--muted)}
+.t-verdict{font-size:11px; font-weight:600}
+.v-g{fill:var(--good-ink)} .v-b{fill:var(--bad-ink)} .v-n{fill:var(--ink2)}
+.t-delta{font-size:12px; font-weight:650; fill:var(--ink)}
+.t-tick,.t-anno{font-size:11px; fill:var(--muted)}
+.bar{fill:var(--blue)}
+.bandr{fill:var(--band)}
+.hit{fill:transparent; cursor:help}
+.hit:hover,.hit:focus{fill:var(--wash-hover)}
+.hit:focus{outline:none}
+.hit:focus-visible{stroke:var(--blue); stroke-width:2}
+
+/* ---------- decision card ---------- */
+.callrow{display:flex; gap:12px; padding:10px 0; border-top:1px solid var(--grid); align-items:flex-start}
+.callrow:first-of-type{border-top:none; padding-top:4px}
+.chip{flex:0 0 92px; text-align:center; font-size:10.5px; font-weight:700; letter-spacing:.04em; padding:4px 6px; border-radius:8px; margin-top:2px}
+.chip.g{color:var(--good-ink); background:var(--wash-good)}
+.chip.b{color:var(--bad-ink); background:var(--wash-bad)}
+.chip.n{color:var(--ink2); background:var(--wash-neut)}
+.callrow p{margin:0; font-size:13.5px; color:var(--ink2)}
+.callrow b{color:var(--ink)}
+.callnote{font-size:12px; color:var(--muted); margin:8px 0 0; border-top:1px solid var(--grid); padding-top:8px}
+
+/* ---------- don't-say strip ---------- */
+.myths{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:16px}
+.myth{display:flex; gap:9px; font-size:12.5px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px}
+.myth .x{color:var(--bad-ink); font-weight:700; line-height:1.4}
+.myth b{display:block; color:var(--ink)}
+.myth span.why{color:var(--ink2)}
+
+/* ---------- tabs ---------- */
+.tabs{display:none; gap:6px; flex-wrap:wrap; margin-bottom:-1px; position:relative; z-index:1}
+.js .tabs{display:flex}
+.tab{font:inherit; font-size:13.5px; font-weight:600; color:var(--ink2); background:var(--wash-neut); border:1px solid var(--border); border-bottom:none; border-radius:10px 10px 0 0; padding:9px 16px; cursor:pointer}
+.tab[aria-selected="true"]{background:var(--surface); color:var(--ink)}
+.tab .td{font-weight:700}
+.tab .td.g{color:var(--good-ink)} .tab .td.b{color:var(--bad-ink)} .tab .td.n{color:var(--muted)}
+.tab:focus-visible{outline:2px solid var(--blue); outline-offset:-2px}
+.panel{border-radius:0 12px 12px 12px; margin-bottom:14px}
+.js .panel{margin-bottom:0}
+.js .panel > h3{display:none}
+.panel .pgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px 26px}
+.panel p{margin:6px 0; font-size:14px; color:var(--ink2)}
+.panel p b{color:var(--ink)}
+.panel .plabel{font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin:10px 0 2px}
+
+/* ---------- details / trust ---------- */
+details{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:0 18px; margin-bottom:10px}
+summary{cursor:pointer; font-weight:600; font-size:14.5px; padding:13px 0; list-style-position:outside}
+summary:focus-visible{outline:2px solid var(--blue); outline-offset:2px; border-radius:6px}
+details[open] summary{border-bottom:1px solid var(--grid)}
+details .body{padding:10px 0 14px; font-size:14px; color:var(--ink2)}
+details .body p{margin:6px 0}
+details .body b{color:var(--ink)}
+
+/* ---------- next steps ---------- */
+ol.steps{margin:8px 0 0; padding-left:22px; font-size:14px; color:var(--ink2)}
+ol.steps li{margin-bottom:8px}
+ol.steps b{color:var(--ink)}
+
+/* ---------- tables ---------- */
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:13px; margin:6px 0 4px}
+th,td{text-align:right; padding:6px 10px; border-bottom:1px solid var(--grid); white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--ink2)}
+th{color:var(--muted); font-size:11.5px; font-weight:600; letter-spacing:.03em}
+th:first-child,td:first-child{text-align:left; color:var(--ink)}
+td.g{color:var(--good-ink); font-weight:600} td.b{color:var(--bad-ink); font-weight:600}
+.tnote{font-size:11.5px; color:var(--muted); margin:4px 0 0}
+
+/* ---------- glossary terms & tooltip ---------- */
+.gl{border-bottom:1px dotted var(--muted); cursor:help}
+.gl:focus-visible{outline:2px solid var(--blue); outline-offset:1px; border-radius:2px}
+.tip{position:fixed; z-index:60; max-width:320px; background:var(--tipbg); color:var(--tipink);
+  font-size:12.5px; line-height:1.45; padding:8px 11px; border-radius:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.25); opacity:0; visibility:hidden; transition:opacity .12s; pointer-events:none}
+.tip.on{opacity:1; visibility:visible}
+.tip b{font-weight:700}
+
+/* ---------- footer ---------- */
+.ficnote{font-size:11.5px; color:var(--muted); margin-top:26px}
+footer{font-size:11px; color:var(--muted); border-top:1px solid var(--grid); margin-top:10px; padding:10px 0 4px}
+
+/* ---------- responsive ---------- */
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr}
+  .tiles{grid-template-columns:repeat(2,1fr)}
+  .myths{grid-template-columns:repeat(2,1fr)}
+  .panel .pgrid{grid-template-columns:1fr}
+  h1{font-size:24px}
+}
+@media (max-width:460px){
+  .wrap{padding:14px 12px 8px}
+  .tiles{gap:8px}
+  .tile .val{font-size:24px}
+  .myths{grid-template-columns:1fr}
+  .chip{flex-basis:78px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ================= header ================= -->
+<p class="kicker">tessel · growth experimentation · ONB-2026-014 · final readout, 2026-06-30</p>
+<h1>Pathways didn&rsquo;t win overall &mdash; it split.</h1>
+<p class="lede">
+Six weeks, 184,204 new signups randomized 50/50 between the current onboarding (A) and the redesigned
+&ldquo;Pathways&rdquo; flow (B); 13,249 trial starters analyzed. Blended trial-to-paid conversion moved
+11.4% &rarr; 12.2% &mdash; <b>+0.8 percentage points (pp), which is <em>not</em> statistically significant
+(p&nbsp;=&nbsp;0.16)</b>. The honest overall verdict is &ldquo;can&rsquo;t tell&rdquo;, and the blend hides the real story:
+a strong <b>mobile-web win</b> cancelling against a real <b>iOS loss</b>.
+The call: <b>ship mobile-web only, fix iOS, ship nothing else.</b>
+</p>
+
+<!-- ================= stat tiles ================= -->
+<div class="tiles">
+  <div class="card tile">
+    <div class="lbl">Overall (blended)</div>
+    <div class="val n">+0.8pp</div>
+    <div class="sub">11.4% &rarr; 12.2% &middot; <span class="gl" title="95% confidence interval — the range of true effects consistent with the data; if it crosses 0, no effect (or a small harm) can't be ruled out." data-tip="<b>95% confidence interval</b> — the range of true effects consistent with the data. If it crosses 0, &ldquo;no effect&rdquo; (or a small harm) can&rsquo;t be ruled out.">95% CI</span> [&minus;0.3, +1.9] &middot; p = 0.16</div>
+    <span class="badge n">NOT SIGNIFICANT &mdash; &ldquo;CAN&rsquo;T TELL&rdquo;</span>
+  </div>
+  <div class="card tile">
+    <div class="lbl">Mobile-web</div>
+    <div class="val g">+4.2pp</div>
+    <div class="sub">13.9% &rarr; 18.1% &middot; CI [+2.1, +6.3] &middot; p &lt; 0.0001</div>
+    <span class="badge g">SIGNIFICANT WIN &mdash; ~30% RELATIVE</span>
+  </div>
+  <div class="card tile">
+    <div class="lbl">iOS</div>
+    <div class="val b">&minus;1.9pp</div>
+    <div class="sub">11.6% &rarr; 9.7% &middot; CI [&minus;3.6, &minus;0.2] &middot; p = 0.027</div>
+    <span class="badge b">SIGNIFICANT LOSS &mdash; ~16% RELATIVE</span>
+  </div>
+  <div class="card tile">
+    <div class="lbl"><span class="gl" title="A metric watched to make sure the change doesn't quietly hurt something else. Here: 7-day retention, on all 184k randomized users." data-tip="<b>Guardrail</b> — a metric watched to make sure the change doesn&rsquo;t quietly hurt something else. Here: 7-day retention, measured on all 184k randomized users.">Guardrail</span>: 7-day retention</div>
+    <div class="val n">+0.2pp</div>
+    <div class="sub">31.2% &rarr; 31.4% &middot; CI [&minus;0.2, +0.6]</div>
+    <span class="badge n">FLAT &mdash; PASS</span>
+  </div>
+</div>
+
+<!-- ================= hero grid ================= -->
+<div class="hero">
+
+  <!-- forest plot card -->
+  <div class="card" id="forestCard">
+    <div class="cardhead">
+      <h3 style="margin:0">Effect on trial-to-paid conversion (B&nbsp;&minus;&nbsp;A)</h3>
+      <button id="winSwitch" class="switch" role="switch" aria-checked="false"
+              aria-label="Switch between the full 6-week run and the late window, weeks 4 to 6">
+        <span class="opt">Full run &middot; 6 weeks</span><span class="opt">Late window &middot; wks 4&ndash;6</span>
+      </button>
+      <span class="hint">hover &middot; tap &middot; Tab&nbsp;for exact numbers</span>
+    </div>
+
+    <figure id="figFull">
+      <svg viewBox="0 0 800 300" role="img" aria-label="Forest plot of conversion effects with 95% confidence intervals. Overall plus 0.8 points, not significant. Mobile-web plus 4.2, significant win. iOS minus 1.9, significant loss. Android plus 0.1, null.">
+        <text class="t-anno" x="426" y="18" text-anchor="end">&larr; current (A) better</text>
+        <text class="t-anno" x="452" y="18">Pathways (B) better &rarr;</text>
+        <line class="gridl" x1="272.9" y1="26" x2="272.9" y2="268"/>
+        <line class="gridl" x1="355.7" y1="26" x2="355.7" y2="268"/>
+        <line class="gridl" x1="521.4" y1="26" x2="521.4" y2="268"/>
+        <line class="gridl" x1="604.3" y1="26" x2="604.3" y2="268"/>
+        <line class="gridl" x1="687.1" y1="26" x2="687.1" y2="268"/>
+        <line class="zline" x1="438.6" y1="24" x2="438.6" y2="268"/>
+
+        <!-- Overall -->
+        <g>
+          <text class="t-name" x="8" y="46">Overall</text>
+          <text class="t-n" x="8" y="62">n 6,602 / 6,647</text>
+          <text class="t-verdict v-n" x="8" y="78">not significant &middot; p = 0.16</text>
+          <line class="wh n" x1="426.1" y1="56" x2="517.3" y2="56"/>
+          <line class="wh n" x1="426.1" y1="51" x2="426.1" y2="61"/>
+          <line class="wh n" x1="517.3" y1="51" x2="517.3" y2="61"/>
+          <circle class="pt n" cx="471.7" cy="56" r="5.5"/>
+          <text class="t-delta" x="471.7" y="42" text-anchor="middle">+0.8pp</text>
+          <rect class="hit" x="0" y="28" width="800" height="56" tabindex="0"
+            aria-label="Overall: A 11.4 percent to B 12.2 percent, plus 0.8 points, confidence interval minus 0.3 to plus 1.9, p 0.16, not significant"
+            data-tip="<b>Overall</b> &mdash; A 11.4% &rarr; B 12.2% &middot; &Delta; +0.8pp &middot; 95% CI [&minus;0.3, +1.9] &middot; p = 0.16 &middot; trial starts 6,602 / 6,647.<br>CI crosses zero: don&rsquo;t quote this as a win &mdash; or as &ldquo;no effect&rdquo;."/>
+        </g>
+        <!-- Mobile-web -->
+        <g>
+          <text class="t-name" x="8" y="108">Mobile-web</text>
+          <text class="t-n" x="8" y="124">n 2,341 / 2,367</text>
+          <text class="t-verdict v-g" x="8" y="140">significant win &middot; p &lt; 0.0001</text>
+          <line class="wh g" x1="525.6" y1="118" x2="699.6" y2="118"/>
+          <line class="wh g" x1="525.6" y1="113" x2="525.6" y2="123"/>
+          <line class="wh g" x1="699.6" y1="113" x2="699.6" y2="123"/>
+          <circle class="pt g" cx="612.6" cy="118" r="5.5"/>
+          <text class="t-delta" x="612.6" y="104" text-anchor="middle">+4.2pp</text>
+          <rect class="hit" x="0" y="90" width="800" height="56" tabindex="0"
+            aria-label="Mobile-web: 13.9 percent to 18.1 percent, plus 4.2 points, confidence interval plus 2.1 to plus 6.3, p below 0.0001, significant win"
+            data-tip="<b>Mobile-web</b> &mdash; 13.9% &rarr; 18.1% &middot; &Delta; +4.2pp &middot; CI [+2.1, +6.3] &middot; p &lt; 0.0001 &middot; n 2,341 / 2,367.<br>A ~30% relative lift; survives the multiple-comparison correction."/>
+        </g>
+        <!-- iOS -->
+        <g>
+          <text class="t-name" x="8" y="170">iOS</text>
+          <text class="t-n" x="8" y="186">n 2,528 / 2,541</text>
+          <text class="t-verdict v-b" x="8" y="202">significant loss &middot; p = 0.027</text>
+          <line class="wh b" x1="289.4" y1="180" x2="430.3" y2="180"/>
+          <line class="wh b" x1="289.4" y1="175" x2="289.4" y2="185"/>
+          <line class="wh b" x1="430.3" y1="175" x2="430.3" y2="185"/>
+          <circle class="pt b" cx="359.9" cy="180" r="5.5"/>
+          <text class="t-delta" x="359.9" y="166" text-anchor="middle">&minus;1.9pp</text>
+          <rect class="hit" x="0" y="152" width="800" height="56" tabindex="0"
+            aria-label="iOS: 11.6 percent down to 9.7 percent, minus 1.9 points, confidence interval minus 3.6 to minus 0.2, p 0.027, significant loss"
+            data-tip="<b>iOS</b> &mdash; 11.6% &rarr; 9.7% &middot; &Delta; &minus;1.9pp &middot; CI [&minus;3.6, &minus;0.2] &middot; p = 0.027 &middot; n 2,528 / 2,541.<br>A ~16% relative loss; the CI excludes zero. Likely culprit: the step-3 permission prompt (see the iOS tab)."/>
+        </g>
+        <!-- Android -->
+        <g>
+          <text class="t-name" x="8" y="232">Android</text>
+          <text class="t-n" x="8" y="248">n 1,733 / 1,739</text>
+          <text class="t-verdict v-n" x="8" y="264">null &middot; p = 0.92</text>
+          <line class="wh n" x1="368.1" y1="242" x2="517.3" y2="242"/>
+          <line class="wh n" x1="368.1" y1="237" x2="368.1" y2="247"/>
+          <line class="wh n" x1="517.3" y1="237" x2="517.3" y2="247"/>
+          <circle class="pt n" cx="442.7" cy="242" r="5.5"/>
+          <text class="t-delta" x="456" y="228">+0.1pp</text>
+          <rect class="hit" x="0" y="214" width="800" height="56" tabindex="0"
+            aria-label="Android: 7.8 percent to 7.9 percent, plus 0.1 points, confidence interval minus 1.7 to plus 1.9, p 0.92, null"
+            data-tip="<b>Android</b> &mdash; 7.8% &rarr; 7.9% &middot; &Delta; +0.1pp &middot; CI [&minus;1.7, +1.9] &middot; p = 0.92 &middot; n 1,733 / 1,739.<br>No evidence of an effect in either direction."/>
+        </g>
+
+        <line class="axisl" x1="190" y1="268" x2="770" y2="268"/>
+        <text class="t-tick" x="272.9" y="288" text-anchor="middle">&minus;4</text>
+        <text class="t-tick" x="355.7" y="288" text-anchor="middle">&minus;2</text>
+        <text class="t-tick" x="438.6" y="288" text-anchor="middle">0</text>
+        <text class="t-tick" x="521.4" y="288" text-anchor="middle">+2</text>
+        <text class="t-tick" x="604.3" y="288" text-anchor="middle">+4</text>
+        <text class="t-tick" x="687.1" y="288" text-anchor="middle">+6 pp</text>
+      </svg>
+      <figcaption>
+        Change in trial-to-paid conversion, B&nbsp;&minus;&nbsp;A, in percentage points, full 6-week run.
+        Whiskers are 95% CIs. <b>Filled dots = CI clear of zero (significant); hollow = CI crosses zero</b>,
+        so no effect &mdash; or a small harm &mdash; can&rsquo;t be ruled out. The subgroup effects, weighted by trial
+        starts, reconcile to the blended +0.8pp: the overall number is a win and a loss averaging out,
+        not a modest win everywhere. Platform was the single
+        <span class="gl" tabindex="0" title="Declared in the analysis plan (v1.2, filed 2026-04-28, before launch) — not a pattern found by scanning cuts after the fact." data-tip="<b>Pre-registered</b> — declared in the analysis plan (v1.2, filed 2026-04-28, before launch), so it isn&rsquo;t a pattern found by scanning many cuts after the fact. Platform was the only pre-registered subgroup dimension.">pre-registered</span>
+        subgroup dimension.
+      </figcaption>
+    </figure>
+
+    <figure id="figLate">
+      <svg viewBox="0 0 800 178" role="img" aria-label="Forest plot for weeks 4 to 6 only. Mobile-web plus 3.8 points, still significant. iOS minus 2.2 points, confidence interval now crosses zero.">
+        <text class="t-anno" x="426" y="18" text-anchor="end">&larr; current (A) better</text>
+        <text class="t-anno" x="452" y="18">Pathways (B) better &rarr;</text>
+        <line class="gridl" x1="272.9" y1="26" x2="272.9" y2="150"/>
+        <line class="gridl" x1="355.7" y1="26" x2="355.7" y2="150"/>
+        <line class="gridl" x1="521.4" y1="26" x2="521.4" y2="150"/>
+        <line class="gridl" x1="604.3" y1="26" x2="604.3" y2="150"/>
+        <line class="gridl" x1="687.1" y1="26" x2="687.1" y2="150"/>
+        <line class="zline" x1="438.6" y1="24" x2="438.6" y2="150"/>
+        <!-- Mobile-web late -->
+        <g>
+          <text class="t-name" x="8" y="46">Mobile-web</text>
+          <text class="t-n" x="8" y="62">weeks 4&ndash;6 pooled</text>
+          <text class="t-verdict v-g" x="8" y="78">persists &middot; CI &asymp; [+0.8, +6.8]</text>
+          <line class="wh g" x1="471.7" y1="56" x2="720.3" y2="56"/>
+          <line class="wh g" x1="471.7" y1="51" x2="471.7" y2="61"/>
+          <line class="wh g" x1="720.3" y1="51" x2="720.3" y2="61"/>
+          <circle class="pt g" cx="596" cy="56" r="5.5"/>
+          <text class="t-delta" x="596" y="42" text-anchor="middle">+3.8pp</text>
+          <rect class="hit" x="0" y="28" width="800" height="56" tabindex="0"
+            aria-label="Mobile-web, weeks 4 to 6: plus 3.8 points, confidence interval approximately plus 0.8 to plus 6.8, still significant"
+            data-tip="<b>Mobile-web, weeks 4&ndash;6</b> &mdash; &Delta; +3.8pp &middot; CI &asymp; [+0.8, +6.8].<br>Still clear of zero on half the sample: the gain is not just novelty."/>
+        </g>
+        <!-- iOS late -->
+        <g>
+          <text class="t-name" x="8" y="108">iOS</text>
+          <text class="t-n" x="8" y="124">weeks 4&ndash;6 pooled</text>
+          <text class="t-verdict v-n" x="8" y="140">still negative &middot; CI &asymp; [&minus;4.6, +0.2]</text>
+          <line class="wh n" x1="248" y1="118" x2="446.9" y2="118"/>
+          <line class="wh n" x1="248" y1="113" x2="248" y2="123"/>
+          <line class="wh n" x1="446.9" y1="113" x2="446.9" y2="123"/>
+          <circle class="pt n" cx="347.4" cy="118" r="5.5"/>
+          <text class="t-delta" x="347.4" y="104" text-anchor="middle">&minus;2.2pp</text>
+          <rect class="hit" x="0" y="90" width="800" height="56" tabindex="0"
+            aria-label="iOS, weeks 4 to 6: minus 2.2 points, confidence interval approximately minus 4.6 to plus 0.2, no longer individually significant at half the sample"
+            data-tip="<b>iOS, weeks 4&ndash;6</b> &mdash; &Delta; &minus;2.2pp &middot; CI &asymp; [&minus;4.6, +0.2].<br>The deficit doesn&rsquo;t recover, but at half the sample the CI now crosses zero &mdash; no longer individually significant."/>
+        </g>
+        <line class="axisl" x1="190" y1="150" x2="770" y2="150"/>
+        <text class="t-tick" x="272.9" y="170" text-anchor="middle">&minus;4</text>
+        <text class="t-tick" x="355.7" y="170" text-anchor="middle">&minus;2</text>
+        <text class="t-tick" x="438.6" y="170" text-anchor="middle">0</text>
+        <text class="t-tick" x="521.4" y="170" text-anchor="middle">+2</text>
+        <text class="t-tick" x="604.3" y="170" text-anchor="middle">+4</text>
+        <text class="t-tick" x="687.1" y="170" text-anchor="middle">+6 pp</text>
+      </svg>
+      <figcaption>
+        Exploratory pooled check, weeks 4&ndash;6 only (half the sample; CIs marked &asymp;).
+        After the novelty washes out, the <b>mobile-web gain persists (+3.8pp, still significant)</b>;
+        the <b>iOS deficit does not recover (&minus;2.2pp)</b>, though its CI now crosses zero at this
+        smaller sample. The platform split is not explained by novelty.
+      </figcaption>
+    </figure>
+  </div>
+
+  <!-- right column: the call + novelty decay -->
+  <div class="col">
+    <div class="card">
+      <h3>The call</h3>
+      <div class="callrow">
+        <span class="chip g">SHIP</span>
+        <p><b>Mobile-web only</b> &mdash; target 2026-07-06, with a 5%
+        <span class="gl" tabindex="0" title="A small slice of users kept on the old flow after launch, to confirm the effect holds outside the experiment." data-tip="<b>Holdback</b> — a small slice of users kept on the old flow after launch, to confirm the effect holds outside the experiment.">holdback</span>
+        for 8 weeks to confirm the +4.2pp effect out-of-experiment and watch for post-novelty drift.</p>
+      </div>
+      <div class="callrow">
+        <span class="chip b">DON&rsquo;T SHIP</span>
+        <p><b>iOS</b> &mdash; run fix experiment ONB-2026-019 instead: revert the notification prompt
+        to the day-2 soft ask (plus a pre-permission explainer arm). Est. 8 weeks.</p>
+      </div>
+      <div class="callrow">
+        <span class="chip n">DON&rsquo;T SHIP</span>
+        <p><b>Android</b> &mdash; null result; revisit after the iOS fix experiment settles the
+        prompt question, since Android shares the flow.</p>
+      </div>
+      <p class="callnote">Revenue estimate for the mobile-web ship: use +3.8pp (conservative,
+      late-window) to +4.2pp (full-run).</p>
+    </div>
+
+    <div class="card">
+      <div class="cardhead">
+        <h3 style="margin:0">Why the early weeks lied</h3>
+        <span class="hint">hover a bar</span>
+      </div>
+      <figure>
+        <svg viewBox="0 0 460 226" role="img" aria-label="Weekly blended conversion difference, B minus A: plus 2.9 points in week 1 decaying to plus 0.1 by week 6, all inside a plus or minus 2.7 point noise band except week 1.">
+          <rect class="bandr" x="44" y="34.4" width="406" height="151.2"/>
+          <line class="gridl" x1="44" y1="54" x2="450" y2="54"/>
+          <line class="gridl" x1="44" y1="166" x2="450" y2="166"/>
+          <line class="axisl" x1="44" y1="110" x2="450" y2="110"/>
+          <text class="t-tick" x="38" y="58" text-anchor="end">+2</text>
+          <text class="t-tick" x="38" y="114" text-anchor="end">0</text>
+          <text class="t-tick" x="38" y="170" text-anchor="end">&minus;2</text>
+          <text class="t-anno" x="446" y="48" text-anchor="end">weekly noise &asymp; &plusmn;2.7pp</text>
+          <path class="bar" d="M67,32.8 q0,-4 4,-4 h14 q4,0 4,4 V110 h-22 Z"/>
+          <path class="bar" d="M129,72 q0,-4 4,-4 h14 q4,0 4,4 V110 h-22 Z"/>
+          <path class="bar" d="M191,97.2 q0,-4 4,-4 h14 q4,0 4,4 V110 h-22 Z"/>
+          <rect class="bar" x="253" y="108" width="22" height="2"/>
+          <path class="bar" d="M315,110 h22 v7.2 q0,4 -4,4 h-14 q-4,0 -4,-4 Z"/>
+          <rect class="bar" x="377" y="107.2" width="22" height="2.8"/>
+          <text class="t-delta" x="78" y="20" text-anchor="middle">+2.9</text>
+          <text class="t-delta" x="388" y="100" text-anchor="middle">+0.1</text>
+          <text class="t-tick" x="78" y="204" text-anchor="middle">W1</text>
+          <text class="t-tick" x="140" y="204" text-anchor="middle">W2</text>
+          <text class="t-tick" x="202" y="204" text-anchor="middle">W3</text>
+          <text class="t-tick" x="264" y="204" text-anchor="middle">W4</text>
+          <text class="t-tick" x="326" y="204" text-anchor="middle">W5</text>
+          <text class="t-tick" x="388" y="204" text-anchor="middle">W6</text>
+          <rect class="hit" x="52" y="14" width="52" height="196" tabindex="0"
+            aria-label="Week 1, May 4 to 10: A 11.2 percent versus B 14.1 percent, plus 2.9 points"
+            data-tip="<b>Week 1 (May 4&ndash;10)</b> &mdash; A 11.2% vs B 14.1% &middot; &Delta; +2.9pp &middot; trial starts 1,104 / 1,118"/>
+          <rect class="hit" x="114" y="14" width="52" height="196" tabindex="0"
+            aria-label="Week 2, May 11 to 17: A 11.5 percent versus B 13.0 percent, plus 1.5 points"
+            data-tip="<b>Week 2 (May 11&ndash;17)</b> &mdash; A 11.5% vs B 13.0% &middot; &Delta; +1.5pp &middot; trial starts 1,092 / 1,102"/>
+          <rect class="hit" x="176" y="14" width="52" height="196" tabindex="0"
+            aria-label="Week 3, May 18 to 24: A 11.3 percent versus B 11.9 percent, plus 0.6 points"
+            data-tip="<b>Week 3 (May 18&ndash;24)</b> &mdash; A 11.3% vs B 11.9% &middot; &Delta; +0.6pp &middot; trial starts 1,110 / 1,109"/>
+          <rect class="hit" x="238" y="14" width="52" height="196" tabindex="0"
+            aria-label="Week 4, May 25 to 31: A 11.6 percent versus B 11.6 percent, zero difference"
+            data-tip="<b>Week 4 (May 25&ndash;31)</b> &mdash; A 11.6% vs B 11.6% &middot; &Delta; 0.0pp &middot; trial starts 1,098 / 1,105"/>
+          <rect class="hit" x="300" y="14" width="52" height="196" tabindex="0"
+            aria-label="Week 5, June 1 to 7: A 11.5 percent versus B 11.1 percent, minus 0.4 points"
+            data-tip="<b>Week 5 (Jun 1&ndash;7)</b> &mdash; A 11.5% vs B 11.1% &middot; &Delta; &minus;0.4pp &middot; trial starts 1,101 / 1,111"/>
+          <rect class="hit" x="362" y="14" width="52" height="196" tabindex="0"
+            aria-label="Week 6, June 8 to 14: A 11.3 percent versus B 11.4 percent, plus 0.1 points"
+            data-tip="<b>Week 6 (Jun 8&ndash;14)</b> &mdash; A 11.3% vs B 11.4% &middot; &Delta; +0.1pp &middot; trial starts 1,097 / 1,102"/>
+        </svg>
+        <figcaption>
+          Blended weekly &Delta; (B&nbsp;&minus;&nbsp;A, pp) &mdash; a
+          <span class="gl" tabindex="0" title="An early boost that comes from newness itself and fades as the novelty wears off." data-tip="<b>Novelty effect</b> — an early boost that comes from newness itself and fades as the novelty wears off.">novelty effect</span>
+          decaying from +2.9pp to ~0. Weekly CIs are &asymp;&plusmn;2.7pp (shaded band), so single weeks are
+          noise &mdash; the decaying <em>pattern</em> is the signal. A week-2 interim readout (blended +2.2pp,
+          nominally significant at the time) circulated internally; <b>this readout supersedes it</b>.
+          Any decision made on week-1 or week-2 snapshots would have materially overstated B.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</div>
+
+<!-- ================= don't-say strip ================= -->
+<div class="myths" aria-label="Misreadings this readout does not support">
+  <div class="myth"><span class="x" aria-hidden="true">&#10005;</span><div>
+    <b>&ldquo;B won overall &mdash; +0.8 points.&rdquo;</b>
+    <span class="why">Not significant (p&nbsp;=&nbsp;0.16), and the blend averages a win with a loss.</span>
+  </div></div>
+  <div class="myth"><span class="x" aria-hidden="true">&#10005;</span><div>
+    <b>&ldquo;Ship it everywhere.&rdquo;</b>
+    <span class="why">iOS would likely pay a real cost &mdash; best estimate &minus;1.9pp on the highest-revenue platform.</span>
+  </div></div>
+  <div class="myth"><span class="x" aria-hidden="true">&#10005;</span><div>
+    <b>&ldquo;The redesign failed.&rdquo;</b>
+    <span class="why">Mobile-web is a large, durable, pre-registered, mechanism-consistent win.</span>
+  </div></div>
+  <div class="myth"><span class="x" aria-hidden="true">&#10005;</span><div>
+    <b>&ldquo;Week 1 showed +2.9.&rdquo;</b>
+    <span class="why">Novelty that fully decayed &mdash; don&rsquo;t cite the early-week numbers.</span>
+  </div></div>
+</div>
+
+<!-- ================= platform tabs ================= -->
+<h2 id="platforms">The platform stories</h2>
+<div class="tabs" role="tablist" aria-label="Platform detail">
+  <button class="tab" role="tab" id="tab-mw" aria-controls="panel-mw" aria-selected="true">Mobile-web <span class="td g">+4.2pp</span></button>
+  <button class="tab" role="tab" id="tab-ios" aria-controls="panel-ios" aria-selected="false" tabindex="-1">iOS <span class="td b">&minus;1.9pp</span></button>
+  <button class="tab" role="tab" id="tab-and" aria-controls="panel-and" aria-selected="false" tabindex="-1">Android <span class="td n">+0.1pp</span></button>
+</div>
+
+<section class="card panel" id="panel-mw" role="tabpanel" aria-labelledby="tab-mw">
+  <h3>Mobile-web &mdash; +4.2pp, the unambiguous win</h3>
+  <div class="pgrid">
+    <div>
+      <p class="plabel">Result</p>
+      <p><b>13.9% &rarr; 18.1%</b> (+4.2pp, CI [+2.1, +6.3], p&nbsp;&lt;&nbsp;0.0001; n 2,341&nbsp;/&nbsp;2,367;
+      conversions 325 &rarr; 428). A <b>~30% relative lift</b>, significant at any reasonable threshold,
+      and it easily survives the
+      <span class="gl" tabindex="0" title="A stricter significance bar (alpha = 0.0167 here) compensating for running three platform tests instead of one." data-tip="<b>Bonferroni correction</b> — a stricter significance bar (&alpha; = 0.0167 here) compensating for running three platform tests instead of one.">multiple-comparison correction</span>.</p>
+      <p class="plabel">Durability</p>
+      <p>In the late window (weeks 4&ndash;6, after novelty washed out) mobile-web still shows
+      <b>+3.8pp</b> (CI &asymp; [+0.8, +6.8]) &mdash; the gain persists; it is not just novelty.</p>
+    </div>
+    <div>
+      <p class="plabel">Why it&rsquo;s believable</p>
+      <p>Mobile-web converts through a <b>web checkout with no app-store friction</b>, and it&rsquo;s where
+      the old flow was clumsiest: the 9-screen flow was designed for native and ported to web.
+      Step 3 there is a soft email opt-in with no OS dialog &mdash; drop-off barely moved (3.2% &rarr; 3.4%).</p>
+      <p class="plabel">Decision</p>
+      <p><b>Ship</b>, target 2026-07-06, with a 5% holdback for 8 weeks to confirm the effect
+      out-of-experiment and monitor post-novelty drift.</p>
+    </div>
+  </div>
+</section>
+
+<section class="card panel" id="panel-ios" role="tabpanel" aria-labelledby="tab-ios">
+  <h3>iOS &mdash; &minus;1.9pp, a credible regression with a likely mechanism</h3>
+  <div class="pgrid">
+    <div>
+      <p class="plabel">Result</p>
+      <p><b>11.6% &rarr; 9.7%</b> (&minus;1.9pp, CI [&minus;3.6, &minus;0.2], p&nbsp;=&nbsp;0.027;
+      n 2,528&nbsp;/&nbsp;2,541; conversions 293 &rarr; 246). A <b>~16% relative loss</b>; the CI excludes zero.
+      In the late window the deficit stays at &minus;2.2pp (CI &asymp; [&minus;4.6, +0.2]) &mdash; it does not recover.</p>
+      <p class="plabel">How much to trust it</p>
+      <p>Honestly mixed: at the Bonferroni-adjusted bar (&alpha;&nbsp;=&nbsp;0.0167) for three platform tests,
+      p&nbsp;=&nbsp;0.027 does <b>not</b> survive the strict correction. Cutting the other way: platform was the
+      <b>single pre-registered subgroup dimension</b>, chosen in advance for a stated mechanistic reason
+      (different payment surfaces) &mdash; not found by scanning cuts. Pre-registration plus a coherent
+      mechanism makes this a <b>credible signal that warrants action, while stopping short of proof</b>.</p>
+    </div>
+    <div>
+      <p class="plabel">The likely mechanism &mdash; the step-3 permission prompt</p>
+      <p>Pathways moved the notification-permission ask from a day-2 soft in-product card to
+      <b>onboarding step 3</b>, where iOS fires the system permission dialog. Drop-off at exactly that
+      step, on exactly the highest-friction platform (funnel data &mdash; exploratory, but directly on the
+      hypothesized mechanism):</p>
+      <div class="tblwrap"><table>
+        <tr><th>Step-3 drop-off</th><th>A</th><th>B</th></tr>
+        <tr><td>iOS (system dialog)</td><td>8.1%</td><td class="b">12.7%</td></tr>
+        <tr><td>Mobile-web (soft email opt-in)</td><td>3.2%</td><td>3.4%</td></tr>
+        <tr><td>Android (lower-friction dialog)</td><td>5.0%</td><td>5.6%</td></tr>
+      </table></div>
+      <p class="tnote">iOS: A 2,530 of 31,240 reaching step 3 dropped; B 3,940 of 31,020. In B, iOS users
+      who dismissed the dialog converted at 7.9% vs 10.4% for accepters &mdash; consistent with the prompt
+      souring or filtering marginal users, though confounded by user intent (not causal on its own).</p>
+      <p class="plabel">Decision</p>
+      <p><b>Don&rsquo;t ship.</b> Fix and re-test: ONB-2026-019 (draft) runs Pathways-on-iOS with the prompt
+      reverted to the day-2 soft ask, plus an arm with a pre-permission explainer screen. Same primary
+      metric; powered for a &plusmn;1.5pp iOS-only effect; est. 8 weeks.</p>
+    </div>
+  </div>
+</section>
+
+<section class="card panel" id="panel-and" role="tabpanel" aria-labelledby="tab-and">
+  <h3>Android &mdash; +0.1pp, null</h3>
+  <div class="pgrid">
+    <div>
+      <p class="plabel">Result</p>
+      <p><b>7.8% &rarr; 7.9%</b> (+0.1pp, CI [&minus;1.7, +1.9], p&nbsp;=&nbsp;0.92; n 1,733&nbsp;/&nbsp;1,739;
+      conversions 135 &rarr; 137). <b>No evidence of an effect in either direction.</b>
+      Android&rsquo;s OS permission dialog is lower-friction than iOS&rsquo;s; step-3 drop-off moved
+      only 5.0% &rarr; 5.6%.</p>
+    </div>
+    <div>
+      <p class="plabel">Decision</p>
+      <p><b>Don&rsquo;t ship.</b> Revisit after the iOS fix experiment (ONB-2026-019) settles the prompt
+      question, since Android shares the flow.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= trust section ================= -->
+<h2>Before you quote this readout</h2>
+
+<details>
+  <summary>What Pathways (B) actually changed</summary>
+  <div class="body">
+    <p>The current flow (A) has 9 screens with the notification-permission ask deferred to day 2.
+    Pathways (B) <b>shortens the flow to 6 screens</b>, adds a <b>goal-setting quiz</b> that personalizes
+    the starter course, <b>moves the notification-permission ask to step 3</b>, and adds a
+    <b>social-proof screen</b>. Hypothesis: a faster, more personally relevant first session raises
+    trial-to-paid conversion.</p>
+    <p><b>Primary metric:</b> among users who start a free trial, the share whose first payment succeeds
+    within 14 days of trial start (denominator = trial starters, not all randomized users &mdash; see
+    &ldquo;Was the experiment healthy?&rdquo; for the check that this comparison is fair).</p>
+  </div>
+</details>
+
+<details>
+  <summary>Was the experiment healthy? (SRM, instrumentation, denominator)</summary>
+  <div class="body">
+    <p><b>Randomization:</b> 184,204 signups split 50/50 at account creation (A 92,114 / B 92,090);
+    <span class="gl" tabindex="0" title="Sample-ratio mismatch — a red flag where the arms drift from their planned 50/50 split, suggesting broken assignment or logging." data-tip="<b>Sample-ratio mismatch (SRM)</b> — a red flag where the arms drift from their planned 50/50 split, suggesting a broken assignment or logging pipeline.">SRM</span>
+    check &chi;&sup2; p&nbsp;=&nbsp;0.96 &mdash; no mismatch; weekly monitoring never alarmed. Assignment sticky per
+    account; no crossover observed. Duration was fixed at six weeks in advance; interim looks were
+    monitoring-only, no peeking-based early stop.</p>
+    <p><b>Instrumentation:</b> verified against the payments ledger on a 2% audit sample (n&nbsp;=&nbsp;3,684):
+    zero cross-arm contamination, zero duplicate assignment, conversions reconciled within 0.1%.</p>
+    <p><b>Denominator integrity:</b> because the metric conditions on trial start, a treatment that changed
+    <em>who</em> starts trials would bias the comparison. Trial-start rate is statistically flat
+    (7.17% vs 7.22%, p&nbsp;=&nbsp;0.69) and platform mix among trialists is near-identical across arms
+    (within 0.4pp per platform) &mdash; the conditioned comparison is sound.</p>
+    <p><b>One deviation from plan:</b> a planned supplementary Bayesian shrinkage estimate of weekly deltas
+    was dropped for time, replaced by the pooled late-window checks. No registered primary or subgroup
+    analysis was altered.</p>
+  </div>
+</details>
+
+<details>
+  <summary>Multiple comparisons &amp; statistical power</summary>
+  <div class="body">
+    <p><b>Multiple comparisons:</b> three platform tests were run, so the Bonferroni-adjusted threshold is
+    &alpha;&nbsp;=&nbsp;0.0167. Mobile-web (p&nbsp;&lt;&nbsp;0.0001) survives easily; <b>iOS (p&nbsp;=&nbsp;0.027) does not survive
+    the strict correction</b>. Cutting the other way: platform was the single pre-registered subgroup
+    dimension, chosen in advance for a stated mechanistic reason (different payment surfaces), not
+    discovered by scanning many cuts &mdash; which makes the iOS regression a credible signal that warrants a
+    targeted follow-up, while stopping short of proof. The mobile-web result needs no such hedging.</p>
+    <p><b>Power:</b> the pre-experiment analysis gave <b>80% power to detect a +1.55pp lift</b> overall
+    (11.5% assumed baseline, ~6,400 trial starters per arm, two-sided &alpha;&nbsp;=&nbsp;0.05). The experiment was
+    <b>not powered to confirm effects smaller than ~1.5pp overall</b> &mdash; relevant context for the +0.8pp
+    point estimate.</p>
+  </div>
+</details>
+
+<details>
+  <summary>Guardrails: retention flat, a support-ticket blip that resolved</summary>
+  <div class="body">
+    <p><b>7-day retention is flat:</b> 31.2% (A) vs 31.4% (B), +0.2pp, CI [&minus;0.2, +0.6], measured on all
+    184k randomized users. Pathways neither helps nor harms whether users come back in week one: the
+    conversion story does not come at a retention cost &mdash; and equally, the mobile-web conversion gain is
+    <em>not</em> accompanied by a retention gain.</p>
+    <p><b>Support tickets rose +12% in weeks 1&ndash;2</b> (4.1 &rarr; 4.6 per 1k signups, driven by confusion
+    around the goal-quiz &ldquo;skip&rdquo; affordance per ticket tagging). A copy fix shipped 2026-05-15 to both
+    arms&rsquo; shared components and volume normalized from week 3 on (4.0 vs 4.0). Treated as a
+    launch-quality blip, not a standing cost of the design.</p>
+  </div>
+</details>
+
+<details>
+  <summary>Secondary metrics: the flow works mechanically, but that didn&rsquo;t become a blended win</summary>
+  <div class="body">
+    <p><b>Median time-to-first-lesson fell 38 seconds</b>: 4m&nbsp;52s (292s) &rarr; 4m&nbsp;14s (254s),
+    CI [&minus;45, &minus;31], p&nbsp;&lt;&nbsp;0.001 &mdash; the one clearly significant secondary. The shorter flow does what
+    it was designed to do mechanically; it just didn&rsquo;t translate into a blended conversion or
+    retention win.</p>
+    <p><b>Trial-start rate:</b> 7.17% vs 7.22% (+0.05pp, CI [&minus;0.19, +0.29], p&nbsp;=&nbsp;0.69) &mdash; flat.
+    <b>Lessons completed in first 7 days:</b> 3.9 vs 4.0 (+0.1, CI [&minus;0.1, +0.3], p&nbsp;=&nbsp;0.24) &mdash; flat.</p>
+  </div>
+</details>
+
+<!-- ================= next steps ================= -->
+<h2>Next steps</h2>
+<div class="card">
+  <ol class="steps">
+    <li><b>Ship Pathways to mobile-web only</b>, target 2026-07-06, with a 5% holdback for 8 weeks to
+    confirm the +4.2pp effect out-of-experiment and monitor for post-novelty drift.</li>
+    <li><b>Do not ship iOS.</b> Launch ONB-2026-019 (draft): Pathways-on-iOS with the permission prompt
+    reverted to the day-2 soft ask, plus a second arm with a pre-permission explainer screen. Primary
+    metric unchanged; powered for a &plusmn;1.5pp iOS-only effect; est. 8 weeks.</li>
+    <li><b>Do not ship Android.</b> Null result; revisit after the iOS fix experiment settles the prompt
+    question, since Android shares the flow.</li>
+    <li><b>Retire the week-2 interim readout</b> (+2.2pp blended, nominally significant at the time) from
+    internal decks; this readout supersedes it.</li>
+    <li><b>Re-estimate revenue impact</b> for the mobile-web ship using the late-window +3.8pp
+    (conservative) to full-run +4.2pp range.</li>
+  </ol>
+</div>
+
+<!-- ================= appendix ================= -->
+<h2>All the numbers</h2>
+<div class="card">
+  <h3>Primary &amp; platform effects (trial-to-paid conversion, B&nbsp;&minus;&nbsp;A)</h3>
+  <div class="tblwrap">
+  <table>
+    <tr><th>Scope</th><th>n (A / B)</th><th>Conv. (A / B)</th><th>Conv. A</th><th>Conv. B</th><th>&Delta; (pp)</th><th>95% CI</th><th>p</th></tr>
+    <tr><td>Overall</td><td>6,602 / 6,647</td><td>753 / 811</td><td>11.4%</td><td>12.2%</td><td>+0.8</td><td>[&minus;0.3, +1.9]</td><td>0.16</td></tr>
+    <tr><td>Mobile-web</td><td>2,341 / 2,367</td><td>325 / 428</td><td>13.9%</td><td>18.1%</td><td class="g">+4.2</td><td>[+2.1, +6.3]</td><td>&lt;0.0001</td></tr>
+    <tr><td>iOS</td><td>2,528 / 2,541</td><td>293 / 246</td><td>11.6%</td><td>9.7%</td><td class="b">&minus;1.9</td><td>[&minus;3.6, &minus;0.2]</td><td>0.027</td></tr>
+    <tr><td>Android</td><td>1,733 / 1,739</td><td>135 / 137</td><td>7.8%</td><td>7.9%</td><td>+0.1</td><td>[&minus;1.7, +1.9]</td><td>0.92</td></tr>
+  </table>
+  </div>
+  <p class="tnote">Randomized: 184,204 (A 92,114 / B 92,090; SRM &chi;&sup2; p = 0.96). Platform conversion
+  counts sum to the overall counts (325+293+135 = 753; 428+246+137 = 811).</p>
+
+  <h3 style="margin-top:18px">Weekly blended &Delta; (pp)</h3>
+  <div class="tblwrap">
+  <table>
+    <tr><th>Week</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>
+    <tr><td>&Delta; (B &minus; A)</td><td>+2.9</td><td>+1.5</td><td>+0.6</td><td>0.0</td><td>&minus;0.4</td><td>+0.1</td></tr>
+  </table>
+  </div>
+  <p class="tnote">Weekly CIs approximately &plusmn;2.7pp &mdash; individual weekly deltas are noisy; the decay
+  pattern is the signal. Exploratory pooled weeks 4&ndash;6: mobile-web +3.8pp (CI &asymp; [+0.8, +6.8]);
+  iOS &minus;2.2pp (CI &asymp; [&minus;4.6, +0.2]).</p>
+
+  <h3 style="margin-top:18px">Guardrails, secondaries &amp; funnel</h3>
+  <div class="tblwrap">
+  <table>
+    <tr><th>Metric</th><th>A</th><th>B</th><th>&Delta;</th><th>95% CI</th><th>p</th></tr>
+    <tr><td>7-day retention (all randomized)</td><td>31.2%</td><td>31.4%</td><td>+0.2pp</td><td>[&minus;0.2, +0.6]</td><td>&mdash;</td></tr>
+    <tr><td>Support tickets / 1k signups, wks 1&ndash;2</td><td>4.1</td><td>4.6</td><td>+12%</td><td>&mdash;</td><td>&mdash;</td></tr>
+    <tr><td>Support tickets / 1k signups, wks 3&ndash;6</td><td>4.0</td><td>4.0</td><td>0%</td><td>&mdash;</td><td>&mdash;</td></tr>
+    <tr><td>Median time-to-first-lesson</td><td>4m 52s</td><td>4m 14s</td><td class="g">&minus;38s</td><td>[&minus;45, &minus;31]</td><td>&lt;0.001</td></tr>
+    <tr><td>Trial-start rate (of randomized)</td><td>7.17%</td><td>7.22%</td><td>+0.05pp</td><td>[&minus;0.19, +0.29]</td><td>0.69</td></tr>
+    <tr><td>Lessons completed, first 7 days (mean)</td><td>3.9</td><td>4.0</td><td>+0.1</td><td>[&minus;0.1, +0.3]</td><td>0.24</td></tr>
+    <tr><td>iOS step-3 drop-off</td><td>8.1%</td><td>12.7%</td><td class="b">+4.6pp</td><td>&mdash;</td><td>&mdash;</td></tr>
+    <tr><td>Mobile-web step-3 drop-off</td><td>3.2%</td><td>3.4%</td><td>+0.2pp</td><td>&mdash;</td><td>&mdash;</td></tr>
+    <tr><td>Android step-3 drop-off</td><td>5.0%</td><td>5.6%</td><td>+0.6pp</td><td>&mdash;</td><td>&mdash;</td></tr>
+  </table>
+  </div>
+  <p class="tnote">Run window 2026-05-04 &rarr; 2026-06-14 (enrollment); conversion window closed
+  2026-06-28. Pre-registered analysis plan v1.2 (filed 2026-04-28) followed, with the single deviation
+  noted above.</p>
+</div>
+
+<p class="ficnote">All names, users, and numbers in this readout are fictional (a fixed test fixture).</p>
+
+<footer>experiment-results &middot; interactive-explainer &middot; v1 &middot; 2026-07-01</footer>
+</div>
+
+<script>
+(function () {
+  document.documentElement.classList.add('js');
+
+  /* ---- tabs ---- */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  var panels = tabs.map(function (t) {
+    return document.getElementById(t.getAttribute('aria-controls'));
+  });
+  function selectTab(i) {
+    tabs.forEach(function (t, j) {
+      var on = i === j;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      panels[j].hidden = !on;
+    });
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { selectTab(i); });
+    t.addEventListener('keydown', function (e) {
+      var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      var n = (i + d + tabs.length) % tabs.length;
+      selectTab(n);
+      tabs[n].focus();
+    });
+  });
+  selectTab(0);
+
+  /* ---- full-run / late-window switch ---- */
+  var sw = document.getElementById('winSwitch');
+  var forest = document.getElementById('forestCard');
+  sw.addEventListener('click', function () {
+    var late = sw.getAttribute('aria-checked') !== 'true';
+    sw.setAttribute('aria-checked', String(late));
+    forest.classList.toggle('late', late);
+  });
+
+  /* ---- shared tooltip (hover / tap / keyboard focus) ---- */
+  var tip = document.createElement('div');
+  tip.className = 'tip';
+  tip.setAttribute('role', 'status');
+  document.body.appendChild(tip);
+
+  function showTip(el) {
+    tip.innerHTML = el.getAttribute('data-tip');
+    tip.classList.add('on');
+    var r = el.getBoundingClientRect();
+    var x = r.left + r.width / 2 - tip.offsetWidth / 2;
+    x = Math.max(8, Math.min(x, window.innerWidth - tip.offsetWidth - 8));
+    var y = r.top - tip.offsetHeight - 10;
+    if (y < 8) y = r.bottom + 10;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  function hideTip() { tip.classList.remove('on'); }
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tip]'), function (el) {
+    if (!el.hasAttribute('tabindex') && !/^(a|button)$/i.test(el.tagName)) {
+      el.setAttribute('tabindex', '0');
+    }
+    el.removeAttribute('title'); // custom tooltip replaces the native no-JS fallback
+    el.addEventListener('mouseenter', function () { showTip(el); });
+    el.addEventListener('mouseleave', hideTip);
+    el.addEventListener('focus', function () { showTip(el); });
+    el.addEventListener('blur', hideTip);
+    el.addEventListener('click', function () { showTip(el); }); // tap on touch
+  });
+  window.addEventListener('scroll', hideTip, true);
+  window.addEventListener('resize', hideTip);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hideTip(); });
+})();
+</script>
+</body>
+</html>

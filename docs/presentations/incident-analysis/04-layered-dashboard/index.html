@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INC-1194 — the June 24 outage, in three layers</title>
+<style>
+  :root {
+    --page:        #f9f9f7;
+    --surface:     #fcfcfb;
+    --ink:         #0b0b0b;
+    --ink-2:       #52514e;
+    --muted:       #898781;
+    --grid:        #e1e0d9;
+    --baseline:    #c3c2b7;
+    --border:      rgba(11,11,11,0.10);
+    --accent:      #2a78d6;
+    --good:        #0ca30c;
+    --good-text:   #006300;
+    --warning:     #fab219;
+    --critical:    #d03b3b;
+    /* ordinal phase ramp (validated, light surface) */
+    --ph1: #86b6ef; --ph2: #3987e5; --ph3: #256abf; --ph4: #184f95; --ph5: #0d366b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:      #0d0d0d;
+      --surface:   #1a1a19;
+      --ink:       #ffffff;
+      --ink-2:     #c3c2b7;
+      --muted:     #898781;
+      --grid:      #2c2c2a;
+      --baseline:  #383835;
+      --border:    rgba(255,255,255,0.10);
+      --accent:    #3987e5;
+      --good-text: #0ca30c;
+      /* ordinal phase ramp (validated, dark surface) */
+      --ph1: #9ec5f4; --ph2: #6da7ec; --ph3: #3987e5; --ph4: #256abf; --ph5: #184f95;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---------- sticky nav ---------- */
+  nav.sticky {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--page) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.sticky .wrap {
+    display: flex; align-items: center; gap: 14px;
+    height: 44px; overflow-x: auto; white-space: nowrap;
+  }
+  nav.sticky .brand { font-weight: 700; font-size: 13px; letter-spacing: .02em; }
+  nav.sticky a {
+    color: var(--ink-2); text-decoration: none; font-size: 13px; padding: 4px 2px;
+  }
+  nav.sticky a:hover { color: var(--ink); }
+  .nav-tools { margin-left: auto; display: none; gap: 8px; }
+  .js .nav-tools { display: flex; }
+  .nav-tools button {
+    font: inherit; font-size: 12px; color: var(--ink-2);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 3px 12px; cursor: pointer;
+  }
+  .nav-tools button:hover { color: var(--ink); border-color: var(--baseline); }
+
+  /* ---------- layer 1 : glance ---------- */
+  header.glance { padding: 12px 0 18px; }
+  .headline { max-width: 1120px; }
+  .headline h1 {
+    margin: 0 0 5px; font-size: clamp(19px, 1.65vw, 23px); line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  .headline .meta {
+    font-size: 12.5px; color: var(--ink-2); display: flex; flex-wrap: wrap;
+    gap: 4px 13px; align-items: center;
+  }
+  .sev {
+    display: inline-flex; align-items: center; gap: 6px; font-weight: 600;
+    border: 1px solid var(--border); border-radius: 999px; padding: 1px 10px;
+  }
+  .sev .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--critical); }
+
+  .tiles {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px; margin: 12px 0 10px;
+  }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 9px 13px 7px;
+  }
+  .tile .label { font-size: 12px; color: var(--ink-2); }
+  .tile .value { font-size: 26px; font-weight: 600; line-height: 1.15; margin: 1px 0; }
+  .tile .sub { font-size: 11.5px; color: var(--muted); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  .chip {
+    display: inline-flex; align-items: baseline; gap: 7px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 12px; font-size: 12.5px; color: var(--ink-2);
+  }
+  .chip b { color: var(--ink); font-weight: 600; }
+  .chip .ic { font-weight: 700; }
+  .chip .ic.bad  { color: var(--critical); }
+  .chip .ic.ok   { color: var(--good-text); }
+  .chip .ic.plan { color: var(--accent); }
+
+  .hero {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 15px 8px; margin-bottom: 10px;
+  }
+  .hero h2, .strip h2 {
+    margin: 0 0 6px; font-size: 12.5px; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-2);
+  }
+  .scrollx { overflow-x: auto; }
+  .scrollx svg { min-width: 780px; width: 100%; height: auto; display: block; }
+  .hero .caption, .strip .caption { font-size: 12.5px; color: var(--ink-2); margin: 6px 2px 2px; }
+  .hero .caption b, .strip .caption b { color: var(--ink); }
+
+  /* svg text roles */
+  .sk  { font: 600 11px system-ui, sans-serif; letter-spacing: .08em; fill: var(--muted); }
+  .st  { font: 600 15.5px system-ui, sans-serif; fill: var(--ink); }
+  .sb  { font: 13px system-ui, sans-serif; fill: var(--ink-2); }
+  .box   { fill: var(--page); stroke: var(--border); rx: 9; }
+  .box-t { stroke: var(--accent); stroke-width: 1.6; }
+  .arrow { stroke: var(--baseline); stroke-width: 1.6; fill: none; }
+
+  /* ---------- time strip ---------- */
+  .strip {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 15px 8px;
+  }
+  .strip-scroll { overflow-x: auto; }
+  .strip-inner { min-width: 660px; padding: 34px 0 16px; position: relative; }
+  .bar { display: flex; gap: 2px; height: 26px; }
+  .bar .seg { min-width: 0; }
+  .bar .seg:first-child { border-radius: 6px 0 0 6px; }
+  .bar .seg:last-child  { border-radius: 0 6px 6px 0; }
+  .bracket {
+    position: absolute; top: 20px; height: 12px;
+    border: 1px solid var(--muted); border-bottom: none;
+    border-radius: 4px 4px 0 0;
+  }
+  .bracket span {
+    position: absolute; top: -4px; left: 50%; transform: translate(-50%, -100%);
+    font-size: 11.5px; font-weight: 600; color: var(--ink); white-space: nowrap;
+  }
+  .ticks { position: relative; height: 16px; font-size: 11px; color: var(--muted); }
+  .ticks span { position: absolute; top: 3px; transform: translateX(-50%); white-space: nowrap; }
+  .ticks span.left  { transform: none; }
+  .ticks span.right { transform: translateX(-100%); }
+  .strip-key {
+    display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px;
+    color: var(--ink-2); margin-top: 2px;
+  }
+  .strip-key i {
+    display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+    margin-right: 6px; font-style: normal;
+  }
+
+  /* ---------- layer 2 : cards ---------- */
+  main { padding: 8px 0 30px; }
+  .grid-head {
+    display: flex; align-items: baseline; gap: 12px; margin: 18px 0 12px;
+  }
+  .grid-head h2 { margin: 0; font-size: 18px; }
+  .grid-head p { margin: 0; font-size: 13px; color: var(--muted); }
+  .cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  @media (max-width: 1100px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 700px)  { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; scroll-margin-top: 58px;
+  }
+  .card:has(details[open]) { grid-column: 1 / -1; }
+  .card summary {
+    list-style: none; cursor: pointer; padding: 14px 16px 12px; border-radius: 10px;
+  }
+  .card summary::-webkit-details-marker { display: none; }
+  .card summary:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+  .kicker {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); display: flex; justify-content: space-between; gap: 8px;
+  }
+  .kicker .keynum { color: var(--accent); letter-spacing: 0; text-transform: none; font-size: 13px; }
+  .card h3 { margin: 4px 0 6px; font-size: 16.5px; line-height: 1.3; }
+  .card .sum { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+  .card .sum strong { color: var(--ink); }
+  .card .more { display: block; margin-top: 10px; font-size: 12px; color: var(--accent); }
+  .card details[open] .more .closed-lbl, .card details:not([open]) .more .open-lbl { display: none; }
+  .card .detail {
+    border-top: 1px solid var(--grid); padding: 14px 16px 16px;
+    font-size: 14px; color: var(--ink-2); max-width: 980px;
+  }
+  .detail h4 {
+    margin: 16px 0 6px; font-size: 13px; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  .detail h4:first-child { margin-top: 2px; }
+  .detail p { margin: 6px 0; }
+  .detail strong { color: var(--ink); }
+  .detail ul, .detail ol { margin: 6px 0; padding-left: 22px; }
+  .detail li { margin: 4px 0; }
+  .gloss {
+    font-size: 13px; color: var(--muted); font-style: italic;
+    border-left: 3px solid var(--grid); padding: 2px 0 2px 10px; margin: 8px 0;
+  }
+  .caveat {
+    border-left: 3px solid var(--warning); background: color-mix(in srgb, var(--warning) 7%, transparent);
+    border-radius: 0 6px 6px 0; padding: 8px 12px; margin: 10px 0; font-size: 13.5px;
+  }
+  .caveat b.tag { color: var(--ink); }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13.5px; }
+  th {
+    text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--muted); font-weight: 600; padding: 6px 10px 4px;
+    border-bottom: 1px solid var(--baseline);
+  }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; color: var(--ink-2); }
+  td.num, th.num { font-variant-numeric: tabular-nums; }
+  td b { color: var(--ink); }
+  tr.mark td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+  .tbl-scroll { overflow-x: auto; }
+  .pri { font-weight: 700; white-space: nowrap; }
+  .pri.p0 { color: var(--accent); }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 14px 0 22px;
+    font-size: 11.5px; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<nav class="sticky" aria-label="Sections">
+  <div class="wrap">
+    <span class="brand">INC-1194 · Jun 24 outage</span>
+    <a href="#impact">Impact</a>
+    <a href="#timeline">Timeline</a>
+    <a href="#cause-1">Causes</a>
+    <a href="#chain">Chain</a>
+    <a href="#diagnosis">Diagnosis</a>
+    <a href="#rollback">Rollback</a>
+    <a href="#wins">Wins</a>
+    <a href="#actions">Actions</a>
+    <a href="#lessons">Lessons</a>
+    <span class="nav-tools">
+      <button type="button" id="expand-all">Expand all</button>
+      <button type="button" id="collapse-all">Collapse all</button>
+    </span>
+  </div>
+</nav>
+
+<!-- ================= LAYER 1 — GLANCE ================= -->
+<header class="glance">
+  <div class="wrap">
+    <div class="headline">
+      <h1>A bad query rewrite met two dormant weaknesses — and a one-endpoint slowdown became a platform-wide 4&#8202;h&#8202;17&#8202;m outage.</h1>
+      <p class="meta">
+        <span class="sev"><span class="dot"></span>SEV-1 · partial outage</span>
+        <span>Invoicing API · 2026-06-24, 14:02–18:19 UTC</span>
+        <span>Report final, published 2026-07-01</span>
+        <span>Blameless review — systems and process gaps failed, not people</span>
+      </p>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="label">Outage duration</div><div class="value">4&#8202;h&#8202;17&#8202;m</div><div class="sub">257 min, 14:02–18:19 UTC</div></div>
+      <div class="tile"><div class="label">Peak API error rate</div><div class="value">31.2%</div><div class="sub">at 15:47 · avg 19.1%</div></div>
+      <div class="tile"><div class="label">Customers affected</div><div class="value">2,312</div><div class="sub">24.4% of 9,480 active orgs</div></div>
+      <div class="tile"><div class="label">SLA credits</div><div class="value">≈$41,300</div><div class="sub">across 216 enterprise contracts</div></div>
+      <div class="tile"><div class="label">Lost to diagnosis</div><div class="value">68&#8202;min</div><div class="sub">alert 14:11 → diagnosis 15:19</div></div>
+    </div>
+
+    <div class="chips">
+      <span class="chip"><span class="ic bad">✕</span><span><b>Rollback impossible</b> — the release dropped the old index (rebuild ≈6&#8202;h)</span></span>
+      <span class="chip"><span class="ic ok">✓</span><span><b>A feature flag stopped it at 17:05</b> — a 90-second flip, no deploy</span></span>
+      <span class="chip"><span class="ic ok">✓</span><span><b>No data lost</b> — all 37,400 delayed webhooks replayed</span></span>
+      <span class="chip"><span class="ic plan">▶</span><span><b>3 P0 fixes land Q3 2026</b> — one per failure leg</span></span>
+    </div>
+
+    <div class="hero">
+      <h2>Why it happened — a trigger plus two amplifiers, not one root cause</h2>
+      <div class="scrollx">
+      <svg viewBox="0 0 1200 254" role="img" aria-label="Causal diagram: a query regression (trigger), autovacuum debt (amplifier 1) and jitterless retries (amplifier 2) combine to saturate the shared connection pool, producing a platform-wide partial outage.">
+        <title>Trigger plus two amplifiers combine into pool saturation and a platform-wide outage</title>
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--baseline)"></path>
+          </marker>
+        </defs>
+        <rect class="box box-t" x="10" y="4" width="372" height="88" rx="9"></rect>
+        <text class="sk" x="26" y="26">CAUSE 1 · THE TRIGGER — SHIPPED 14:02</text>
+        <text class="st" x="26" y="47">Search query regression (PR #8841)</text>
+        <text class="sb" x="26" y="67">Rewritten to a leading-wildcard LIKE no index</text>
+        <text class="sb" x="26" y="84">can serve: 0.4&#8202;ms → 24–31&#8202;s per search.</text>
+
+        <rect class="box" x="414" y="4" width="372" height="88" rx="9"></rect>
+        <text class="sk" x="430" y="26">CAUSE 2 · AMPLIFIER — LATENT SINCE JUN 22</text>
+        <text class="st" x="430" y="47">Autovacuum debt from a backfill</text>
+        <text class="sb" x="430" y="67">38.1&#8202;M dead tuples of bloat pushed scans past</text>
+        <text class="sb" x="430" y="84">the 30&#8202;s query timeout: slow became failing.</text>
+
+        <rect class="box" x="818" y="4" width="372" height="88" rx="9"></rect>
+        <text class="sk" x="834" y="26">CAUSE 3 · AMPLIFIER — LATENT FOR MONTHS</text>
+        <text class="st" x="834" y="47">Jitterless client retries</text>
+        <text class="sb" x="834" y="67">Fixed 1-second retries multiplied inbound</text>
+        <text class="sb" x="834" y="84">traffic 4.7× — a self-inflicted storm.</text>
+
+        <path class="arrow" d="M196,92 L196,106 Q196,116 210,116 L560,116" marker-end="url(#ah)"></path>
+        <path class="arrow" d="M600,92 L600,120" marker-end="url(#ah)"></path>
+        <path class="arrow" d="M1004,92 L1004,106 Q1004,116 990,116 L640,116" marker-end="url(#ah)"></path>
+
+        <rect class="box" x="250" y="126" width="700" height="58" rx="9"></rect>
+        <text class="st" x="270" y="150">Shared connection pool (80) saturates at 15:12</text>
+        <text class="sb" x="270" y="171">Invoice creation, PDF rendering and webhooks all queue behind 30-second scans.</text>
+
+        <path class="arrow" d="M600,184 L600,202" marker-end="url(#ah)"></path>
+
+        <rect class="box box-t" x="250" y="206" width="700" height="44" rx="9"></rect>
+        <text class="st" x="270" y="233">Platform-wide partial outage — 4&#8202;h&#8202;17&#8202;m, peak 31.2% of requests failing</text>
+      </svg>
+      </div>
+      <p class="caption"><b>Remove any one leg and June 24 shrinks to a one-endpoint degradation</b> — no bloat: slow searches that mostly succeed; no retry storm: the pool holds; no query change: nothing at all.</p>
+    </div>
+
+    <div class="strip">
+      <h2>Where the 257 minutes went</h2>
+      <div class="strip-scroll">
+        <div class="strip-inner">
+          <div class="bracket" style="left:3.5%; width:26.46%;"><span>68 min: alert → correct diagnosis</span></div>
+          <div class="bar" aria-hidden="false" role="img" aria-label="Timeline bar of the 257-minute incident split into five phases: silent regression 9 minutes, diagnosis lag 68 minutes, finding a safe fix 106 minutes, recovery 48 minutes, stability confirmation 26 minutes.">
+            <div class="seg" style="flex-basis:3.5%;   background:var(--ph1);" title="Silent regression — 9 min (14:02–14:11). Search p99 exploded at 14:07; no latency alert existed."></div>
+            <div class="seg" style="flex-basis:26.46%; background:var(--ph2);" title="Diagnosis lag — 68 min (14:11–15:19). 50 min spent on a wrong network hypothesis."></div>
+            <div class="seg" style="flex-basis:41.25%; background:var(--ph3);" title="Finding a safe fix — 106 min (15:19–17:05). Rollback failed at 15:40; feature-flag path chosen and verified."></div>
+            <div class="seg" style="flex-basis:18.68%; background:var(--ph4);" title="Recovery — 48 min (17:05–17:53). Flag off, manual VACUUM, caches re-warm."></div>
+            <div class="seg" style="flex-basis:10.12%; background:var(--ph5);" title="Stability confirmation — 26 min (17:53–18:19)."></div>
+          </div>
+          <div class="ticks">
+            <span class="left" style="left:0;">14:02 deploy</span>
+            <span style="left:29.96%;">15:19 DB identified</span>
+            <span style="left:71.21%;">17:05 flag off</span>
+            <span class="right" style="left:100%;">18:19 closed</span>
+          </div>
+        </div>
+      </div>
+      <div class="strip-key">
+        <span><i style="background:var(--ph1)"></i>Silent regression · 9&#8202;m</span>
+        <span><i style="background:var(--ph2)"></i>Diagnosis lag · 68&#8202;m</span>
+        <span><i style="background:var(--ph3)"></i>Finding a safe fix · 106&#8202;m</span>
+        <span><i style="background:var(--ph4)"></i>Recovery · 48&#8202;m</span>
+        <span><i style="background:var(--ph5)"></i>Stability confirm · 26&#8202;m</span>
+      </div>
+      <p class="caption"><b>Detection, not repair, dominated the clock.</b> Alerting watched error rate, not latency — the first alert fired 9 minutes after customers felt it — and 50 of the next 68 minutes went to a wrong network theory: latency dashboards sampled 1 in 100 requests, and the deploy marker on the graphs was broken.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ================= LAYERS 2 & 3 — SKIM + DETAIL ================= -->
+<main>
+  <div class="wrap">
+    <div class="grid-head">
+      <h2>The full story</h2>
+      <p>Read titles and bold lead-ins to skim; open any card for full detail, evidence and caveats.</p>
+    </div>
+
+    <div class="cards">
+
+      <!-- Impact -->
+      <section class="card" id="impact">
+        <details>
+          <summary>
+            <div class="kicker"><span>Impact</span><span class="keynum">19.1% avg · 31.2% peak errors</span></div>
+            <h3>How bad it was for customers and the business</h3>
+            <p class="sum"><strong>A quarter of customers felt it; none lost data.</strong> ≈362,000 of ≈1.9&#8202;M requests failed in the window, p99 on affected endpoints went 420&#8202;ms → 28.4&#8202;s, and ≈$41,300 in SLA credits is expected. Read-replica reporting and the separately pooled auth service stayed healthy, which capped the platform-wide peak at 31.2%.</p>
+            <span class="more"><span class="closed-lbl">Show impact table & caveats ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <table>
+              <tr><th>Measure</th><th>Value</th></tr>
+              <tr><td>Outage window</td><td class="num"><b>2026-06-24 14:02–18:19 UTC</b> (4&#8202;h&#8202;17&#8202;m / 257 min)</td></tr>
+              <tr><td>API error rate</td><td class="num"><b>19.1%</b> average across the window; peak <b>31.2%</b> at 15:47</td></tr>
+              <tr><td>Failed requests</td><td class="num">≈362,000 of ≈1.9&#8202;M requests in the window</td></tr>
+              <tr><td>Latency, affected endpoint groups</td><td class="num">p50 85&#8202;ms → 2.9&#8202;s; p99 420&#8202;ms → 28.4&#8202;s</td></tr>
+              <tr><td>Customers affected</td><td class="num"><b>2,312 organizations</b> (24.4% of 9,480 active that day)</td></tr>
+              <tr><td>SLA credits</td><td class="num">≈$41,300 across 216 enterprise contracts</td></tr>
+              <tr><td>Data loss</td><td><b>None</b></td></tr>
+              <tr><td>Delayed webhooks</td><td class="num">37,400 queued deliveries, all replayed by 19:05</td></tr>
+            </table>
+            <div class="caveat"><b class="tag">⚠ Caveat on the latency figures:</b> they cover <b>completed</b> requests only. Requests that hit the 30-second gateway timeout surfaced as 504s and are counted as <em>errors</em>, not in the latency percentiles.</div>
+            <p>"Affected" means an organization saw at least one failed API request or dashboard action during the window. Endpoints served by read replicas (reporting) and the separately pooled auth service stayed healthy — that is why the platform-wide error rate peaked at 31.2% rather than higher.</p>
+            <p>Invoice <strong>writes were never lost</strong>: creation goes through a durable queue, and webhook deliveries queued during the outage were replayed to completion by 19:05 with zero drops. The blast radius was availability, not integrity.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- Timeline -->
+      <section class="card" id="timeline">
+        <details>
+          <summary>
+            <div class="kicker"><span>Timeline</span><span class="keynum">Jun 22 → Jun 24, 18:19</span></div>
+            <h3>From a quiet backfill to a closed incident</h3>
+            <p class="sum"><strong>The seeds were planted two days early.</strong> A June 22 backfill left the bloat; the 14:02 deploy on June 24 lit the fuse; 68 minutes went to diagnosis, rollback failed at 15:40, and the flag-off at 17:05 put the fire out. Closed 18:19 after 26 minutes of stable metrics.</p>
+            <span class="more"><span class="closed-lbl">Show the full timeline ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <p>All times UTC. The first two rows are the pre-existing condition; the incident clock runs 14:02–18:19 on June 24.</p>
+            <div class="tbl-scroll">
+            <table>
+              <tr><th>Time</th><th>Event</th></tr>
+              <tr><td class="num">Jun 22 09:04</td><td><code>tax_region</code> backfill begins: bulk UPDATE of 38.1&#8202;M historical rows in <code>invoices</code>.</td></tr>
+              <tr><td class="num">Jun 22 14:37</td><td>Backfill completes. Dead tuples: 38.1&#8202;M. Autovacuum threshold (≈54.9&#8202;M for this table) not crossed; no vacuum scheduled.</td></tr>
+              <tr class="mark"><td class="num">Jun 24 14:02</td><td><b>Incident clock starts.</b> Release <code>2026-06-24.3</code> reaches 100%: PR #8841 (contains-style invoice search) + migration 0412. Canary was green.</td></tr>
+              <tr><td class="num">14:07</td><td>(Retrospective) p99 on <code>GET /v2/invoices/search</code> jumps from 2.1&#8202;ms to &gt;20&#8202;s in trace data. No alert exists on this signal.</td></tr>
+              <tr><td class="num">14:11</td><td>First alert: api-gateway 5xx rate crosses the 2% / 5-min threshold. On-call paged.</td></tr>
+              <tr><td class="num">14:16</td><td>On-call acknowledges. Error rate 4.1% and climbing; 504s visible across several endpoint groups, not just search.</td></tr>
+              <tr><td class="num">14:20</td><td><b>Misdiagnosis begins.</b> A cloud-provider advisory (14:05, "elevated packet loss" in one availability zone) plus the gateway-timeout pattern anchor a network hypothesis. Infra team engaged.</td></tr>
+              <tr><td class="num">14:38</td><td>Gateway/NAT failover to the unaffected zone executed. No improvement.</td></tr>
+              <tr><td class="num">14:55</td><td>Status page updated: "Degraded performance — invoicing API." (Updated every 30 min thereafter.)</td></tr>
+              <tr><td class="num">15:10</td><td>Packet captures clean; provider confirms our zone was not impacted. Network hypothesis ruled out — 50 minutes after it was adopted.</td></tr>
+              <tr><td class="num">15:12</td><td>(Retrospective) pgbouncer pool to the primary saturates: 80/80 server connections busy; client wait queue begins to grow.</td></tr>
+              <tr><td class="num">15:15</td><td>A responder notices pgbouncer <code>cl_waiting</code> above 900 and climbing.</td></tr>
+              <tr class="mark"><td class="num">15:19</td><td><b>Database identified as the bottleneck; IC pivots</b> — <code>pg_stat_activity</code> shows dozens of concurrent sequential scans from invoice search. 68 min after first alert.</td></tr>
+              <tr><td class="num">15:40</td><td>Rollback attempted — and abandoned: migration 0412 dropped the covering index the old query needs; recreating it takes ≈6&#8202;h. Code rollback alone would not restore performance.</td></tr>
+              <tr><td class="num">15:47</td><td>Peak: error rate 31.2%; gateway inbound 15,020 rpm vs 3,200 rpm baseline (4.7×) as retry waves compound.</td></tr>
+              <tr><td class="num">16:05</td><td><code>CREATE INDEX CONCURRENTLY</code> started as insurance (it completes 21:48, after incident close). Options review settles on feature-flag disable as primary path.</td></tr>
+              <tr><td class="num">16:12</td><td>Retry storm quantified: SDK and internal clients retry 5xx on a fixed 1&#8202;s interval, 3 attempts, no jitter, no budget — measured request multiplication 4.7×.</td></tr>
+              <tr><td class="num">16:20</td><td>Emergency pool bump 80 → 200 tried; write p99 on the primary worsens (more concurrent scans, more I/O contention). Reverted at 16:31.</td></tr>
+              <tr><td class="num">16:35</td><td>Staging verification that the exact-match search fallback uses the untouched unique index and not the dropped one.</td></tr>
+              <tr><td class="num">17:03</td><td>Flag-off approved by IC.</td></tr>
+              <tr class="mark"><td class="num">17:05</td><td><b>Mitigation:</b> feature flag <code>invoice_search_contains</code> set to 0%. Search falls back to exact invoice-number match. Error rate falls immediately.</td></tr>
+              <tr><td class="num">17:12</td><td>Manual <code>VACUUM (ANALYZE)</code> on <code>invoices</code> started, cost limits disabled.</td></tr>
+              <tr><td class="num">17:15</td><td>Error rate below 3%; pgbouncer wait queue fully drained by 17:18. Latency still above SLO (bloat + evicted caches).</td></tr>
+              <tr><td class="num">17:50</td><td>VACUUM completes: 38.1&#8202;M dead tuples removed, statistics refreshed.</td></tr>
+              <tr><td class="num">17:53</td><td>All endpoint groups back within SLO (p99 &lt; 1&#8202;s, error rate &lt; 0.5%).</td></tr>
+              <tr class="mark"><td class="num">18:19</td><td><b>Incident closed</b> after 26 minutes of stable, in-SLO metrics. Total: 4&#8202;h&#8202;17&#8202;m.</td></tr>
+            </table>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Cause 1 -->
+      <section class="card" id="cause-1">
+        <details>
+          <summary>
+            <div class="kicker"><span>Cause 1 · the trigger</span><span class="keynum">0.4&#8202;ms → 24–31&#8202;s</span></div>
+            <h3>A search rewrite abandoned its index</h3>
+            <p class="sum"><strong>The new contains-search couldn't use any index.</strong> PR #8841 gave the query a leading wildcard — which no B-tree index can serve — and moved org scoping out of the SQL, so every search sequentially scanned the entire 274-million-row invoices table. Canary (2&#8202;M rows) couldn't see it.</p>
+            <span class="more"><span class="closed-lbl">Show the evidence ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <h4>What changed</h4>
+            <p>PR #8841 upgraded invoice search from prefix matching ("starts with") to contains matching ("anywhere in the number") — a long-requested feature. Two things changed at once in the ORM layer:</p>
+            <ul>
+              <li>The pattern gained a <strong>leading wildcard</strong>: <code>invoice_number LIKE $1 || '%'</code> became <code>invoice_number LIKE '%' || $1 || '%'</code>.</li>
+              <li>Org scoping moved from the SQL <code>WHERE</code> clause into application-side post-filtering, so the query itself ran <strong>unscoped</strong> across all organizations. Results were identical after filtering — which is why the change passed review and its behavioral tests.</li>
+            </ul>
+            <h4>Why that is catastrophic in Postgres</h4>
+            <p class="gloss">Gloss: a B-tree index is like a sorted phone book — it can jump to entries that <em>start with</em> a value, but a pattern that begins with a wildcard gives it nothing to anchor on, so Postgres can't use it at all.</p>
+            <p>With the org filter gone from the SQL too, the planner's only option was a <strong>sequential scan</strong>: read the entire table for every single search.</p>
+            <h4>Evidence — query plans before and after (representative)</h4>
+            <ul>
+              <li><strong>Before:</strong> <code>Index Only Scan using idx_invoices_org_number on invoices (cost=0.56..8.44)</code> — mean <b>0.4&#8202;ms</b>, p99 2.1&#8202;ms. The index <em>covered</em> the query: all needed columns lived in the index, so the table itself was never touched.</li>
+              <li><strong>After:</strong> <code>Seq Scan on invoices (cost=0.00..6,214,891)</code>, <code>Filter: invoice_number ~~ '%…%'</code>, <code>Rows Removed by Filter: 312,344,806</code>, <code>Buffers: shared hit=3,214,556 read=24,661,020</code> — actual time <b>24,000–31,000&#8202;ms</b> per query. That is the whole table: 274.2&#8202;M live rows plus 38.1&#8202;M dead tuples (≈213&#8202;GB of heap — see Cause 2).</li>
+            </ul>
+            <p>Two mercies kept this from being even worse: Postgres synchronized concurrent sequential scans (parallel searches shared one pass over the table), and the table was partially cached. Without those, scans would have taken minutes, not tens of seconds.</p>
+            <div class="caveat"><b class="tag">⚠ Why canary didn't catch it:</b> the canary environment's <code>invoices</code> table holds ~2&#8202;M rows. The same seq scan there takes ~180&#8202;ms — slow, but under every alert threshold. The regression is invisible until the query meets production-scale data.</div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Cause 2 -->
+      <section class="card" id="cause-2">
+        <details>
+          <summary>
+            <div class="kicker"><span>Cause 2 · first amplifier</span><span class="keynum">38.1&#8202;M dead tuples</span></div>
+            <h3>Two-day-old bloat turned slow into failing</h3>
+            <p class="sum"><strong>A June 22 backfill left 12.2% bloat that autovacuum never cleaned</strong> — the cleanup threshold on a table this size is ≈54.9&#8202;M dead tuples, and the backfill left "only" 38.1&#8202;M. The extra bulk pushed scans past the 30-second query timeout: ~57% of searches died as errors instead of finishing slow.</p>
+            <span class="more"><span class="closed-lbl">Show the arithmetic ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <p class="gloss">Gloss: in Postgres, an UPDATE doesn't overwrite a row — it writes a new version and leaves the old one behind as a "dead tuple." A background process, autovacuum, reclaims dead tuples. Until it runs, the table is physically larger ("bloat"), and every full-table scan pays to read the corpses.</p>
+            <h4>What happened</h4>
+            <p>On June 22 — two days before the incident — a backfill populated the new <code>tax_region</code> column on 38.1&#8202;M historical invoices. That single job created 38.1&#8202;M dead tuples, growing the table on disk from 190&#8202;GB to 213&#8202;GB (+12%); dead tuples were 38.1&#8202;M of 312.3&#8202;M total — <strong>12.2% bloat</strong>.</p>
+            <h4>Why autovacuum never ran</h4>
+            <p>Autovacuum triggers when dead tuples exceed <code>scale_factor × live rows</code> — by default 20%. On a 274.2-million-row table that threshold is ≈54.9&#8202;M dead tuples. The backfill's 38.1&#8202;M fell short, so autovacuum — <strong>correctly, by its configuration</strong> — did nothing. The default scale factor is sized for small tables; on very large tables it permits tens of gigabytes of bloat. <code>ANALYZE</code> (statistics refresh) was likewise never triggered, leaving the query planner with pre-backfill statistics.</p>
+            <h4>Why it mattered</h4>
+            <p>Alone, this bloat was harmless — index-backed queries skip dead tuples cheaply, and nothing scans this table in normal operation. But once Cause 1 turned every search into a full-table scan, each scan had to read 312.3&#8202;M tuples instead of 274.2&#8202;M and ~23&#8202;GB of extra data. That pushed scan times from an estimated ~26&#8202;s (bloat-free) to the observed 24–31&#8202;s — <strong>straddling the 30-second statement timeout</strong> (the limit after which Postgres kills a running query).</p>
+            <p>During the incident, <strong>~57% of search queries were killed by the timeout</strong> (<code>query_canceled</code>), surfacing to clients as 5xx errors. Bloat converted "slow" into "failing" — and a killed query still held its pooled connection for the full 30 seconds first.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- Cause 3 -->
+      <section class="card" id="cause-3">
+        <details>
+          <summary>
+            <div class="kicker"><span>Cause 3 · second amplifier</span><span class="keynum">4.7× traffic · pool 80/80</span></div>
+            <h3>Jitterless retries turned failure into a storm</h3>
+            <p class="sum"><strong>Clients retried every failure on a fixed 1-second beat</strong> — no jitter, no budget — multiplying traffic 4.7×. Thirty-second connection holds then saturated the shared 80-connection database pool at 15:12, and every endpoint behind it (invoice creation, PDFs, webhooks) went down with search.</p>
+            <span class="more"><span class="closed-lbl">Show the arithmetic ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <p class="gloss">Gloss: the API doesn't open a Postgres connection per request; requests borrow one of a fixed pool of server connections managed by pgbouncer. If every connection is busy, new requests wait in a queue.</p>
+            <h4>The arithmetic of exhaustion</h4>
+            <p>The pgbouncer pool to the primary is sized at <strong>80 server connections</strong>, shared by invoice reads, writes, PDF rendering, and webhook dispatch. Pre-incident, invoice search consumed a negligible share (1.2 searches/s × 0.4&#8202;ms each). After the deploy, each search held a connection for up to 30&#8202;s:</p>
+            <ul>
+              <li><b>14:07–15:00</b> — organic search traffic alone (≈1.2/s × ~28&#8202;s) occupied ~34 of 80 connections: heavily degraded, but the pool held.</li>
+              <li><b>Around 15:00</b>, the day's largest cohort of hourly scheduled invoice-generation jobs landed, and retries multiplied search arrivals to ≈5.6/s. Demand hit ≈160+ concurrent connections against a pool of 80. <b>Saturation at 15:12.</b> From then on, <em>every</em> endpoint sharing the pool queued behind 30-second scans — the blast radius stopped being "search."</li>
+            </ul>
+            <p>The client wait queue (<code>cl_waiting</code>) peaked at <strong>1,437</strong> at 15:58.</p>
+            <h4>The retry storm</h4>
+            <p>SDKs and internal service clients retried 5xx responses on a <strong>fixed 1-second interval, 3 attempts, no jitter, no retry budget</strong>. Under sustained failure this is traffic multiplication: gateway inbound rose from a 3,200&#8202;rpm baseline to 15,020&#8202;rpm at peak — <strong>4.7×</strong> — with visible 1-second-period oscillation as retry waves arrived in phase. The retries queued on the same exhausted pool, so the extra load produced <em>zero</em> extra successes; it only kept the pool pinned and the queue full for nearly two hours (15:12–17:18).</p>
+            <div class="caveat"><b class="tag">⚠ Why the pool bump backfired:</b> at 16:20 the pool was raised 80 → 200 as an experiment. That admitted more concurrent sequential scans to the primary, worsening I/O contention and write p99. It was reverted at 16:31. The pool size was not the problem; the 30-second connection holds were.</div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Chain -->
+      <section class="card" id="chain">
+        <details>
+          <summary>
+            <div class="kicker"><span>How they combined</span><span class="keynum">3 legs, 1 outage</span></div>
+            <h3>Remove any leg and June 24 looks different</h3>
+            <p class="sum"><strong>This was a conjunction, not a chain of blame.</strong> Without the bloat: painfully slow searches that mostly succeed, pool at ≈34/80 — a one-endpoint degradation. Without the retry storm: the pool holds. Without the query change: nothing at all. That is why the fix plan targets all three legs, not just the trigger.</p>
+            <span class="more"><span class="closed-lbl">Show the causal chain ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <h4>The causal chain, in order</h4>
+            <ol>
+              <li>The deploy made every search a 24–31&#8202;s full-table scan (<strong>Cause 1 — the trigger</strong>).</li>
+              <li>Backfill bloat pushed those scans past the 30&#8202;s statement timeout, so slow queries became failed queries (<strong>Cause 2 — first amplifier</strong>).</li>
+              <li>Failures triggered jitterless retries, multiplying search arrivals 4.7× (<strong>Cause 3a — second amplifier</strong>).</li>
+              <li>Multiplied 30-second connection holds exhausted the shared pool of 80, extending the failure to every endpoint behind the pool (<strong>Cause 3b</strong>).</li>
+              <li>Those endpoints' failures also retried, sustaining the storm until the flag-off at 17:05 removed the scans entirely.</li>
+            </ol>
+            <h4>The counterfactuals</h4>
+            <p>Remove any single leg and June 24 looks different: without the bloat, searches are painfully slow but mostly <em>succeed</em>, retries stay rare, and the pool (≈34/80 used) survives — a one-endpoint degradation. Without the retry storm, demand stays near organic levels and the pool holds through the 15:00 spike. Without the query change, nothing happens at all.</p>
+            <p>This is why the remediation plan deliberately targets all three legs rather than only the trigger.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- Diagnosis -->
+      <section class="card" id="diagnosis">
+        <details>
+          <summary>
+            <div class="kicker"><span>Detection &amp; diagnosis</span><span class="keynum">68 min lost</span></div>
+            <h3>The system hid the right answer</h3>
+            <p class="sum"><strong>Four systemic gaps, no human error.</strong> No latency alert existed for invoicing, latency dashboards sampled 1 in 100 requests, the deploy marker on graphs had been broken since June 10, and a coincident cloud-provider advisory anchored 50 minutes of network chasing.</p>
+            <span class="more"><span class="closed-lbl">Show the four gaps ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <p>68 minutes elapsed between the first alert (14:11) and the correct diagnosis (15:19), of which 50 minutes (14:20–15:10) were spent actively pursuing the network hypothesis. Contributing gaps, all systemic:</p>
+            <ul>
+              <li><strong>Alerting watched error rate, not latency.</strong> The only firing signal was "gateway 5xx &gt; 2% over 5 min." Search p99 exploded at 14:07 — four minutes before that alert — but no latency SLO alert existed for the invoicing endpoint group (checkout had one; invoicing did not).</li>
+              <li><strong>Latency dashboards sampled 1 in 100 requests.</strong> At 1.2 searches/s, that is ~0.7 samples per minute — the search-latency panel looked like sparse noise, not a cliff, exactly when it mattered.</li>
+              <li><strong>The deploy marker was broken.</strong> The dashboard integration that annotates deploys had been broken since June 10 (a known ticket). The 14:02 deploy was invisible on every graph responders looked at, removing the single strongest hint.</li>
+              <li><strong>A plausible distractor arrived on cue.</strong> The cloud provider's 14:05 packet-loss advisory, plus gateway 504s that <em>look</em> like network timeouts, anchored the team. Given the missing deploy marker, the network theory was the most reasonable available explanation.</li>
+            </ul>
+            <p>In retrospect, <code>pg_stat_activity</code> (Postgres's live view of running queries) would have shown rows of identical sequential scans as early as ~14:15. Nothing routed responders toward the database until the pool queue became impossible to miss at 15:15.</p>
+            <div class="caveat"><b class="tag">⚠ Blameless framing is deliberate:</b> every decision described here was reasonable given what responders could see at the time. The review fixes the instruments, not the people who flew with them.</div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Rollback -->
+      <section class="card" id="rollback">
+        <details>
+          <summary>
+            <div class="kicker"><span>Why rollback failed</span><span class="keynum">flag flip: 90&#8202;s</span></div>
+            <h3>The deploy was irreversible; the flag wasn't</h3>
+            <p class="sum"><strong>Migration 0412 had dropped the old query's index — rebuild ≈6 hours</strong> — so rolling back the code would seq-scan just the same. The feature flag <code>invoice_search_contains</code>, set to 0% at 17:05 after staging verification, cut errors below 3% within ten minutes.</p>
+            <span class="more"><span class="closed-lbl">Show what worked & the cleanup ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <h4>Why the deploy could not be rolled back</h4>
+            <p>Release <code>2026-06-24.3</code> bundled migration 0412, which <strong>dropped</strong> <code>idx_invoices_org_number</code> — the covering index the <em>old</em> query depended on. (A covering index holds every column a query needs, so the query never touches the table itself.) The migration's rationale was reasonable at review time: the new query shape no longer used the index, and it cost 31&#8202;GB and write overhead. That made the deploy irreversible in practice:</p>
+            <ul>
+              <li>Rolling back the code would restore the old prefix query — which now also has no index to use, and would seq-scan just the same.</li>
+              <li>Recreating the index on 274&#8202;M rows takes ≈6 hours (<code>CREATE INDEX CONCURRENTLY</code> — an index build that doesn't lock the table — was started at 16:05 as insurance; it finished at 21:48, well after incident close).</li>
+              <li>Rolling <em>forward</em> with a query fix was estimated at 50+ minutes of build/deploy under storm conditions, with its own risk.</li>
+            </ul>
+            <h4>What worked: the feature flag</h4>
+            <p>The contains-search path had shipped behind <code>invoice_search_contains</code>. After staging verification (16:35) that the exact-match fallback used the untouched unique index <code>uq_invoices_org_number</code>, the flag was set to 0% at 17:05. Errors fell below 3% within ten minutes; the flip itself took 90 seconds once approved.</p>
+            <h4>The remaining recovery was cleanup</h4>
+            <p>The manual VACUUM (17:12–17:50) removed the 38.1&#8202;M dead tuples and refreshed planner statistics, and the buffer caches that hours of 200-GB scans had evicted re-warmed. All SLOs were met from 17:53; the incident closed at 18:19.</p>
+            <div class="caveat"><b class="tag">⚠ Two loose ends, both handled:</b> VACUUM marks disk space reusable but doesn't return it — a <code>pg_repack</code> is scheduled separately. And search ran in degraded, exact-match-only mode until the index rebuild completed that evening; full contains search was re-enabled (with the fixed, org-scoped query) on June 26.</div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Wins -->
+      <section class="card" id="wins">
+        <details>
+          <summary>
+            <div class="kicker"><span>What went well</span><span class="keynum">0 records lost</span></div>
+            <h3>Flags and durable queues held</h3>
+            <p class="sum"><strong>The safety nets that existed worked.</strong> Feature-flag discipline meant mitigation required no build, no deploy, no schema change. Durable queues meant no invoice write was lost, and all 37,400 delayed webhooks were replayed by 19:05.</p>
+            <span class="more"><span class="closed-lbl">Show details ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <ol>
+              <li><strong>Feature-flag discipline paid for itself.</strong> Because the new query path shipped behind a flag, mitigation required no build, no deploy, and no schema change — the flip itself took 90 seconds once approved. On June 24, flags — not the deploy pipeline — were the working safety net.</li>
+              <li><strong>No data was lost.</strong> Invoice writes ride a durable queue and webhook deliveries are queued with replay: all 37,400 webhooks delayed during the outage were delivered by 19:05, and no customer record was dropped or corrupted. The blast radius was availability, not integrity.</li>
+            </ol>
+          </div>
+        </details>
+      </section>
+
+      <!-- Actions -->
+      <section class="card" id="actions">
+        <details>
+          <summary>
+            <div class="kicker"><span>Action items</span><span class="keynum">3× P0 · Q3 2026</span></div>
+            <h3>One fix per failure leg, scheduled — not aspirational</h3>
+            <p class="sum"><strong>Nine items; the three P0s land this quarter and are tracked weekly.</strong> Per-endpoint latency SLO alerts (the detection gap), pool-saturation alerting (the blast-radius leg), and standardized retries with backoff and jitter (the storm leg). Three P1 and three P2 items follow.</p>
+            <span class="more"><span class="closed-lbl">Show all nine items ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <p>Three P0 (this quarter, tracked weekly at the ops review), three P1, three P2. Each P0 targets a different leg of the failure: #1 the detection gap, #2 the pool leg, #3 the retry leg.</p>
+            <div class="tbl-scroll">
+            <table>
+              <tr><th>#</th><th>Pri</th><th>Action</th><th>Owner</th><th>Target</th></tr>
+              <tr><td class="num">1</td><td><span class="pri p0">P0</span></td><td>Per-endpoint-group p99 latency SLO alerts (invoicing first); alert on latency, not only error rate</td><td>Priya N. (Observability)</td><td class="num">Q3 2026</td></tr>
+              <tr><td class="num">2</td><td><span class="pri p0">P0</span></td><td>pgbouncer saturation alerting (<code>cl_waiting</code> &gt; 50 for 2 min) + pool sizing/isolation review so one endpoint can't starve the shared pool</td><td>Marcus T. (Infrastructure)</td><td class="num">Q3 2026</td></tr>
+              <tr><td class="num">3</td><td><span class="pri p0">P0</span></td><td>Standardize retries in all SDKs and internal clients: exponential backoff, full jitter, retry budgets</td><td>Dana K. (Platform)</td><td class="num">Q3 2026</td></tr>
+              <tr><td class="num">4</td><td><span class="pri">P1</span></td><td>Per-table autovacuum tuning for tables &gt; 50&#8202;M rows (<code>autovacuum_vacuum_scale_factor</code> 0.2 → 0.01) + dead-tuple/bloat monitoring with alerts</td><td>Yuki O. (Data Eng)</td><td class="num">Q3 2026</td></tr>
+              <tr><td class="num">5</td><td><span class="pri">P1</span></td><td>Migration reversibility policy: destructive migrations (index/column drops) ship at least one release <b>after</b> the code that stops using them, never bundled</td><td>Marcus T. (Infrastructure)</td><td class="num">Q3 2026</td></tr>
+              <tr><td class="num">6</td><td><span class="pri">P1</span></td><td>CI query-plan regression check: EXPLAIN hot queries against production-scale statistics; block plans that flip to sequential scan</td><td>Alé G. (Billing Experience)</td><td class="num">Q4 2026</td></tr>
+              <tr><td class="num">7</td><td><span class="pri">P2</span></td><td>Production-scale query replay in canary (shadow traffic against a full-size dataset) so data-dependent regressions surface pre-deploy</td><td>Yuki O. (Data Eng)</td><td class="num">Q4 2026</td></tr>
+              <tr><td class="num">8</td><td><span class="pri">P2</span></td><td>Fix deploy markers on dashboards (broken since June 10) and raise latency-panel sampling 1/100 → 1/10 on tier-1 endpoints</td><td>Priya N. (Observability)</td><td class="num">Q3 2026</td></tr>
+              <tr><td class="num">9</td><td><span class="pri">P2</span></td><td>IC-guild training: hypothesis board + explicit deploy-correlation step in the first 15 minutes, to counter anchoring</td><td>Rotimi O. (IC guild)</td><td class="num">Q4 2026</td></tr>
+            </table>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Lessons -->
+      <section class="card" id="lessons">
+        <details>
+          <summary>
+            <div class="kicker"><span>Lessons</span><span class="keynum">5 takeaways</span></div>
+            <h3>Outages of this class are conjunctions</h3>
+            <p class="sum"><strong>Reviews that stop at the trigger fix one third of the problem.</strong> Alert on what the customer feels; treat irreversible changes as their own category; jitterless retries are a denial-of-service you ship to yourself; fix the instruments, not the people.</p>
+            <span class="more"><span class="closed-lbl">Show all five lessons ▾</span><span class="open-lbl">Hide details ▴</span></span>
+          </summary>
+          <div class="detail">
+            <ul>
+              <li><strong>Latent conditions are part of the system.</strong> The bloat and the retry configuration were both known-shaped risks that were individually harmless for months. Outages of this class are conjunctions; reviews that stop at the trigger fix one third of the problem.</li>
+              <li><strong>Alert on what the customer feels.</strong> Customers felt latency at 14:07; the first signal was an error-rate threshold at 14:11, and the dashboards couldn't show the latency cliff at all. Detection gaps cost more minutes than any technical failure on June 24.</li>
+              <li><strong>Treat irreversible changes as a category.</strong> The engineers who bundled migration 0412 followed existing norms; the norms were wrong. Schema changes that foreclose rollback need their own release policy (action item 5), not more reviewer vigilance.</li>
+              <li><strong>Retries without jitter are a denial-of-service you ship to yourself.</strong> A 4.7× traffic multiplier during failure is the worst possible time to add load. Backoff and budgets (action item 3) turn clients from amplifiers into dampers.</li>
+              <li><strong>The responders did the right things in the wrong order because the system hid the right order.</strong> With a working deploy marker and a latency alert, the 14:20 network detour likely never happens. The fixes target the instruments, not the people who flew with them.</li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">incident-analysis · layered-dashboard · v1 · 2026-07-01</div>
+</footer>
+
+<script>
+  document.documentElement.classList.add('js');
+  var all = Array.prototype.slice.call(document.querySelectorAll('main details'));
+  document.getElementById('expand-all').addEventListener('click', function () {
+    all.forEach(function (d) { d.open = true; });
+  });
+  document.getElementById('collapse-all').addEventListener('click', function () {
+    all.forEach(function (d) { d.open = false; });
+  });
+  // opening a card from the nav also expands it
+  function openTarget() {
+    var id = location.hash.slice(1);
+    if (!id) return;
+    var el = document.getElementById(id);
+    if (el) { var d = el.querySelector('details'); if (d) d.open = true; }
+  }
+  window.addEventListener('hashchange', openTarget);
+  openTarget();
+</script>
+</body>
+</html>

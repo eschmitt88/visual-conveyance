@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tessel — Pathways onboarding A/B test: final readout</title>
+<style>
+:root{
+  --surface:#fcfcfb; --page:#f9f9f7;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --hairline:rgba(11,11,11,.10);
+  --pos:#2a78d6; --neg:#e34948; --warn:#fab219;
+  --pos-tint:rgba(42,120,214,.10); --neg-tint:rgba(227,73,72,.10);
+  --null-tint:rgba(137,135,129,.12); --warn-tint:rgba(250,178,25,.12);
+  --band:rgba(137,135,129,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --surface:#1a1a19; --page:#0d0d0d;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --hairline:rgba(255,255,255,.10);
+    --pos:#3987e5; --neg:#e66767; --warn:#fab219;
+    --pos-tint:rgba(57,135,229,.16); --neg-tint:rgba(230,103,103,.16);
+    --null-tint:rgba(137,135,129,.18); --warn-tint:rgba(250,178,25,.14);
+    --band:rgba(137,135,129,.14);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--page); color:var(--ink);
+  font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+a{color:var(--pos)}
+section{scroll-margin-top:56px}
+
+/* ---------- sticky nav ---------- */
+nav{
+  position:sticky; top:0; z-index:20; background:var(--surface);
+  border-bottom:1px solid var(--hairline);
+  display:flex; align-items:center; gap:2px;
+  padding:6px 16px; overflow-x:auto; white-space:nowrap;
+}
+nav .brand{font-weight:700; font-size:13px; margin-right:10px}
+nav .brand span{color:var(--muted); font-weight:400}
+nav a{
+  font-size:12.5px; color:var(--ink-2); text-decoration:none;
+  padding:4px 8px; border-radius:6px;
+}
+nav a:hover{background:var(--null-tint); color:var(--ink)}
+nav .spacer{flex:1}
+nav button{
+  font:inherit; font-size:12px; color:var(--ink-2);
+  background:none; border:1px solid var(--hairline); border-radius:6px;
+  padding:3px 9px; cursor:pointer; margin-left:4px;
+}
+nav button:hover{background:var(--null-tint); color:var(--ink)}
+
+main{max-width:1240px; margin:0 auto; padding:0 20px 32px}
+
+/* ---------- layer 1 : glance ---------- */
+header.masthead{padding:18px 0 4px}
+.kicker{font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted)}
+h1{font-size:clamp(20px,2.4vw,27px); line-height:1.25; margin:6px 0 4px; max-width:62ch}
+h1 .win{color:var(--pos)} h1 .loss{color:var(--neg)}
+.subhead{color:var(--ink-2); max-width:88ch; margin:0 0 2px; font-size:14.5px}
+.gloss{font-size:12px; color:var(--muted); margin:2px 0 12px}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px}
+.tile{
+  background:var(--surface); border:1px solid var(--hairline); border-radius:10px;
+  padding:10px 12px 9px;
+}
+.tile .lbl{font-size:12px; color:var(--muted)}
+.tile .val{font-size:27px; font-weight:600; line-height:1.15}
+.tile .sub{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums}
+.chip{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11.5px; font-weight:600; color:var(--ink);
+  border-radius:999px; padding:2px 9px; margin-top:6px;
+}
+.chip i{width:8px;height:8px;border-radius:50%;flex:none}
+.chip.win{background:var(--pos-tint)} .chip.win i{background:var(--pos)}
+.chip.loss{background:var(--neg-tint)} .chip.loss i{background:var(--neg)}
+.chip.null{background:var(--null-tint)} .chip.null i{background:transparent;border:2px solid var(--muted);width:6px;height:6px}
+.chip.pass{background:var(--null-tint)} .chip.pass i{background:var(--muted)}
+
+.hero{display:grid; grid-template-columns:minmax(0,1.9fr) minmax(260px,1fr); gap:10px; margin-top:10px}
+.panel{background:var(--surface); border:1px solid var(--hairline); border-radius:10px; padding:12px 14px}
+.panel h2{font-size:13.5px; margin:0 0 2px}
+.panel .cap{font-size:12px; color:var(--muted); margin:0 0 8px}
+
+/* forest plot (pure HTML/CSS, % positioned) */
+.forest{position:relative; margin-top:4px}
+.frow{display:grid; grid-template-columns:108px minmax(0,1fr); align-items:stretch; height:56px}
+.frow .name{font-size:12.5px; color:var(--ink-2); align-self:center; padding-right:8px}
+.frow .name b{display:block; color:var(--ink); font-size:13px}
+.track{position:relative}
+.track::before{ /* zero line, rows are contiguous so it reads as one rule */
+  content:""; position:absolute; left:39.13%; top:0; bottom:0;
+  width:1px; background:var(--baseline);
+}
+.whisk{position:absolute; top:50%; height:3px; margin-top:-1.5px; border-radius:2px}
+.whisk.sig-pos{background:var(--pos)} .whisk.sig-neg{background:var(--neg)}
+.whisk.ns{background:var(--baseline)}
+.dot{position:absolute; top:50%; width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:50%;
+     box-shadow:0 0 0 2px var(--surface)}
+.dot.sig-pos{background:var(--pos)} .dot.sig-neg{background:var(--neg)}
+.dot.ns{background:var(--surface); border:2px solid var(--muted)}
+.dlab{position:absolute; top:3px; transform:translateX(-50%); font-size:12px; font-weight:700; white-space:nowrap}
+.cilab{position:absolute; bottom:3px; transform:translateX(-50%); font-size:11px; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
+.faxis{display:grid; grid-template-columns:108px minmax(0,1fr); height:20px}
+.faxis .track::before{display:none}
+.faxis span{position:absolute; top:2px; transform:translateX(-50%); font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+.flegend{font-size:11.5px; color:var(--muted); margin-top:6px}
+.flegend .k{display:inline-block; width:10px; height:10px; border-radius:50%; vertical-align:-1px; margin-right:3px}
+.flegend .k.f{background:var(--pos)} .flegend .k.f2{background:var(--neg)}
+.flegend .k.o{background:var(--surface); border:2px solid var(--muted); width:8px; height:8px}
+
+/* decision panel */
+.decide{display:flex; flex-direction:column; gap:8px}
+.dec{border-left:3px solid var(--baseline); padding:2px 0 2px 10px; font-size:13px}
+.dec .t{display:block; font-weight:700; font-size:11px; letter-spacing:.05em; text-transform:uppercase}
+.dec.do{border-color:var(--pos)} .dec.do .t{color:var(--pos)}
+.dec.dont{border-color:var(--neg)} .dec.dont .t{color:var(--neg)}
+.dec.watch{border-color:var(--warn)} .dec.watch .t{color:var(--ink-2)}
+
+/* ---------- caveat style (shared across layers) ---------- */
+.caveat{
+  border-left:3px solid var(--warn); background:var(--warn-tint);
+  border-radius:0 8px 8px 0; padding:8px 12px; font-size:13px; margin:10px 0;
+}
+.caveat b.tag{font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-2); display:block}
+
+/* ---------- layer 2/3 : cards ---------- */
+#cards{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px}
+.card{background:var(--surface); border:1px solid var(--hairline); border-radius:10px; overflow:hidden}
+.card.wide{grid-column:1 / -1}
+summary{list-style:none; cursor:pointer; padding:14px 16px; position:relative}
+summary::-webkit-details-marker{display:none}
+summary::after{
+  content:"▸"; position:absolute; top:14px; right:14px; color:var(--muted);
+  transition:transform .15s;
+}
+details[open] > summary::after{transform:rotate(90deg)}
+summary:hover{background:var(--null-tint)}
+.chead{display:flex; align-items:center; gap:10px; margin-bottom:6px}
+.cico{flex:none; width:30px; height:30px; border-radius:8px; display:grid; place-items:center; background:var(--null-tint)}
+.cico svg{width:17px; height:17px; stroke:var(--ink-2); fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.card h3{font-size:15px; margin:0; padding-right:20px}
+.lead{font-size:13.5px; color:var(--ink-2); margin:0}
+.lead b{color:var(--ink)}
+.keynum{margin-top:8px; font-size:12.5px; color:var(--ink-2)}
+.keynum b{font-size:15px; color:var(--ink); font-variant-numeric:tabular-nums}
+.cbody{padding:2px 16px 16px; border-top:1px solid var(--hairline)}
+.cbody h4{font-size:13px; margin:14px 0 4px}
+.cbody p, .cbody li{font-size:13.5px; color:var(--ink-2)}
+.cbody p b, .cbody li b{color:var(--ink)}
+.cbody ul, .cbody ol{padding-left:20px; margin:6px 0}
+
+table{border-collapse:collapse; width:100%; margin:8px 0; font-size:13px}
+th{font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); font-weight:600; text-align:left}
+th,td{padding:5px 10px 5px 0; border-bottom:1px solid var(--grid)}
+td{font-variant-numeric:tabular-nums; color:var(--ink-2)}
+td b{color:var(--ink)}
+td.pos{color:var(--ink); font-weight:600} td.neg{color:var(--ink); font-weight:600}
+.mark{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:-1px}
+.mark.p{background:var(--pos)} .mark.n{background:var(--neg)}
+.mark.o{background:var(--surface); border:2px solid var(--muted); width:7px; height:7px}
+.tblwrap{overflow-x:auto}
+
+/* weekly chart */
+.chartwrap{overflow-x:auto}
+.chartwrap svg{min-width:520px; width:100%; height:auto; display:block}
+.axis-t{font-size:11px; fill:var(--muted); font-variant-numeric:tabular-nums}
+.val-t{font-size:12px; font-weight:700; fill:var(--ink)}
+.note-t{font-size:11px; fill:var(--muted)}
+.gridln{stroke:var(--grid); stroke-width:1}
+.baseln{stroke:var(--baseline); stroke-width:1}
+.wbar{fill:var(--pos)}
+.bandr{fill:var(--band)}
+
+/* funnel mini-bars */
+.fun{margin:10px 0 4px}
+.funrow{display:grid; grid-template-columns:120px minmax(0,1fr) 52px; gap:8px; align-items:center; font-size:12.5px; margin:3px 0}
+.funrow .fl{color:var(--ink-2)}
+.funbar{height:10px; border-radius:0 4px 4px 0; min-width:2px}
+.funbar.a{background:var(--baseline)} .funbar.b{background:var(--pos)}
+.funrow .fv{font-variant-numeric:tabular-nums; color:var(--ink)}
+.funleg{font-size:11.5px; color:var(--muted); margin:4px 0 8px}
+.funleg .k{display:inline-block; width:12px; height:8px; border-radius:2px; vertical-align:0; margin:0 3px 0 10px}
+.funleg .k.a{background:var(--baseline)} .funleg .k.b{background:var(--pos)}
+
+footer{max-width:1240px; margin:0 auto; padding:10px 20px 18px; font-size:11px; color:var(--muted); border-top:1px solid var(--hairline)}
+
+@media (max-width:900px){
+  #cards{grid-template-columns:1fr}
+  .hero{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  .frow{grid-template-columns:78px minmax(0,1fr)}
+  .faxis{grid-template-columns:78px minmax(0,1fr)}
+  .frow .name{font-size:11px} .frow .name b{font-size:11.5px}
+  .cilab{font-size:9.5px} .dlab{font-size:11px}
+  .funrow{grid-template-columns:86px minmax(0,1fr) 44px}
+  .tile .val{font-size:23px}
+}
+</style>
+</head>
+<body>
+
+<nav aria-label="Sections">
+  <span class="brand">tessel <span>· ONB-2026-014 readout</span></span>
+  <a href="#glance">Glance</a>
+  <a href="#primary">Primary</a>
+  <a href="#platforms">Platforms</a>
+  <a href="#weeks">Weeks</a>
+  <a href="#guardrails">Guardrails</a>
+  <a href="#ios">iOS</a>
+  <a href="#validity">Validity</a>
+  <a href="#recommendation">Decision</a>
+  <span class="spacer"></span>
+  <button id="expandAll" class="jsctl" hidden>Expand all</button>
+  <button id="collapseAll" class="jsctl" hidden>Collapse all</button>
+</nav>
+
+<main>
+
+<!-- ================= LAYER 1 — GLANCE ================= -->
+<section id="glance">
+  <header class="masthead">
+    <div class="kicker">Onboarding redesign “Pathways” (B) vs current flow (A) · 6-week A/B test · final readout 2026-06-30</div>
+    <h1>Overall: <em style="font-style:normal">not significant — don’t read this as “B won.”</em>
+        The real story: <span class="win">mobile-web up +4.2pp</span>, <span class="loss">iOS down −1.9pp</span>. Ship narrow.</h1>
+    <p class="subhead">The blended +0.8pp is a strong win and a real loss averaging each other out — plus a novelty bump
+       that faded (week 1: +2.9pp → week 6: +0.1pp). Recommendation: ship Pathways to <b>mobile-web only</b>, do <b>not</b> ship iOS, and run an iOS fix experiment.</p>
+    <p class="gloss">pp = percentage points. 95% CI = the range of effects consistent with the data; a CI that crosses zero means “can’t tell,” not “no effect.”</p>
+  </header>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="lbl">Overall (blended)</div>
+      <div class="val">+0.8pp</div>
+      <div class="sub">11.4% → 12.2% · CI [−0.3, +1.9] · p=0.16</div>
+      <span class="chip null"><i></i>Not significant — can’t tell</span>
+    </div>
+    <div class="tile">
+      <div class="lbl">Mobile-web</div>
+      <div class="val">+4.2pp</div>
+      <div class="sub">13.9% → 18.1% · CI [+2.1, +6.3] · p&lt;0.0001</div>
+      <span class="chip win"><i></i>Significant win</span>
+    </div>
+    <div class="tile">
+      <div class="lbl">iOS</div>
+      <div class="val">−1.9pp</div>
+      <div class="sub">11.6% → 9.7% · CI [−3.6, −0.2] · p=0.027</div>
+      <span class="chip loss"><i></i>Significant regression</span>
+    </div>
+    <div class="tile">
+      <div class="lbl">Android</div>
+      <div class="val">+0.1pp</div>
+      <div class="sub">7.8% → 7.9% · CI [−1.7, +1.9] · p=0.92</div>
+      <span class="chip null"><i></i>Null — no evidence</span>
+    </div>
+    <div class="tile">
+      <div class="lbl">Guardrail: 7-day retention</div>
+      <div class="val">+0.2pp</div>
+      <div class="sub">31.2% → 31.4% · CI [−0.2, +0.6]</div>
+      <span class="chip pass"><i></i>Flat — pass</span>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="panel">
+      <h2>Effect on trial-to-paid conversion, B − A (percentage points)</h2>
+      <p class="cap">Pre-registered platform subgroups vs the blended overall. The opposing platform effects partially cancel in the overall number.</p>
+      <div class="forest" role="img" aria-label="Forest plot: overall +0.8pp CI −0.3 to +1.9 not significant; mobile-web +4.2pp CI +2.1 to +6.3 significant; iOS −1.9pp CI −3.6 to −0.2 significant regression; Android +0.1pp CI −1.7 to +1.9 null.">
+        <div class="frow">
+          <div class="name"><b>Overall</b>blended</div>
+          <div class="track">
+            <div class="whisk ns" style="left:36.52%; width:19.13%"></div>
+            <div class="dot ns" style="left:46.09%"></div>
+            <div class="dlab" style="left:46.09%">+0.8pp</div>
+            <div class="cilab" style="left:46.09%">[−0.3, +1.9] · p=0.16</div>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="name"><b>Mobile-web</b>web checkout</div>
+          <div class="track">
+            <div class="whisk sig-pos" style="left:57.39%; width:36.52%"></div>
+            <div class="dot sig-pos" style="left:75.65%"></div>
+            <div class="dlab" style="left:75.65%">+4.2pp</div>
+            <div class="cilab" style="left:75.65%">[+2.1, +6.3] · p&lt;0.0001</div>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="name"><b>iOS</b>App Store</div>
+          <div class="track">
+            <div class="whisk sig-neg" style="left:7.83%; width:29.56%"></div>
+            <div class="dot sig-neg" style="left:22.61%"></div>
+            <div class="dlab" style="left:22.61%">−1.9pp</div>
+            <div class="cilab" style="left:22.61%">[−3.6, −0.2] · p=0.027</div>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="name"><b>Android</b>Play Store</div>
+          <div class="track">
+            <div class="whisk ns" style="left:24.35%; width:31.30%"></div>
+            <div class="dot ns" style="left:40.0%"></div>
+            <div class="dlab" style="left:40.0%">+0.1pp</div>
+            <div class="cilab" style="left:40.0%">[−1.7, +1.9] · p=0.92</div>
+          </div>
+        </div>
+        <div class="faxis">
+          <div></div>
+          <div class="track" style="position:relative">
+            <span style="left:4.35%">−4</span><span style="left:21.74%">−2</span>
+            <span style="left:39.13%">0 (no effect)</span>
+            <span style="left:56.52%">+2</span><span style="left:73.91%">+4</span><span style="left:91.30%">+6</span>
+          </div>
+        </div>
+      </div>
+      <div class="flegend">
+        <span class="k f"></span>/<span class="k f2" style="margin-left:2px"></span> filled = 95% CI excludes zero (significant) &nbsp;·&nbsp;
+        <span class="k o"></span> open = CI crosses zero (can’t tell)
+      </div>
+    </div>
+
+    <div class="panel decide">
+      <h2>The decision this supports</h2>
+      <div class="dec do"><span class="t">Ship — narrow</span>Pathways to <b>mobile-web only</b>, with a 5% holdback to confirm the effect post-experiment.</div>
+      <div class="dec dont"><span class="t">Don’t ship</span>iOS (best estimate −1.9pp) or Android (null). Not a full rollout — and not a kill.</div>
+      <div class="dec watch"><span class="t">Fix &amp; re-test</span>iOS follow-up on the likely culprit: the step-3 notification-permission prompt (iOS drop-off 8.1% → 12.7%).</div>
+      <div class="dec watch"><span class="t">Ignore early snapshots</span>Week-1 delta +2.9pp decayed to +0.1pp by week 6 (novelty). The mobile-web gain persists late (+3.8pp, weeks 4–6).</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LAYER 2/3 — CARDS ================= -->
+<div id="cards">
+
+  <!-- 1 · primary -->
+  <section class="card" id="primary">
+    <details>
+      <summary>
+        <div class="chead">
+          <span class="cico"><svg viewBox="0 0 24 24"><path d="M4 20h16M7 16v-6m5 6V7m5 9v-4"/></svg></span>
+          <h3>Primary result — overall verdict: “can’t tell”</h3>
+        </div>
+        <p class="lead"><b>Trial-to-paid conversion moved 11.4% → 12.2% (+0.8pp), CI [−0.3, +1.9], p=0.16 — not statistically significant.</b>
+        Don’t quote it as a win, and don’t quote it as “no effect” either: the CI includes both −0.3pp and +1.9pp.</p>
+        <div class="keynum">Verdict: <b>inconclusive overall</b> · p = 0.16</div>
+      </summary>
+      <div class="cbody">
+        <h4>The numbers</h4>
+        <div class="tblwrap"><table>
+          <tr><th>Arm</th><th>Trial starts</th><th>Paid conversions</th><th>Conversion</th></tr>
+          <tr><td>A (current)</td><td>6,602</td><td>753</td><td>11.4%</td></tr>
+          <tr><td>B (Pathways)</td><td>6,647</td><td>811</td><td><b>12.2%</b></td></tr>
+        </table></div>
+        <p>Difference (B − A): <b>+0.8pp</b>, 95% CI <b>[−0.3, +1.9]</b>, <b>p = 0.16</b> (two-proportion z-test, two-sided — a standard test of whether two conversion rates differ).</p>
+        <p><b>Why “can’t tell” is the honest reading.</b> The CI includes zero and includes effects as negative as −0.3pp, so the data can’t rule out “no benefit.” It equally includes +1.9pp, so it can’t rule out a real gain. The blended effect is too small relative to noise — and too internally heterogeneous (see the platform split) — to support a global ship decision either way.</p>
+        <div class="caveat"><b class="tag">Caveat — power</b>
+          The experiment had 80% power to detect an overall lift of <b>+1.55pp</b>; it was not powered to confirm effects smaller than ~1.5pp overall. A +0.8pp point estimate sits below what this test could reliably detect.</div>
+        <p><b>The blend hides the story.</b> The overall number is not “a modest win everywhere” — it is a strong mobile-web win and a real iOS loss averaging each other out. Weighted by trial-start counts, the platform effects reconcile to the blended result: (2,354 × 4.2 − 2,535 × 1.9 + 1,736 × 0.1) / 6,625 ≈ +0.8pp.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 2 · platforms -->
+  <section class="card" id="platforms">
+    <details>
+      <summary>
+        <div class="chead">
+          <span class="cico"><svg viewBox="0 0 24 24"><path d="M12 4v16M12 8l6-3M12 8 6 5M12 16l6 3M12 16l-6 3"/></svg></span>
+          <h3>Platform split — the real story (pre-registered)</h3>
+        </div>
+        <p class="lead"><b>Mobile-web improved +4.2pp (CI [+2.1, +6.3], p&lt;0.0001); iOS regressed −1.9pp (CI [−3.6, −0.2], p=0.027); Android was null.</b>
+        Platform was the single subgroup chosen before launch — this is not a cut found by fishing.</p>
+        <div class="keynum">Mobile-web <b>+4.2pp</b> (≈30% relative lift) ↔ iOS <b>−1.9pp</b> (≈16% relative loss)</div>
+      </summary>
+      <div class="cbody">
+        <h4>Pre-registered subgroup results</h4>
+        <div class="tblwrap"><table>
+          <tr><th>Platform</th><th>n (A / B)</th><th>Conv. A</th><th>Conv. B</th><th>Δ (pp)</th><th>95% CI</th><th>p</th></tr>
+          <tr><td><span class="mark p"></span>Mobile-web</td><td>2,341 / 2,367</td><td>13.9%</td><td>18.1%</td><td class="pos">+4.2</td><td>[+2.1, +6.3]</td><td>&lt;0.0001</td></tr>
+          <tr><td><span class="mark n"></span>iOS</td><td>2,528 / 2,541</td><td>11.6%</td><td>9.7%</td><td class="neg">−1.9</td><td>[−3.6, −0.2]</td><td>0.027</td></tr>
+          <tr><td><span class="mark o"></span>Android</td><td>1,733 / 1,739</td><td>7.8%</td><td>7.9%</td><td>+0.1</td><td>[−1.7, +1.9]</td><td>0.92</td></tr>
+        </table></div>
+        <ul>
+          <li><b>Mobile-web is a large, unambiguous improvement</b> — +4.2pp on a 13.9% base is a ~30% relative lift, significant at any reasonable threshold, and it survives the multiple-comparison correction below. Mobile-web converts through a web checkout with no app-store friction, and it is where the old flow was clumsiest (the 9-screen flow was designed for native and ported to web).</li>
+          <li><b>iOS is a significant regression</b> — −1.9pp on an 11.6% base is a ~16% relative <em>loss</em>, and the CI excludes zero. The mechanism evidence points at the step-3 permission prompt (see the iOS card).</li>
+          <li><b>Android is null</b> — +0.1pp with a CI spanning [−1.7, +1.9]; no evidence of an effect in either direction.</li>
+        </ul>
+        <h4>How seriously to take the subgroups</h4>
+        <div class="caveat"><b class="tag">Caveat — multiple comparisons</b>
+          Three platform tests were run. Under a Bonferroni-adjusted threshold (α = 0.0167 — a stricter bar that compensates for testing three subgroups), mobile-web (p&lt;0.0001) survives easily; <b>iOS (p=0.027) does not survive the strict correction</b>.</div>
+        <p>Cutting the other way: platform was the <b>single pre-registered subgroup dimension</b> (analysis plan v1.2, filed 2026-04-28, before launch — i.e., chosen in advance, not discovered by scanning many cuts), motivated by a stated mechanism: the three platforms have different payment surfaces (web checkout vs App Store vs Play Store). Pre-registration plus a coherent mechanism makes the iOS regression a <b>credible signal that warrants action</b> — a targeted follow-up experiment — while stopping short of proof. The mobile-web result needs no such hedging.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 3 · weeks -->
+  <section class="card" id="weeks">
+    <details>
+      <summary>
+        <div class="chead">
+          <span class="cico"><svg viewBox="0 0 24 24"><path d="M4 6c3 0 3 9 8 9s5-6 8-6M4 20h16"/></svg></span>
+          <h3>Week by week — a novelty bump that faded</h3>
+        </div>
+        <p class="lead"><b>The overall delta decayed from +2.9pp in week 1 to +0.1pp in week 6</b> — early snapshots materially overstated B.
+        But the mobile-web gain persists in the late weeks, so the split is not just novelty.</p>
+        <div class="keynum">Week 1 <b>+2.9pp</b> → week 6 <b>+0.1pp</b></div>
+      </summary>
+      <div class="cbody">
+        <h4>Overall weekly Δ (B − A), all platforms</h4>
+        <div class="chartwrap">
+        <svg viewBox="0 0 720 252" role="img" aria-label="Column chart of weekly overall conversion deltas: week 1 +2.9, week 2 +1.5, week 3 +0.6, week 4 0.0, week 5 minus 0.4, week 6 +0.1 percentage points. A shaded band marks plus-minus 2.7 points of weekly noise; only week 1 pokes above it.">
+          <rect class="bandr" x="40" y="45" width="660" height="162"/>
+          <line class="gridln" x1="40" y1="66" x2="700" y2="66"/>
+          <line class="gridln" x1="40" y1="186" x2="700" y2="186"/>
+          <line class="baseln" x1="40" y1="126" x2="700" y2="126"/>
+          <text class="axis-t" x="34" y="70" text-anchor="end">+2</text>
+          <text class="axis-t" x="34" y="130" text-anchor="end">0</text>
+          <text class="axis-t" x="34" y="190" text-anchor="end">−2</text>
+          <text class="note-t" x="696" y="58" text-anchor="end">weekly noise ≈ ±2.7pp — single weeks can’t be read alone</text>
+          <g>
+            <path class="wbar" d="M84,126 V43 Q84,39 88,39 H102 Q106,39 106,43 V126 Z"><title>Week 1 (May 4–10): A 11.2%, B 14.1%, Δ +2.9pp</title></path>
+            <path class="wbar" d="M194,126 V85 Q194,81 198,81 H212 Q216,81 216,85 V126 Z"><title>Week 2 (May 11–17): A 11.5%, B 13.0%, Δ +1.5pp</title></path>
+            <path class="wbar" d="M304,126 V112 Q304,108 308,108 H322 Q326,108 326,112 V126 Z"><title>Week 3 (May 18–24): A 11.3%, B 11.9%, Δ +0.6pp</title></path>
+            <rect class="wbar" x="414" y="124.5" width="22" height="3"><title>Week 4 (May 25–31): A 11.6%, B 11.6%, Δ 0.0pp</title></rect>
+            <path class="wbar" d="M524,126 V134 Q524,138 528,138 H542 Q546,138 546,134 V126 Z"><title>Week 5 (Jun 1–7): A 11.5%, B 11.1%, Δ −0.4pp</title></path>
+            <rect class="wbar" x="634" y="123" width="22" height="3"><title>Week 6 (Jun 8–14): A 11.3%, B 11.4%, Δ +0.1pp</title></rect>
+          </g>
+          <text class="val-t" x="95" y="31" text-anchor="middle">+2.9</text>
+          <text class="val-t" x="205" y="73" text-anchor="middle">+1.5</text>
+          <text class="val-t" x="315" y="100" text-anchor="middle">+0.6</text>
+          <text class="val-t" x="425" y="117" text-anchor="middle">0.0</text>
+          <text class="val-t" x="535" y="154" text-anchor="middle">−0.4</text>
+          <text class="val-t" x="645" y="115" text-anchor="middle">+0.1</text>
+          <text class="axis-t" x="95" y="236" text-anchor="middle">W1</text>
+          <text class="axis-t" x="205" y="236" text-anchor="middle">W2</text>
+          <text class="axis-t" x="315" y="236" text-anchor="middle">W3</text>
+          <text class="axis-t" x="425" y="236" text-anchor="middle">W4</text>
+          <text class="axis-t" x="535" y="236" text-anchor="middle">W5</text>
+          <text class="axis-t" x="645" y="236" text-anchor="middle">W6</text>
+        </svg>
+        </div>
+        <div class="tblwrap"><table>
+          <tr><th>Week</th><th>Trial starts (A / B)</th><th>Conv. A</th><th>Conv. B</th><th>Δ (pp)</th></tr>
+          <tr><td>1 (May 4–10)</td><td>1,104 / 1,118</td><td>11.2%</td><td>14.1%</td><td><b>+2.9</b></td></tr>
+          <tr><td>2 (May 11–17)</td><td>1,092 / 1,102</td><td>11.5%</td><td>13.0%</td><td>+1.5</td></tr>
+          <tr><td>3 (May 18–24)</td><td>1,110 / 1,109</td><td>11.3%</td><td>11.9%</td><td>+0.6</td></tr>
+          <tr><td>4 (May 25–31)</td><td>1,098 / 1,105</td><td>11.6%</td><td>11.6%</td><td>0.0</td></tr>
+          <tr><td>5 (Jun 1–7)</td><td>1,101 / 1,111</td><td>11.5%</td><td>11.1%</td><td>−0.4</td></tr>
+          <tr><td>6 (Jun 8–14)</td><td>1,097 / 1,102</td><td>11.3%</td><td>11.4%</td><td>+0.1</td></tr>
+        </table></div>
+        <div class="caveat"><b class="tag">Caveat — weekly noise</b>
+          Weekly CIs are wide (~±2.7pp at these sample sizes), so individual weekly deltas are noisy. The <b>pattern</b> — monotone-ish decay from +2.9 toward zero — is the signal, not any single cell.</div>
+        <p><b>Novelty effect.</b> The decay is consistent with the redesigned flow outperforming most among the earliest cohorts and converging toward control as the run matured. <b>Any decision made on week-1 or week-2 snapshots would have materially overstated B.</b> A mid-flight readout at the end of week 2 (blended +2.2pp, nominally significant at the time) circulated internally; this final readout supersedes it.</p>
+        <p><b>The platform split is not explained by novelty.</b> Exploratory pooled late-window checks (weeks 4–6): mobile-web remains <b>+3.8pp</b> (CI ≈ [+0.8, +6.8]); iOS remains negative at <b>−2.2pp</b> (CI ≈ [−4.6, +0.2] — no longer individually significant at this halved sample). The mobile-web gain persists after novelty washes out; the iOS deficit does not recover.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 4 · guardrails & secondaries -->
+  <section class="card" id="guardrails">
+    <details>
+      <summary>
+        <div class="chead">
+          <span class="cico"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/></svg></span>
+          <h3>Guardrails &amp; secondaries — retention flat, onboarding faster</h3>
+        </div>
+        <p class="lead"><b>7-day retention was flat (+0.2pp, CI [−0.2, +0.6]) — the guardrail held.</b>
+        Users reach a first lesson 38 seconds faster in B, but that didn’t translate into a blended conversion or retention win. An early support-ticket bump resolved after a copy fix.</p>
+        <div class="keynum">Retention <b>+0.2pp (flat)</b> · time-to-first-lesson <b>−38s</b></div>
+      </summary>
+      <div class="cbody">
+        <h4>Guardrails</h4>
+        <div class="tblwrap"><table>
+          <tr><th>Guardrail</th><th>A</th><th>B</th><th>Δ</th><th>95% CI</th><th>Status</th></tr>
+          <tr><td>7-day retention (all randomized users)</td><td>31.2%</td><td>31.4%</td><td>+0.2pp</td><td>[−0.2, +0.6]</td><td><b>Flat — pass</b></td></tr>
+          <tr><td>Support tickets / 1k signups, weeks 1–2</td><td>4.1</td><td>4.6</td><td>+12%</td><td>—</td><td>Elevated, then resolved</td></tr>
+          <tr><td>Support tickets / 1k signups, weeks 3–6</td><td>4.0</td><td>4.0</td><td>0%</td><td>—</td><td><b>Normal — pass</b></td></tr>
+        </table></div>
+        <ul>
+          <li><b>Retention is flat</b> — measured on all 184k randomized users (not just trialists), with a tight CI around zero: Pathways neither helps nor harms whether users come back in week one. The conversion story does not come at a retention cost — and equally, the mobile-web conversion gain is <em>not</em> accompanied by a retention gain.</li>
+          <li><b>Support tickets rose +12% in the first two weeks</b>, driven by confusion around the goal-quiz “skip” affordance (per ticket tagging). A copy fix shipped 2026-05-15 to both arms’ shared components and volume normalized from week 3 onward — treated as a launch-quality blip, not a standing cost of the design.</li>
+        </ul>
+        <h4>Secondary metrics</h4>
+        <div class="tblwrap"><table>
+          <tr><th>Metric</th><th>A</th><th>B</th><th>Δ</th><th>95% CI</th><th>p</th></tr>
+          <tr><td>Median time-to-first-lesson</td><td>4m 52s (292s)</td><td>4m 14s (254s)</td><td><b>−38s</b></td><td>[−45, −31]</td><td>&lt;0.001</td></tr>
+          <tr><td>Trial-start rate (of randomized)</td><td>7.17%</td><td>7.22%</td><td>+0.05pp</td><td>[−0.19, +0.29]</td><td>0.69</td></tr>
+          <tr><td>Lessons completed, first 7 days (mean)</td><td>3.9</td><td>4.0</td><td>+0.1</td><td>[−0.1, +0.3]</td><td>0.24</td></tr>
+        </table></div>
+        <p><b>Time-to-first-lesson improved by 38 seconds</b> (median; bootstrap CI) — the one secondary that is clearly significant. The shorter flow does what it was designed to do mechanically — users reach a lesson faster — but this did not translate into a blended conversion or retention win. Trial-start rate being flat also matters for validity (see the design &amp; validity card).</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 5 · iOS mechanism -->
+  <section class="card" id="ios">
+    <details>
+      <summary>
+        <div class="chead">
+          <span class="cico"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg></span>
+          <h3>Why iOS regressed — the step-3 permission prompt</h3>
+        </div>
+        <p class="lead"><b>Pathways moved the notification-permission ask from a day-2 soft card to onboarding step 3, where iOS fires the system dialog — and iOS step-3 drop-off jumped 8.1% → 12.7%.</b>
+        No comparable shift on mobile-web or Android. That concentration is why the call is “fix and re-test,” not “abandon iOS.”</p>
+        <div class="keynum">iOS step-3 drop-off <b>8.1% → 12.7%</b> (+4.6pp)</div>
+      </summary>
+      <div class="cbody">
+        <h4>Step-3 drop-off by platform <span style="font-weight:400;color:var(--muted)">(exploratory funnel data, directly on the hypothesized mechanism)</span></h4>
+        <div class="funleg">Share of users reaching step 3 who abandon onboarding there —<span class="k a"></span>A (current)<span class="k b"></span>B (Pathways)</div>
+        <div class="fun" role="img" aria-label="Paired bars: iOS drop-off 8.1 percent in A vs 12.7 percent in B; mobile-web 3.2 vs 3.4; Android 5.0 vs 5.6.">
+          <div class="funrow"><span class="fl">iOS — system dialog</span><span class="funbar a" style="width:62.3%"></span><span class="fv">8.1%</span></div>
+          <div class="funrow"><span class="fl"></span><span class="funbar b" style="width:97.7%"></span><span class="fv"><b>12.7%</b></span></div>
+          <div class="funrow"><span class="fl">Mobile-web — soft email opt-in</span><span class="funbar a" style="width:24.6%"></span><span class="fv">3.2%</span></div>
+          <div class="funrow"><span class="fl"></span><span class="funbar b" style="width:26.2%"></span><span class="fv">3.4%</span></div>
+          <div class="funrow"><span class="fl">Android — lower-friction dialog</span><span class="funbar a" style="width:38.5%"></span><span class="fv">5.0%</span></div>
+          <div class="funrow"><span class="fl"></span><span class="funbar b" style="width:43.1%"></span><span class="fv">5.6%</span></div>
+        </div>
+        <ul>
+          <li><b>iOS: 8.1% (A) vs 12.7% (B)</b> — of iOS users reaching step 3, A: 31,240 reached / 2,530 dropped; B: 31,020 reached / 3,940 dropped. On iOS, step 3 fires the operating system’s notification-permission dialog.</li>
+          <li><b>Mobile-web: 3.2% vs 3.4%</b> — step 3 there is a soft email opt-in with no OS dialog; no comparable shift.</li>
+          <li><b>Android: 5.0% vs 5.6%</b> — the OS dialog is lower-friction; no comparable shift.</li>
+        </ul>
+        <p>iOS users who <b>dismissed</b> the step-3 dialog in B converted at <b>7.9%</b> vs <b>10.4%</b> for those who accepted — consistent with the prompt souring or filtering the marginal user.</p>
+        <div class="caveat"><b class="tag">Caveat — not causal on its own</b>
+          The dismissed-vs-accepted comparison is confounded by user intent (people who accept prompts differ from people who dismiss them) and is not causal evidence by itself. The funnel data is exploratory, not pre-registered.</div>
+        <p><b>Why “fix and re-test.”</b> The regression concentrates at exactly the changed step, on exactly the platform with the highest-friction system dialog. That is why the recommendation is a targeted iOS fix experiment rather than abandoning iOS.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 6 · design & validity -->
+  <section class="card" id="validity">
+    <details>
+      <summary>
+        <div class="chead">
+          <span class="cico"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg></span>
+          <h3>Design &amp; validity — checks passed, one caveat on power</h3>
+        </div>
+        <p class="lead"><b>184,204 signups randomized 50/50; no sample-ratio mismatch; instrumentation audited clean; the trial-starter denominator is sound.</b>
+        The test was powered for a +1.55pp overall lift — effects smaller than ~1.5pp were never confirmable overall. One minor deviation from the analysis plan.</p>
+        <div class="keynum"><b>184,204</b> randomized · SRM χ² p=0.96 · powered for <b>+1.55pp</b></div>
+      </summary>
+      <div class="cbody">
+        <h4>What was tested</h4>
+        <p>The current flow (A) has 9 screens with the notification-permission prompt deferred to day 2. <b>Pathways (B)</b> shortens the flow to 6 screens, adds a goal-setting quiz that personalizes the starter course, moves the notification-permission ask to step 3, and adds a social-proof screen. Hypothesis: Pathways increases trial-to-paid conversion by making the first-session experience faster and more personally relevant.</p>
+        <h4>Primary metric</h4>
+        <p><b>Trial-to-paid conversion</b>: among users who start a free trial, the share whose first payment succeeds within 14 days of trial start. Denominator = trial starts, not all randomized users — see “denominator integrity” below for why that’s safe here.</p>
+        <h4>Sample, power, duration</h4>
+        <ul>
+          <li><b>Randomized:</b> 184,204 new signups, split 50/50 at account creation (A: 92,114; B: 92,090). Assignment sticky per account; no crossover observed.</li>
+          <li><b>Analyzed for the primary metric (trial starters):</b> 13,249 (A: 6,602; B: 6,647).</li>
+          <li><b>Power:</b> assuming an 11.5% baseline and ~6,400 trial starters per arm, 80% power to detect an absolute lift of <b>+1.55pp</b> at two-sided α = 0.05. Not powered to confirm effects smaller than ~1.5pp overall — key context for the +0.8pp point estimate.</li>
+          <li><b>Duration:</b> six weeks of enrollment (2026-05-04 → 2026-06-14), fixed in advance; conversion window closed 2026-06-28. No peeking-based early stop; interim looks were monitoring-only (guardrails and SRM).</li>
+          <li><b>Pre-registered subgroups:</b> exactly one dimension — platform (mobile-web / iOS / Android) — in analysis plan v1.2, filed 2026-04-28 before launch, motivated by the differing payment surfaces. Any other cut in the readout is labeled exploratory.</li>
+        </ul>
+        <h4>Diagnostics</h4>
+        <ul>
+          <li><b>Sample-ratio mismatch (SRM — a check that the 50/50 split actually landed 50/50):</b> A: 92,114 vs B: 92,090; χ² p = 0.96. No SRM; weekly monitoring never alarmed.</li>
+          <li><b>Instrumentation:</b> assignment and exposure logging verified against the payments ledger on a 2% audit sample (n = 3,684): zero cross-arm contamination, zero duplicate assignment, conversions reconciled within 0.1%.</li>
+          <li><b>Denominator integrity:</b> because the metric conditions on trial start, a treatment that changed <em>who</em> starts trials would bias the comparison. Trial-start rate is statistically flat (7.17% vs 7.22%, p = 0.69) and platform mix among trialists is near-identical across arms (within 0.4pp per platform), so the conditioned comparison is sound.</li>
+        </ul>
+        <div class="caveat"><b class="tag">Deviation from plan (one)</b>
+          A planned supplementary Bayesian shrinkage estimate of weekly deltas was dropped for time, replaced by the pooled late-window checks (weeks 4–6). No registered primary or subgroup analysis was altered.</div>
+        <p style="font-size:12px;color:var(--muted)">Experiment ID ONB-2026-014, Growth Experimentation. Status: final; readout 2026-06-30. All names, users, and numbers are fictional (test fixture).</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 7 · recommendation -->
+  <section class="card wide" id="recommendation">
+    <details>
+      <summary>
+        <div class="chead">
+          <span class="cico"><svg viewBox="0 0 24 24"><path d="M5 12h9m0 0-3.5-3.5M14 12l-3.5 3.5M17 5v14"/></svg></span>
+          <h3>Recommendation — narrow ship, targeted fix</h3>
+        </div>
+        <p class="lead"><b>Ship Pathways to mobile-web only (with a 5% holdback); do not ship iOS or Android; run an iOS fix experiment on the permission prompt.</b>
+        Not a full rollout, not a kill — and definitely not “B won overall.”</p>
+        <div class="keynum">Mobile-web ship target <b>2026-07-06</b> · iOS fix experiment <b>ONB-2026-019</b> (draft)</div>
+      </summary>
+      <div class="cbody">
+        <h4>Next steps</h4>
+        <ol>
+          <li><b>Ship Pathways to mobile-web only</b>, target 2026-07-06, with a <b>5% holdback</b> (a slice kept on the old flow) for 8 weeks — to confirm the +4.2pp effect out-of-experiment and monitor for post-novelty drift.</li>
+          <li><b>Do not ship iOS.</b> Launch a follow-up experiment (ONB-2026-019, draft) testing Pathways-on-iOS with the permission prompt reverted to the day-2 soft ask, plus a second arm with a pre-permission explainer screen. Primary metric unchanged; powered for a ±1.5pp iOS-only effect; est. 8 weeks.</li>
+          <li><b>Do not ship Android.</b> Null result; revisit after the iOS fix experiment settles the prompt question, since Android shares the flow.</li>
+          <li><b>Retire the week-2 interim readout</b> from internal decks; this readout supersedes it.</li>
+          <li><b>Re-estimate revenue impact</b> for the mobile-web ship using the late-window +3.8pp (conservative) to full-run +4.2pp range.</li>
+        </ol>
+        <h4>What this readout does NOT support</h4>
+        <div class="caveat"><b class="tag">Guardrails on interpretation</b>
+          <ul style="margin:4px 0">
+            <li>Not <b>“B increased conversion by 0.8 points”</b> — the blended effect is not significant, and the blend averages a win with a loss.</li>
+            <li>Not <b>a platform-wide ship</b> — iOS would likely pay a real conversion cost (best estimate −1.9pp on the highest-revenue platform).</li>
+            <li>Not <b>“the redesign failed”</b> — mobile-web is a large, durable, pre-registered, mechanism-consistent win.</li>
+            <li>Not <b>the early-week numbers</b> — the +2.9pp week-1 snapshot reflects novelty that fully decayed and should not be cited.</li>
+          </ul>
+        </div>
+      </div>
+    </details>
+  </section>
+
+</div>
+</main>
+
+<footer>experiment-results · layered-dashboard (approach 04) · v1 · generated 2026-07-01</footer>
+
+<script>
+(function(){
+  var ctls=document.querySelectorAll('.jsctl');
+  for(var i=0;i<ctls.length;i++) ctls[i].hidden=false;
+  function setAll(o){
+    var ds=document.querySelectorAll('#cards details');
+    for(var j=0;j<ds.length;j++) ds[j].open=o;
+  }
+  document.getElementById('expandAll').addEventListener('click',function(){setAll(true);});
+  document.getElementById('collapseAll').addEventListener('click',function(){setAll(false);});
+  // Opening a section from the nav also expands its card.
+  var links=document.querySelectorAll('nav a[href^="#"]');
+  for(var k=0;k<links.length;k++){
+    links[k].addEventListener('click',function(){
+      var t=document.querySelector(this.getAttribute('href'));
+      if(t){var d=t.querySelector('details'); if(d) d.open=true;}
+    });
+  }
+})();
+</script>
+</body>
+</html>

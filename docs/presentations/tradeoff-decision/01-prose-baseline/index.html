@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choosing Fernwick's vector-search engine — decision brief</title>
+<style>
+  :root {
+    --fg: #1a1a1a;
+    --bg: #ffffff;
+    --muted: #555;
+    --rule: #d8d8d8;
+    --callout-bg: #f6f1e4;
+    --callout-border: #b89b4e;
+    --emph: #8a3b12;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e6e3dc;
+      --bg: #191a1c;
+      --muted: #a5a29a;
+      --rule: #3a3b3e;
+      --callout-bg: #2a2620;
+      --callout-border: #9a7f3c;
+      --emph: #e0946a;
+    }
+  }
+  html { background: var(--bg); }
+  body {
+    color: var(--fg);
+    background: var(--bg);
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.65;
+    margin: 0;
+    padding: 2.2rem 1.25rem 3rem;
+  }
+  main { max-width: 70ch; margin: 0 auto; }
+  h1 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 1.85rem;
+    line-height: 1.25;
+    margin: 0 0 0.4rem;
+    letter-spacing: -0.01em;
+  }
+  .kicker {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin: 0 0 0.7rem;
+  }
+  .byline {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin: 0 0 1.4rem;
+  }
+  h2 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 1.25rem;
+    margin: 2.2rem 0 0.6rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.25rem;
+  }
+  h3 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 1.02rem;
+    margin: 1.5rem 0 0.4rem;
+  }
+  p { margin: 0 0 0.9rem; }
+  .lead {
+    font-size: 1.08rem;
+  }
+  .keysentence {
+    color: var(--emph);
+  }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin-bottom: 0.45rem; }
+  blockquote {
+    margin: 1.1rem 0;
+    padding: 0.7rem 1rem;
+    background: var(--callout-bg);
+    border-left: 4px solid var(--callout-border);
+    font-size: 0.95rem;
+  }
+  blockquote p { margin: 0 0 0.5rem; }
+  blockquote p:last-child { margin-bottom: 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.82rem;
+    margin: 1rem 0 1.2rem;
+  }
+  th, td {
+    border: 1px solid var(--rule);
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { font-weight: 700; }
+  .tablewrap { overflow-x: auto; }
+  .fail { font-weight: 700; }
+  footer {
+    margin-top: 3rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  @media (max-width: 480px) {
+    body { padding: 1.4rem 0.9rem 2rem; }
+    h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<p class="kicker">Fernwick · Search Platform · Decision brief · Proposed</p>
+<h1>Choosing a vector-search engine: Hearth if the headcount lands by October, Quiver if it doesn't</h1>
+<p class="byline">Mara Okonkwo, tech lead, Search Platform · 2026-07-01 · Decision checkpoint 2026-10-01 · Full review 2027-01-15</p>
+
+<p class="lead">Fernwick's semantic product search runs on a prototype index that is now the top reliability risk in the search stack, and we must pick a production vector-search engine this quarter. A two-week bakeoff (2026-06-08 to 2026-06-19) tested four candidates on the same frozen 10M-vector snapshot — our projected 12-month scale. Two failed hard requirements: <strong>pgnearest</strong> misses the latency ceiling on filtered queries (110&nbsp;ms p95 vs the 100&nbsp;ms budget) and the recall floor (0.89 vs 0.92 required); <strong>Braid</strong>, despite being the fastest and highest-recall engine we measured, collapses to 0.71 filtered recall — far below the 0.90 floor — because its filtering is post-hoc and structural, not tunable. That leaves <strong>Quiver</strong> (managed SaaS, zero ops, highest lock-in, most expensive at scale) against <strong>Hearth</strong> (self-hosted open source, cheapest trajectory, real staffing cost), and neither dominates. <strong class="keysentence">Recommendation — conditional, not a winner: adopt self-hosted Hearth IF the approved platform-infra hire (PLAT-7) has signed and started by 2026-10-01 AND a ≥4-engineer on-call rotation is committed in writing by the same date; if either fails, adopt Quiver with a mandatory, budgeted exit plan.</strong> One standing trigger overrides everything: if filtered queries exceed 60% of traffic or facet selectivity drops below ~2%, the answer becomes Quiver even if the hire lands, because Hearth's filtered recall (0.90, exactly at the floor) has no margin there.</p>
+
+<h2>Two options are out on must-haves, not taste</h2>
+
+<p>Five must-have requirements framed the bakeoff: p95 latency ≤&nbsp;100&nbsp;ms at 10M vectors including the 30% of queries that carry metadata filters (M1); recall@10 ≥&nbsp;0.92 unfiltered (M2); filtered recall@10 ≥&nbsp;0.90 down to 5% filter selectivity (M3); EU data residency (M4); and ≤&nbsp;$2,500/month run cost at the 12-month scale of ~10M vectors (M5, set by the Engineering Director). Miss any one and the option is out, regardless of its other merits.</p>
+
+<p><strong>pgnearest (Postgres extension) fails M1 and M2.</strong> The appeal was real — it rides our existing Postgres fleet and DBA practice, queries are plain SQL, and its marginal ops burden (~0.1 FTE) is the lowest of any self-hosted option. But filtered queries hit 110&nbsp;ms p95, over the 100&nbsp;ms budget, and recall@10 is 0.89 both filtered and unfiltered — under the 0.92 floor, and under M3's 0.90 as well. The recall limit is the index architecture itself, not a tuning problem. A v1.0 with a new index type is on the public roadmap but undated; it earns a 1-week re-benchmark if it ships (see sensitivity S5), not a wait.</p>
+
+<p><strong>Braid (embedded library) fails M3.</strong> It posted the best raw numbers of the bakeoff: 12&nbsp;ms p95 unfiltered and 0.98 recall@10. None of that gets to matter, because Braid has no native filtered search. Filtering is post-hoc, so recall collapses as filters get selective — 0.94 at 50% selectivity, 0.71 at 5% — and that is structural: the index doesn't know about metadata. Fixing it would mean building an inverted-index layer ourselves, an estimated ~2 engineer-quarters just to attempt the requirement.</p>
+
+<p>This is the answer to "but the library benchmarks best": yes, and it fails a must-have. Raw speed did not decide this; the decision between the survivors hinges on cost and operations.</p>
+
+<h2>The real decision: Quiver vs Hearth, a direct trade</h2>
+
+<p>Both survivors pass all five must-haves. Between them, no column dominates.</p>
+
+<p><strong>Quiver (managed SaaS)</strong> is the better engine today on almost every soft criterion. 18&nbsp;ms p95 unfiltered, 22&nbsp;ms filtered; recall@10 of 0.97 unfiltered, 0.96 filtered at 5% selectivity, and still 0.95 at 1% — the best filtered-recall curve in the bakeoff. Full 10M re-index in ~21 minutes. Ops burden is effectively zero FTE, with vendor on-call behind a 99.9% SLA (≈43 minutes/month of allowed downtime). Hybrid keyword+vector scoring is built in. The costs: the highest lock-in of the four — a proprietary query DSL and hybrid-scoring API, with exit estimated at ~3 engineer-weeks today and growing as we adopt more proprietary features — a 12-month price lock with renewal pricing <em>not</em> locked, and in-VPC deployment (running inside our own cloud account) never offered, which matters because in-VPC is plausibly a hard requirement for 2027 enterprise-seller contracts.</p>
+
+<p><strong>Hearth (self-hosted OSS)</strong> is comfortably inside every ceiling — 41&nbsp;ms p95 unfiltered, 48&nbsp;ms filtered, projected ~55&nbsp;ms at 20M vectors — with 0.94 unfiltered recall, best-in-class re-index among the service-shaped options (~7 minutes for the full 10M), low lock-in (open API, data on our disks), and in-VPC EU residency. Its price is operational: ~0.5 FTE for the first quarter, settling to ~0.2 FTE steady-state, plus a ≥4-engineer on-call rotation. And one number deserves emphasis:</p>
+
+<blockquote>
+<p><strong>Hearth passes the filtered-recall must-have with zero margin.</strong> It scored 0.90 at 5% selectivity — exactly the M3 floor — and degraded to 0.86 at 1% selectivity in our stress test. Filter share (currently 30% of queries) has grown every quarter since faceted semantic search shipped. This is why the recommendation carries a standing flip trigger, not just a headcount condition.</p>
+</blockquote>
+
+<h2>The cost picture, honestly: the ranking inverts with scale</h2>
+
+<p>The catalog holds 4.1M embedded products today and has roughly doubled every year: ~8M by mid-2027, ~16M by mid-2028, 100M on a 4–5 year horizon. Costs at three scales (infrastructure/subscription only):</p>
+
+<ul>
+<li><strong>At 1M vectors:</strong> Quiver is cheapest at $180/mo; Hearth's minimum 3-node HA cluster is $520/mo.</li>
+<li><strong>At 10M vectors:</strong> the ranking has flipped — Hearth $1,400/mo vs Quiver $1,900/mo (both under the $2,500 ceiling).</li>
+<li><strong>At 100M vectors:</strong> Hearth $6,800/mo vs Quiver $23,000/mo — 3.4× — because above 50M vectors Quiver's pricing forces a dedicated-cluster Enterprise plan.</li>
+</ul>
+
+<p><strong>On infra alone, the crossover is ~3M vectors — already behind us.</strong> At our current 4.1M, Quiver's quote is $740/mo against Hearth's $520. But infra alone is the wrong comparison: Hearth's ~0.2 FTE steady-state is ≈&nbsp;$2,800/mo of loaded engineer cost. Counting labor, Quiver stays cheaper in total until roughly <strong>30M vectors — around 2029</strong> at 2×/yr growth. So the answer to "the SaaS is cheaper" is: correct until about 2029, <em>if</em> the labor is truly marginal — and it is not, if PLAT-7 is hired anyway for broader platform duties. The cost argument for Hearth is a bet on our own growth curve: at 2×/yr we reach the labor-adjusted crossover in ~3 years, and every year on Quiver past that point costs more and deepens lock-in.</p>
+
+<h2>The matrix at a glance</h2>
+
+<p>✓ pass · ✗ must-have fail · ~ marginal. Numbers at 10M vectors.</p>
+
+<div class="tablewrap">
+<table>
+<thead>
+<tr><th>Criterion</th><th>Quiver (SaaS)</th><th>Hearth (self-host)</th><th>pgnearest (PG ext)</th><th>Braid (embedded)</th></tr>
+</thead>
+<tbody>
+<tr><td>p95 latency, unfiltered</td><td>18 ms ✓</td><td>41 ms ✓</td><td>95 ms ~</td><td><strong>12 ms</strong> ✓</td></tr>
+<tr><td>p95 latency, filtered (M1)</td><td>22 ms ✓</td><td>48 ms ✓</td><td class="fail">110 ms ✗</td><td>31 ms ✓</td></tr>
+<tr><td>Recall@10, unfiltered (M2)</td><td>0.97 ✓</td><td>0.94 ✓</td><td class="fail">0.89 ✗</td><td><strong>0.98</strong> ✓</td></tr>
+<tr><td>Filtered recall @5% sel. (M3)</td><td>0.96 ✓</td><td>0.90 ~ (at floor)</td><td>0.89 ✗</td><td class="fail">0.71 ✗</td></tr>
+<tr><td>Ingest (full 10M re-index)</td><td>21 min ✓</td><td><strong>7 min</strong> ✓</td><td>56 min ~</td><td><strong>3 min</strong> ✓</td></tr>
+<tr><td>Cost @1M ($/mo)</td><td><strong>$180</strong></td><td>$520</td><td>$240</td><td>$210</td></tr>
+<tr><td>Cost @10M ($/mo, M5 ≤ $2,500)</td><td>$1,900 ✓</td><td><strong>$1,400</strong> ✓</td><td>$1,150 ✓</td><td>$700 ✓</td></tr>
+<tr><td>Cost @100M ($/mo)</td><td>$23,000</td><td><strong>$6,800</strong></td><td>~$13,500 (est.)</td><td>~$4,200 (est.+DIY)</td></tr>
+<tr><td>EU residency (M4)</td><td>✓ (vendor EU)</td><td>✓ (in-VPC)</td><td>✓ (in-VPC)</td><td>✓ (in-VPC)</td></tr>
+<tr><td>In-VPC (N1)</td><td>✗ never</td><td>✓</td><td>✓</td><td>✓</td></tr>
+<tr><td>Ops burden (steady-state)</td><td><strong>~0 FTE</strong></td><td>~0.2 FTE + on-call</td><td>~0.1 FTE</td><td>~0.3 FTE after 2-qtr build</td></tr>
+<tr><td>Ecosystem maturity</td><td>High (6 yr commercial)</td><td>High (4 yr OSS)</td><td>Low (v0.9)</td><td>High as library / DIY as service</td></tr>
+<tr><td>Migration lock-in</td><td><strong>High</strong></td><td>Low</td><td>Minimal</td><td>Medium</td></tr>
+<tr><td><strong>Must-have verdict</strong></td><td><strong>PASS</strong></td><td><strong>PASS</strong></td><td class="fail">FAIL (M1, M2)</td><td class="fail">FAIL (M3)</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>The recommendation, and exactly what would change it</h2>
+
+<p><strong>Primary: adopt Hearth (self-hosted)</strong>, contingent on <em>all</em> of the following holding at the <strong>2026-10-01 checkpoint</strong>:</p>
+
+<ol>
+<li>The approved platform-infra hire (req PLAT-7) has <strong>signed and started</strong> by 2026-10-01. The req is approved but not yet filled — the whole plan leans on it.</li>
+<li>A <strong>≥4-engineer on-call rotation</strong> for the search-infra service is committed by the Platform team, in writing, by the same date.</li>
+</ol>
+
+<p><strong>Fallback: if either condition fails, adopt Quiver — with a mandatory exit plan</strong>, not an open-ended commitment:</p>
+
+<ul>
+<li>All query construction stays behind our internal <code>SearchIndex</code> interface; no Quiver-proprietary DSL outside the adapter.</li>
+<li>Quarterly export drill: full JSONL export restored into a scratch Hearth cluster, timed and logged.</li>
+<li>A standing ~3 engineer-week migration budget, re-estimated at each renewal.</li>
+<li>Re-evaluate at <strong>30M vectors or the first contract renewal, whichever comes first</strong>.</li>
+</ul>
+
+<blockquote>
+<p><strong>Standing flip trigger (overrides both):</strong> if filtered queries exceed 60% of traffic, or common facet selectivity drops below ~2%, the recommendation becomes Quiver <em>even if the hire lands</em>. Hearth holds 0.90 filtered recall at 5% selectivity and 0.86 at 1%; Quiver holds 0.95 even at 1%. Filter share is trending up — this is the standing trigger to watch.</p>
+</blockquote>
+
+<p><strong>Why Hearth first and not the reverse.</strong> At our growth rate the labor-adjusted cost crossover (~30M vectors, ~2029) is inside the lifetime of this decision; lock-in cost on Quiver compounds with every proprietary feature we adopt; and in-VPC residency is plausibly a hard requirement for 2027 enterprise contracts — a door Quiver keeps closed permanently. Quiver is the better engine today on almost every soft criterion; Hearth is the better position to be standing in come 2029. The condition exists because that position is only reachable with the headcount to hold it.</p>
+
+<h3>Other sensitivities worth naming</h3>
+
+<ul>
+<li><strong>Growth accelerates to 3×/yr:</strong> 100M arrives in ~2.5 years and the labor-adjusted crossover moves under 2 years out — strengthens Hearth.</li>
+<li><strong>Quiver renewal repricing:</strong> our quote is locked for 12 months only; a 25% renewal increase (their published list moved ~20% last year) pulls the labor-adjusted crossover from ~30M to ~20M vectors — strengthens Hearth, and is why the fallback carries a mandatory exit plan.</li>
+<li><strong>pgnearest v1.0 ships recall parity:</strong> if its new index type actually reaches ≥0.92 recall and fixes filtered latency, the cheapest low-ops option re-enters — worth a 1-week re-benchmark when v1.0 exists, not worth waiting for on an undated roadmap.</li>
+</ul>
+
+<h3>Residual risks on the survivors</h3>
+
+<blockquote>
+<p><strong>Hearth:</strong> the plan leans on an approved-but-unfilled hire; one historical breaking index-format change (v3→v4, 2025, forced a full re-index) means major upgrades must be treated as migrations; filtered recall sits exactly at the 0.90 floor with no margin if facet selectivity tightens.</p>
+<p><strong>Quiver:</strong> renewal repricing is unlocked after 12 months; lock-in compounds as we adopt proprietary hybrid-scoring features; in-VPC is never possible if enterprise contracts demand it; the 99.9% SLA allows up to ~43 min/month of downtime with no recourse beyond credits.</p>
+</blockquote>
+
+<h2>Bottom line</h2>
+
+<p>Two options eliminated by must-haves, two survivors trading cost trajectory against operational burden, and one conditional call: Hearth if PLAT-7 starts and the on-call rotation is committed by 2026-10-01; Quiver with a budgeted exit plan if not; Quiver regardless if filtered traffic passes 60% or selectivity tightens below ~2%. Headcount checkpoint <strong>2026-10-01</strong>; full decision review <strong>2027-01-15</strong> (re-check the filter-share trend, PLAT-7 status, Quiver renewal posture, and pgnearest v1.0).</p>
+
+<footer>tradeoff-decision · prose-baseline · v1 · 2026-07-01</footer>
+
+</main>
+</body>
+</html>

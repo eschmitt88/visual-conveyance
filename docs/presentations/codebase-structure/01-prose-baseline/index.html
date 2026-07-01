@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meridian — a new contributor's map of the codebase</title>
+<style>
+  :root {
+    --fg: #1a1a1a;
+    --fg-muted: #555;
+    --bg: #ffffff;
+    --accent: #8a3800;
+    --callout-bg: #fdf3e7;
+    --callout-border: #d98a3d;
+    --caution-bg: #fbeaea;
+    --caution-border: #c0504d;
+    --rule: #ddd;
+    --table-stripe: #f6f6f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e6e2dc;
+      --fg-muted: #a8a29a;
+      --bg: #191817;
+      --accent: #e8a05c;
+      --callout-bg: #2a231a;
+      --callout-border: #a06a30;
+      --caution-bg: #2c1d1d;
+      --caution-border: #a05252;
+      --rule: #3a3835;
+      --table-stripe: #211f1e;
+    }
+  }
+  html { font-size: 17px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.6;
+  }
+  main {
+    max-width: 70ch;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 3rem;
+  }
+  h1, h2, h3 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.25;
+  }
+  h1 {
+    font-size: 1.9rem;
+    margin: 0 0 0.25rem;
+  }
+  .subtitle {
+    color: var(--fg-muted);
+    margin: 0 0 1.5rem;
+    font-size: 1rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  h2 {
+    font-size: 1.35rem;
+    margin: 2.25rem 0 0.6rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.25rem;
+  }
+  h3 {
+    font-size: 1.05rem;
+    margin: 1.5rem 0 0.4rem;
+  }
+  p { margin: 0 0 1rem; }
+  strong.key { color: var(--accent); }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: var(--table-stripe);
+    padding: 0.08em 0.3em;
+    border-radius: 3px;
+  }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin-bottom: 0.35rem; }
+  blockquote {
+    margin: 1.25rem 0;
+    padding: 0.75rem 1rem;
+    background: var(--callout-bg);
+    border-left: 4px solid var(--callout-border);
+    font-size: 0.95rem;
+  }
+  blockquote.caution {
+    background: var(--caution-bg);
+    border-left-color: var(--caution-border);
+  }
+  blockquote p:last-child { margin-bottom: 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0 1.25rem;
+    font-size: 0.9rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th { border-bottom: 2px solid var(--fg-muted); }
+  tbody tr:nth-child(even) { background: var(--table-stripe); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .exec {
+    font-size: 1.05rem;
+  }
+  footer {
+    margin-top: 3rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  @media (max-width: 480px) {
+    html { font-size: 16px; }
+    main { padding: 1.5rem 1rem 2rem; }
+    table { display: block; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>meridian: a new contributor&rsquo;s map of the codebase</h1>
+<p class="subtitle">A self-hosted read-later / RSS service &mdash; Python backend, SQLite store, small HTTP API, vanilla-JS reader, CLI.</p>
+
+<p class="exec">
+meridian fetches articles from feeds, pages, and a mail drop; extracts
+readable text; deduplicates; and stores everything in one SQLite file
+(~1.8&nbsp;GB in WAL mode for a typical instance of ~200 feeds and
+~120,000 articles). <strong class="key">The system is a one-way ingest
+pipeline &mdash; scheduler&nbsp;&rarr; fetcher&nbsp;&rarr; extractor&nbsp;&rarr;
+dedup&nbsp;&rarr; store&nbsp;&rarr; full-text index &mdash; writing into a single
+SQLite database that an HTTP API, a web reader, and a CLI all read back
+out of; your first change will almost certainly land in
+<code>pipeline/sources/</code> (new source type) or
+<code>api/routes.py</code> (new endpoint), and the one file to treat
+with caution is <code>pipeline/extractor.py</code>.</strong>
+There is no external broker, cache, or database server: one process runs
+the API, one runs the workers. The store is the hub; everything else
+layers on top of it.
+</p>
+
+<h2>The shape of the system</h2>
+
+<p>
+The repo is ~23,230 lines total: 13,710 LOC of backend Python under
+<code>meridian/</code>, a 3,280-line frontend under <code>web/</code>,
+and 6,240 LOC of tests. The backend splits into six packages plus a
+small shared layer (<code>config.py</code> and <code>client.py</code>,
+the HTTP client that both the CLI and tests use):
+</p>
+
+<table>
+  <thead>
+    <tr><th>Module</th><th>Responsibility</th><th class="num">LOC</th><th class="num">Coverage</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>pipeline/</code></td><td>Ingest: schedule polls, fetch, extract readable text, dedup. Produces articles, never serves them.</td><td class="num">4,180</td><td class="num">84%</td></tr>
+    <tr><td><code>api/</code></td><td>HTTP surface: 31 REST endpoints, auth, pagination, OPML. Enqueues work; never fetches inline.</td><td class="num">2,940</td><td class="num">62%</td></tr>
+    <tr><td><code>store/</code></td><td>All persistence. Owns the SQLite file, schema, migrations, full-text search. The only module that touches the DB.</td><td class="num">2,310</td><td class="num">91%</td></tr>
+    <tr><td><code>render/</code></td><td>Stored article &rarr; display HTML: sanitize, template, merge highlight annotations.</td><td class="num">1,610</td><td class="num">76%</td></tr>
+    <tr><td><code>queue/</code></td><td>Job queue on a SQLite table. Broker, worker pool, retry policy. No Redis, no Celery.</td><td class="num">1,120</td><td class="num">88%</td></tr>
+    <tr><td><code>cli/</code></td><td>User-facing commands. Talks to the API over HTTP; imports no backend package.</td><td class="num">980</td><td class="num">41%</td></tr>
+    <tr><td>shared</td><td><code>config.py</code>, <code>client.py</code>, <code>__init__.py</code>.</td><td class="num">570</td><td class="num">79%</td></tr>
+  </tbody>
+</table>
+
+<p>
+The <code>web/</code> frontend is deliberately plain: no framework, no
+build step &mdash; one HTML shell, five JS modules
+(<code>app.js</code>, <code>api.js</code>, <code>list.js</code>,
+<code>reader.js</code>, <code>settings.js</code>), one stylesheet with
+light/dark handled by a media query. It talks to the same 31 endpoints
+as the CLI; neither has a private backdoor into the database.
+</p>
+
+<h2>How data moves</h2>
+
+<h3>The write path (fetch pipeline)</h3>
+
+<p>
+<code>pipeline/scheduler.py</code> ticks every 60&nbsp;s, finds feeds
+whose poll interval (default 30&nbsp;min) has elapsed, and enqueues one
+fetch job per feed into a SQLite <code>jobs</code> table. The broker
+(<code>queue/broker.py</code>) polls that table every 500&nbsp;ms and
+leases jobs to 8 worker threads; failures retry with backoff at
+1&nbsp;min / 5&nbsp;min / 30&nbsp;min, then dead-letter. Typical queue
+depth is 30&ndash;60 jobs; the health endpoint alerts at 500.
+</p>
+
+<p>
+Each job flows through four stages. <code>fetcher.py</code> does the
+HTTP work (conditional GET via ETag/Last-Modified, 20&nbsp;s timeout,
+per-host politeness delay). <code>extractor.py</code> turns raw HTML
+into a structured Article &mdash; title, byline, body, word count &mdash;
+with no I/O of any kind (p50 45&nbsp;ms, p95 320&nbsp;ms per article).
+<code>dedup.py</code> computes a 64-bit simhash of the body (a compact
+fingerprint of the text); anything within Hamming distance &le;&nbsp;3
+of a stored hash is flagged as a near-duplicate &mdash; about 7% of
+incoming items are dropped this way. Finally
+<code>store/writer.py</code> persists each surviving article in a
+single transaction, and SQLite triggers update the
+<code>articles_fts</code> FTS5 full-text index &mdash; application code
+never writes the index. End-to-end, p50 from job dequeue to the article
+being searchable is 2.1&nbsp;s, dominated by the network fetch.
+</p>
+
+<h3>The read path</h3>
+
+<p>
+<code>GET /articles/{id}</code> hits <code>api/routes.py</code>, which
+reads via <code>store/reader.py</code> (6&nbsp;ms p50), assembles
+display HTML in <code>render/template.py</code> (14&nbsp;ms), then
+<code>render/annotations.py</code> merges the user&rsquo;s highlights
+&mdash; stored as character offsets into the rendered text &mdash; into
+<code>&lt;mark&gt;</code> spans (8&nbsp;ms). Total p50: 28&nbsp;ms.
+</p>
+
+<h2>The rules that keep it sane</h2>
+
+<p>
+Five invariants, documented in <code>docs/architecture.md</code>, are
+what make the pipeline testable and replayable. Break one and you break
+the codebase&rsquo;s core discipline:
+</p>
+
+<ol>
+  <li><strong>The extractor is pure.</strong> Bytes in &rarr; Article out; no network, disk, DB, or clock. The same HTML always yields the same Article, and a property test replays all 1,400 fixture pages on every CI run to enforce it.</li>
+  <li><strong>Only <code>store/writer.py</code> writes the database.</strong> Every INSERT, UPDATE, and DELETE in the codebase lives in that one 610-LOC file; everything else reads through <code>store/reader.py</code>.</li>
+  <li><strong>The full-text index is trigger-maintained.</strong> Only SQLite triggers in <code>schema.sql</code> touch <code>articles_fts</code>, so the index can never drift from the articles table.</li>
+  <li><strong>Queue jobs are idempotent.</strong> Replaying any job must not create duplicate articles &mdash; dedup plus the writer&rsquo;s upsert keys guarantee it, which is what makes the retry policy safe.</li>
+  <li><strong>The API never fetches inline.</strong> &ldquo;Fetch this now&rdquo; requests enqueue a job and return <code>202 Accepted</code>; only workers touch the network.</li>
+</ol>
+
+<p>
+Import layering is equally strict. <code>store/</code> sits at the
+bottom and imports no other meridian package (stdlib and
+<code>sqlite3</code> only). <code>queue/</code> may import
+<code>store/</code>; <code>pipeline/</code> may import
+<code>store/</code> and <code>queue/</code>; <code>render/</code> may
+import <code>store/</code>; <code>api/</code> may import
+<code>store/</code>, <code>render/</code>, and <code>queue/</code>.
+The CLI imports only <code>client.py</code> &mdash; it speaks HTTP,
+never backend packages. And nothing imports <code>api/</code> or
+<code>cli/</code>.
+</p>
+
+<blockquote class="caution">
+<p>
+<strong>The one known layering violation:</strong>
+<code>pipeline/extractor.py</code> (line 41) imports
+<code>clean_html()</code> from <code>render/sanitize.py</code> &mdash;
+a sideways pipeline&nbsp;&rarr;&nbsp;render edge that has existed since
+v0.8. A change to the <em>display</em> sanitizer can silently change
+what gets <em>stored</em>, and two extractor purity tests are marked
+<code>xfail</code> because of it. The fix (moving
+<code>clean_html()</code> to a shared location) is tracked as issue
+#214, the top item on the architecture debt list.
+</p>
+</blockquote>
+
+<h2>The one scary file &mdash; and two lesser hotspots</h2>
+
+<p>
+<strong><code>pipeline/extractor.py</code></strong> is the largest file
+in the repo at 1,140 LOC. It carries 14 site-specific extraction
+heuristics inlined as if/elif chains, with a maximum cyclomatic
+complexity of 38 (roughly: one function has 38 independent paths
+through it), plus the layering violation above. Nearly every extraction
+bug fix lands here, and each one risks changing output for the other 13
+heuristics. The 1,400-page fixture corpus is the only safety net. Tread
+carefully.
+</p>
+
+<p>
+<strong><code>api/routes.py</code></strong> holds all 31 endpoint
+handlers in one 830-LOC file. <code>auth.py</code> exists, but 11
+routes inline their own copy-pasted auth check instead of using it, and
+file-level coverage is 54% &mdash; below even the api module&rsquo;s 62%.
+</p>
+
+<p>
+<strong><code>web/js/reader.js</code></strong> is 920 LOC of vanilla JS
+with zero tests. Highlight anchoring uses character offsets into the
+rendered HTML, so any markup change in <code>render/template.py</code>
+silently corrupts existing highlight positions &mdash; a coupling behind
+3 of the last 10 user-reported bugs.
+</p>
+
+<h2>Where your first change goes</h2>
+
+<p>
+<strong>Adding a new source type</strong> is the most common
+contribution, and it&rsquo;s a known 4-file recipe (spelled out in
+<code>docs/adding-a-source-type.md</code>):
+</p>
+
+<ol>
+  <li><code>pipeline/sources/base.py</code> &mdash; subclass <code>SourceAdapter</code>, implementing <code>discover()</code> and <code>fetch_items()</code>.</li>
+  <li><code>pipeline/sources/__init__.py</code> &mdash; register the class in <code>SOURCE_REGISTRY</code>.</li>
+  <li><code>store/migrations/</code> &mdash; one migration extending the <code>source_type</code> CHECK constraint.</li>
+  <li><code>cli/commands/add.py</code> &mdash; expose the new <code>--type</code> value.</li>
+</ol>
+
+<p>
+Plus a fixture-backed test under <code>tests/unit/pipeline/</code>. The
+three existing adapters &mdash; RSS/Atom, single-page save, and
+newsletter-by-IMAP &mdash; each followed exactly this recipe.
+</p>
+
+<p>
+<strong>Adding an API endpoint</strong> touches
+<code>api/routes.py</code> and <code>api/schemas.py</code>, plus
+<code>web/js/api.js</code> if the frontend consumes it.
+<strong>Adding a CLI command</strong> is a single new module in
+<code>cli/commands/</code> &mdash; <code>main.py</code> auto-discovers
+it.
+</p>
+
+<blockquote>
+<p>
+A newcomer&rsquo;s first change almost never touches <code>store/</code>
+or <code>queue/</code>. Those layers are stable (91% and 88% covered)
+and change only with schema migrations.
+</p>
+</blockquote>
+
+<h2>What the tests do &mdash; and don&rsquo;t &mdash; cover</h2>
+
+<p>
+412 tests total (348 unit + 64 integration), running in ~41&nbsp;s
+locally. <code>tests/unit/</code> mirrors the package layout
+one-to-one; the extractor&rsquo;s property test replays the 1,400
+captured HTML pages in <code>tests/fixtures/</code>. Integration tests
+run against a real temporary SQLite file and a live in-process ASGI app
+&mdash; no mocks at the store boundary. Backend line coverage is 77%
+overall, but it is uneven: store 91%, queue 88%, pipeline 84%,
+shared 79%, render 76%, api 62%, cli 41%.
+</p>
+
+<blockquote class="caution">
+<p>
+<strong>The frontend has no automated tests at all</strong> &mdash;
+0%, with no JS test harness in the repo. Any change under
+<code>web/</code>, and especially to <code>reader.js</code>, is
+verified only by hand.
+</p>
+</blockquote>
+
+<h2>In short</h2>
+
+<p>
+Learn the write path once and the codebase falls into place: everything
+either feeds the SQLite store or reads from it, under strict layering
+with <code>store/</code> at the bottom. Make your first change in
+<code>pipeline/sources/</code> or <code>api/routes.py</code>, respect
+the five invariants, and treat <code>pipeline/extractor.py</code> &mdash;
+and anything touching highlight offsets in the untested frontend &mdash;
+with respect.
+</p>
+
+<footer>codebase-structure &middot; prose-baseline &middot; v1 &middot; 2026-07-01</footer>
+
+</main>
+</body>
+</html>

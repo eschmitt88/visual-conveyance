@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INC-1194 — anatomy of the June 24 ledgerline outage</title>
+<style>
+  :root {
+    --ink: #1f2430;
+    --muted: #5b6472;
+    --rule: #e3e6ec;
+    --accent: #b91c1c;
+    --bg: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.45;
+  }
+  main { max-width: 1360px; margin: 0 auto; padding: 20px 24px 40px; }
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 14px; }
+  h1 { font-size: 1.55rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { margin: 0; font-size: 1.0rem; color: var(--muted); max-width: 72rem; }
+  .lede strong { color: var(--accent); }
+  section { margin: 26px 0; }
+  h2 {
+    font-size: 1.12rem; margin: 0 0 8px;
+    border-left: 4px solid var(--accent); padding-left: 10px;
+  }
+  .diagram { overflow-x: auto; }
+  pre.mermaid {
+    margin: 0; padding: 0;
+    background: transparent;
+    display: flex; justify-content: center;
+  }
+  #overview pre.mermaid svg { max-height: 640px; }
+  figcaption, .caption {
+    font-size: 0.88rem; color: var(--muted);
+    max-width: 72rem; margin: 8px auto 0;
+    border-top: 1px solid var(--rule); padding-top: 6px;
+  }
+  footer {
+    margin-top: 34px; padding-top: 8px; border-top: 1px solid var(--rule);
+    font-size: 0.72rem; color: var(--muted);
+  }
+  @media (max-width: 480px) {
+    main { padding: 14px 12px 28px; }
+    h1 { font-size: 1.25rem; }
+    .lede { font-size: 0.92rem; }
+  }
+  @media (max-width: 700px) {
+    pre.mermaid { justify-content: flex-start; }
+    pre.mermaid svg { min-width: 720px; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>INC-1194 — anatomy of the June 24 ledgerline outage</h1>
+  <p class="lede">On 2026-06-24, 14:02–18:19 UTC, ledgerline's invoicing API partially failed for
+  <strong>4&nbsp;h&nbsp;17&nbsp;m</strong> — peak 31.2% of requests erroring, 2,312 customer organizations
+  affected, ≈$41,300 in SLA credits — because a deploy-time trigger met two pre-existing latent
+  weaknesses; there was no single root cause.</p>
+</header>
+
+<section id="overview">
+  <h2>The whole story: one trigger, two amplifiers</h2>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  classDef trigger fill:#FDE68A,stroke:#92400E,color:#451A03
+  classDef amp fill:#DDD6FE,stroke:#5B21B6,color:#2E1065
+  classDef impact fill:#FECACA,stroke:#991B1B,color:#450A0A
+  classDef fix fill:#BBF7D0,stroke:#166534,color:#052E16
+
+  T["TRIGGER — 14:02 deploy<br>leading-wildcard LIKE search:<br>full scan of 274.2 M rows<br>0.4 ms → 24–31 s"]:::trigger
+  B["AMPLIFIER 1 — vacuum debt<br>Jun 22 backfill left<br>38.1 M dead tuples;<br>autovacuum threshold<br>(≈54.9 M) never crossed"]:::amp
+  T --> K["Bloat pushes scans past<br>the 30 s statement timeout<br>~57% of searches killed —<br>slow became failing"]:::impact
+  B -->|"≈23 GB extra heap"| K
+  K -->|"5xx responses"| ST["AMPLIFIER 2 — retry storm<br>fixed 1 s retries, 3 attempts,<br>no jitter, no budget:<br>traffic 3,200 → 15,020 rpm<br>(4.7×)"]:::amp
+  ST --> P["pgbouncer pool 80/80<br>saturated at 15:12 —<br>every endpoint sharing<br>the pool queues"]:::impact
+  T -->|"connections held 30 s per scan"| P
+  P --> O["Platform-wide partial outage<br>peak 31.2% errors at 15:47<br>2,312 orgs · ≈$41,300 credits<br>zero data loss"]:::impact
+  O --> X["Rollback impossible —<br>feature flag off 17:05<br>errors under 3% by 17:15<br>SLOs met 17:53<br>closed 18:19 · 4 h 17 m"]:::fix
+</pre>
+  </div>
+  <p class="caption">A leading-wildcard LIKE ("%…%") gives a B-tree index nothing to anchor on — and
+  the rewrite also moved org scoping out of the SQL — so Postgres read the whole table per search,
+  while dead tuples (old row versions an UPDATE leaves behind until autovacuum, a background
+  cleaner, reclaims them) added ≈23&nbsp;GB, pushing scans past the timeout. Remove any one leg and June 24 shrinks to a one-endpoint degradation: without the
+  bloat, slow searches mostly succeed and the pool holds at ≈34/80; without the retry storm, demand
+  stays near organic levels; without the query change, nothing happens at all.</p>
+</section>
+
+<section id="timeline">
+  <h2>Timeline: where 4 h 17 m went</h2>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  classDef pre fill:#C7D2FE,stroke:#3730A3,color:#1E1B4B
+  classDef bad fill:#FECACA,stroke:#991B1B,color:#450A0A
+  classDef warn fill:#FDE68A,stroke:#92400E,color:#451A03
+  classDef good fill:#BBF7D0,stroke:#166534,color:#052E16
+
+  subgraph PH0["Prologue — Jun 22"]
+    a["09:04–14:37 tax_region backfill:<br>38.1 M dead tuples left behind,<br>below the ≈54.9 M autovacuum threshold"]:::pre
+  end
+  subgraph PH1["Silent failure — Jun 24"]
+    b["14:02 release live — canary was green"]:::warn
+    c["14:07 search p99 jumps 2.1 ms → over 20 s<br>no alert existed on this signal"]:::warn
+    b --> c
+  end
+  subgraph PH2["Wrong track — 50 minutes"]
+    d["14:11 first alert: gateway 5xx over 2%"]:::bad
+    e["14:20 network hypothesis adopted<br>(anchored by a coincident cloud advisory)"]:::bad
+    f["14:38 zone failover — no improvement"]:::bad
+    g["15:10 packet captures clean —<br>hypothesis ruled out"]:::bad
+    d --> e --> f --> g
+  end
+  subgraph PH3["Pivot and dead ends"]
+    h["15:12 pool saturates 80/80"]:::bad
+    i["15:19 database identified —<br>68 min after first alert"]:::warn
+    j["15:40 rollback abandoned:<br>index dropped, rebuild ≈6 h"]:::bad
+    k["15:47 peak: 31.2% errors, 4.7× traffic"]:::bad
+    l["16:20 pool bump 80→200 backfires,<br>reverted 16:31"]:::bad
+    h --> i --> j --> k --> l
+  end
+  subgraph PH4["Mitigation and recovery"]
+    m["17:05 flag off — search falls back<br>to exact invoice-number match"]:::good
+    n["17:12–17:50 manual VACUUM removes<br>38.1 M dead tuples"]:::good
+    o2["17:53 all SLOs met"]:::good
+    p["18:19 closed after 26 min stable — 4 h 17 m total<br>37,400 delayed webhooks replayed by 19:05<br>zero data loss"]:::good
+    m --> n --> o2 --> p
+  end
+  PH0 --> PH1 --> PH2 --> PH3 --> PH4
+</pre>
+  </div>
+  <p class="caption">Detection lag dominated: customers felt latency from 14:07, but the only firing
+  alert watched error rate (14:11), and the correct diagnosis came at 15:19 — 68 minutes later, 50 of
+  them spent actively pursuing the network theory. The blast radius was availability, not integrity:
+  invoice writes ride a durable queue, and every delayed webhook was replayed.</p>
+</section>
+
+<section id="diagnosis">
+  <h2>68 minutes to the right diagnosis — and why rollback failed</h2>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  classDef gap fill:#FDE68A,stroke:#92400E,color:#451A03
+  classDef bad fill:#FECACA,stroke:#991B1B,color:#450A0A
+  classDef good fill:#BBF7D0,stroke:#166534,color:#052E16
+
+  g1["Alerts watched error rate only —<br>no latency SLO alert on invoicing"]:::gap
+  g2["Latency dashboards sampled 1 in 100 —<br>the cliff looked like sparse noise"]:::gap
+  g3["Deploy marker on dashboards<br>broken since Jun 10 —<br>the 14:02 deploy was invisible"]:::gap
+  g4["Cloud advisory at 14:05 —<br>a plausible distractor on cue"]:::gap
+  g1 --> H["Network hypothesis held 14:20–15:10"]:::bad
+  g2 --> H
+  g3 --> H
+  g4 --> H
+  H --> DX["15:19 database identified as bottleneck"]:::bad
+  DX --> RB{"Roll back<br>the deploy?"}
+  RB -->|"migration 0412 had dropped<br>the old covering index"| NO["Dead end: old query would seq-scan too<br>index rebuild ≈6 h · roll-forward 50+ min"]:::bad
+  RB -->|"new path shipped<br>behind a feature flag"| FF["16:35 exact-match fallback verified in staging<br>17:05 flag to 0% — the flip took 90 seconds"]:::good
+</pre>
+  </div>
+  <p class="caption">Four systemic gaps — not responder error — made the network theory the most
+  reasonable available explanation; the review is blameless. The flag beat every deploy-pipeline
+  option: rolling back the code would still sequential-scan, because migration 0412 had already
+  dropped the covering index (an index that contains every column the query needs, so the table
+  itself is never touched).</p>
+</section>
+
+<section id="retry">
+  <h2>Anatomy of the retry storm</h2>
+  <div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    participant C as Client / SDK
+    participant G as API gateway
+    participant PB as pgbouncer (pool of 80)
+    participant DB as Postgres primary
+    C->>G: invoice search
+    G->>PB: borrow a pooled connection
+    PB->>DB: leading-wildcard LIKE — full-table scan
+    Note over PB,DB: connection held up to 30 s per query
+    DB--xPB: query_canceled at the 30 s statement timeout
+    PB--xG: error
+    G--xC: 5xx (504)
+    Note over C: retry after a fixed 1 s, 3 attempts, no jitter, no budget
+    C->>G: retry waves arrive in phase (1 s oscillation)
+    Note over G: inbound 3,200 → 15,020 rpm at peak (4.7×)
+    Note over PB: 80/80 busy from 15:12 — client wait queue peaks at 1,437 (15:58)
+    Note over G,DB: invoice creation, PDF rendering, webhook dispatch all queue behind 30 s scans
+</pre>
+  </div>
+  <p class="caption">pgbouncer pools connections — requests borrow one of 80 shared server
+  connections instead of opening their own — so 30-second holds starved invoice creation, PDF
+  rendering, and webhook dispatch alike, and the retries queued on the same exhausted pool: extra
+  load, zero extra successes, for nearly two hours (15:12–17:18). The 16:20 pool bump to 200
+  backfired (more concurrent scans, worse write p99) and was reverted at 16:31 — the 30-second holds
+  were the problem, not the pool size.</p>
+</section>
+
+<section id="remediation">
+  <h2>Remediation: one fix per leg</h2>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  classDef p0 fill:#BBF7D0,stroke:#166534,color:#052E16
+  classDef leg fill:#FECACA,stroke:#991B1B,color:#450A0A
+  classDef later fill:#C7D2FE,stroke:#3730A3,color:#1E1B4B
+
+  A1["P0 · Q3 2026 · Observability<br>Per-endpoint-group p99 latency SLO alerts —<br>alert on latency, not only error rate"]:::p0 -->|targets| L1["The 68-minute<br>detection gap"]:::leg
+  A2["P0 · Q3 2026 · Infrastructure<br>pgbouncer saturation alerting +<br>pool sizing and isolation review"]:::p0 -->|targets| L2["Pool exhaustion"]:::leg
+  A3["P0 · Q3 2026 · Platform<br>Standardized retries: exponential<br>backoff, full jitter, retry budgets"]:::p0 -->|targets| L3["The retry storm"]:::leg
+  B1["3 × P1 (Q3–Q4 2026): autovacuum tuning<br>for tables over 50 M rows · migration<br>reversibility policy · CI query-plan checks"]:::later -->|targets| L4["Vacuum debt and<br>the irreversible deploy"]:::leg
+  B2["3 × P2 (Q3–Q4 2026): production-scale<br>canary replay · deploy markers + 1/10<br>sampling · IC anti-anchoring training"]:::later -->|targets| L5["The canary blind spot<br>and broken instruments"]:::leg
+</pre>
+  </div>
+  <p class="caption">The three P0 items are scheduled and tracked (Q3 2026, weekly at the ops
+  review), not aspirational — each targets a different leg of the failure. Search ran in degraded
+  exact-match-only mode until the index rebuild finished at 21:48 that evening; full contains search
+  returned June 26 with the fixed, org-scoped query.</p>
+</section>
+
+<footer>incident-analysis · mermaid-diagrams · v1 · 2026-07-01</footer>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+</body>
+</html>

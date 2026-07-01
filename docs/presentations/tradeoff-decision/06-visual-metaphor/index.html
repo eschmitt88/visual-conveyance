@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fernwick Search Transit — the vector-engine decision as a map</title>
+<style>
+  :root{
+    --plane:#f9f9f7; --surface:#fcfcfb;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7;
+    --border:rgba(11,11,11,.10);
+    --c-quiver:#2a78d6; --c-hearth:#eda100; --c-pg:#1baf7a; --c-braid:#008300;
+    --crit:#d03b3b; --good:#0ca30c;
+    --wall:#dedcd3; --wall-ink:#52514e;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --plane:#0d0d0d; --surface:#1a1a19;
+      --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835;
+      --border:rgba(255,255,255,.10);
+      --c-quiver:#3987e5; --c-hearth:#c98500; --c-pg:#199e70; --c-braid:#008300;
+      --wall:#33332f; --wall-ink:#c3c2b7;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--plane); color:var(--ink);
+    font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  .wrap{max-width:1400px; margin:0 auto; padding:20px 24px 40px}
+  header h1{font-size:25px; line-height:1.2; margin:0 0 4px}
+  header p.standfirst{margin:0 0 14px; color:var(--ink2); font-size:14.5px; max-width:1100px}
+  .chips{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:10px; margin-bottom:14px}
+  .chip{background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-size:13px; line-height:1.4}
+  .chip b{display:block; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink2); margin-bottom:2px}
+  figure.map{margin:0; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 10px 4px}
+  .map-scroll{overflow-x:auto}
+  .map-scroll svg{display:block; width:100%; min-width:1000px; height:auto}
+  .scroll-hint{display:none; color:var(--muted); font-size:12px; margin:4px 2px 0}
+  @media (max-width:700px){ .scroll-hint{display:block} }
+
+  /* legend + gates strips */
+  .legend, .gates{
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:10px 14px; margin-top:10px; font-size:13px;
+  }
+  .legend b.hd, .gates b.hd{font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink2)}
+  .legend ul{list-style:none; display:flex; flex-wrap:wrap; gap:6px 22px; margin:6px 0 0; padding:0}
+  .legend li{display:flex; align-items:center; gap:8px}
+  .sw{flex:0 0 auto; width:22px; height:0; border-top:4px solid; border-radius:2px}
+  .sym{flex:0 0 auto; width:22px; text-align:center; font-weight:700}
+  .gates p{margin:6px 0 0; line-height:1.5}
+  .gates code{font:inherit; font-weight:700}
+
+  main{max-width:1100px}
+  main h2{font-size:19px; margin:30px 0 8px}
+  main h3{font-size:15px; margin:18px 0 6px}
+  main p, main li{color:var(--ink); font-size:14.5px}
+  main .aside{color:var(--ink2)}
+  ol.reading{padding-left:22px} ol.reading li{margin:4px 0}
+  ul.tight{padding-left:20px} ul.tight li{margin:5px 0}
+  .cutcard{border-left:4px solid var(--crit); background:var(--surface); border-radius:0 8px 8px 0; padding:10px 14px; margin:10px 0}
+  .cutcard b.who{font-size:14px}
+  .tablewrap{overflow-x:auto; margin:10px 0}
+  table{border-collapse:collapse; font-size:13.5px; min-width:640px; background:var(--surface)}
+  th,td{border:1px solid var(--grid); padding:7px 10px; text-align:left; vertical-align:top}
+  th{font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink2)}
+  td.crit{white-space:nowrap; color:var(--ink2)}
+  .dot{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:baseline}
+  .q .dot{background:var(--c-quiver)} .h .dot{background:var(--c-hearth)}
+  .breaknote{border:1px dashed var(--baseline); border-radius:8px; padding:12px 16px; background:var(--surface)}
+  footer{margin-top:36px; font-size:11px; color:var(--muted)}
+
+  /* SVG classes */
+  text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif; fill:var(--ink)}
+  .t11{font-size:11px} .t12{font-size:12px} .t10{font-size:10px} .t13{font-size:13px}
+  .b{font-weight:700}
+  .ink2{fill:var(--ink2)} .mut{fill:var(--muted)}
+  .halo{paint-order:stroke; stroke:var(--surface); stroke-width:3.5px; stroke-linejoin:round}
+  .lq{stroke:var(--c-quiver)} .lh{stroke:var(--c-hearth)} .lp{stroke:var(--c-pg)} .lb{stroke:var(--c-braid)}
+  .fq{fill:var(--c-quiver)} .fh{fill:var(--c-hearth)} .fp{fill:var(--c-pg)} .fb{fill:var(--c-braid)}
+  .rail{fill:none; stroke-width:5; stroke-linecap:round}
+  .gridln{stroke:var(--grid); stroke-width:1}
+  .axis{stroke:var(--baseline); stroke-width:1.5}
+  .ref{stroke:var(--baseline); stroke-width:1.5; stroke-dasharray:4 5}
+  .station{fill:var(--surface); stroke-width:2.5}
+  .critfill{fill:var(--crit)} .critstroke{stroke:var(--crit)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Fernwick Search Transit: four lines leave the prototype — which one do we ride?</h1>
+  <p class="standfirst">Choosing the production vector-search engine behind semantic product search, drawn as a transit map.
+  Four candidate lines depart; the must-have fare-control wall cuts two; the surviving two trade fares against operations —
+  and the ticket is <em>conditional</em>, with the decision made at the 2026-10-01 checkpoint.</p>
+  <div class="chips">
+    <div class="chip"><b>Two lines are cut, not out-voted</b>
+      pgnearest fails gates M1+M2 (110&nbsp;ms filtered, 0.89 recall); Braid fails M3 (filtered recall 0.71). Hard fails — not taste.</div>
+    <div class="chip"><b>No dominant survivor</b>
+      Hearth wins the fare trajectory and lock-in; Quiver wins zero-ops and filtered-recall margin. The fare ranking flips as the corpus grows: crossover ≈3M vectors on infra (behind us), ≈30M counting labor (~2029).</div>
+    <div class="chip"><b>A conditional ticket, not a winner</b>
+      Hearth is primary <em>if</em> the PLAT-7 hire starts and a ≥4-engineer on-call rotation is committed by 2026-10-01; otherwise Quiver, with a budgeted exit plan. Standing override: filtered traffic &gt;60% → Quiver regardless.</div>
+  </div>
+</header>
+
+<figure class="map" aria-label="Transit map of the vector-engine decision">
+<div class="map-scroll">
+<svg viewBox="0 0 1360 592" role="img" aria-labelledby="mapTitle">
+  <title id="mapTitle">Transit map: four candidate lines leave the prototype index; pgnearest and Braid are cut at the must-have wall; Quiver and Hearth continue into fare zones where height is monthly infrastructure cost and distance is corpus size; their fares cross at about 3 million vectors; a conditional interchange at the 2026-10-01 checkpoint decides which line to ride.</title>
+
+  <!-- fare-zone gridlines -->
+  <line class="gridln" x1="360" y1="430" x2="1345" y2="430"/>
+  <line class="gridln" x1="360" y1="310" x2="1345" y2="310"/>
+  <text class="t10 mut halo" x="366" y="426">$1,000/mo</text>
+  <text class="t10 mut halo" x="366" y="306">$10,000/mo</text>
+
+  <!-- origin info block -->
+  <text class="t12 b" x="30" y="76">DEPARTURE: PROTOTYPE INDEX</text>
+  <text class="t11 ink2" x="30" y="92">semantic search GA Mar 2026 — now the top</text>
+  <text class="t11 ink2" x="30" y="106">reliability risk. 4.1M products, 768-dim</text>
+  <text class="t11 ink2" x="30" y="120">sable-embed-v2 · 85–120 QPS · 30% filtered</text>
+
+  <!-- fare axis title -->
+  <text class="t11 b" x="366" y="84">FARE AXIS ↑</text>
+  <text class="t10 ink2" x="366" y="98">height = infra $/mo (log).</text>
+  <text class="t10 ink2" x="366" y="112">Ops labor excluded —</text>
+  <text class="t10 ink2" x="366" y="126">see ≈30M marker.</text>
+
+  <!-- decision banner -->
+  <rect x="496" y="56" width="852" height="92" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+  <text class="t13 b" x="512" y="78">◎ TICKET RULES — CHECKPOINT INTERCHANGE 2026-10-01 · full review 2027-01-15</text>
+  <text class="t12" x="512" y="98">Ride <tspan class="b fh">HEARTH</tspan> (primary) only if BOTH by 2026-10-01: ① infra hire PLAT-7 signed &amp; started, AND</text>
+  <text class="t12" x="512" y="114">② a ≥4-engineer on-call rotation committed in writing. Either fails → <tspan class="b fq">QUIVER</tspan> + mandatory exit plan.</text>
+  <text class="t12" x="512" y="132"><tspan class="b" fill="var(--crit)">⚠ Standing override (S1):</tspan> filtered queries &gt;60% or facet selectivity &lt;≈2% → <tspan class="b fq">QUIVER</tspan> even if the hire lands.</text>
+
+  <!-- must-have wall -->
+  <text class="t11 b ink2" x="331" y="82" text-anchor="middle">MUST-HAVE</text>
+  <text class="t11 b ink2" x="331" y="96" text-anchor="middle">FARE CONTROL</text>
+  <text class="t10 mut" x="331" y="110" text-anchor="middle">gates M1–M5 ▾</text>
+  <rect x="318" y="122" width="26" height="396" rx="6" fill="var(--wall)">
+    <title>The five must-have gates. Missing any one eliminates an option regardless of its other merits.</title>
+  </rect>
+  <text class="t10 b" x="331" y="194" text-anchor="middle" fill="var(--wall-ink)">M1</text>
+  <text class="t10 b" x="331" y="269" text-anchor="middle" fill="var(--wall-ink)">M2</text>
+  <text class="t10 b" x="331" y="344" text-anchor="middle" fill="var(--wall-ink)">M3</text>
+  <text class="t10 b" x="331" y="409" text-anchor="middle" fill="var(--wall-ink)">M4</text>
+  <text class="t10 b" x="331" y="484" text-anchor="middle" fill="var(--wall-ink)">M5</text>
+
+  <!-- rails -->
+  <!-- Braid: cut at wall -->
+  <path class="rail lb" d="M 106 329 C 158 320, 152 170, 210 170 L 318 170">
+    <title>Braid — embedded ANN library. Fastest and highest-recall in the bakeoff; eliminated at gate M3.</title>
+  </path>
+  <!-- pgnearest: cut at wall -->
+  <path class="rail lp" d="M 106 331 C 150 315, 150 245, 210 245 L 318 245">
+    <title>pgnearest — Postgres extension v0.9. Eliminated at gates M1 (filtered latency) and M2 (recall).</title>
+  </path>
+  <!-- Hearth: through line -->
+  <path class="rail lh" d="M 106 341 C 150 355, 150 430, 210 430 L 344 430 C 380 430, 390 464, 420 464 L 721 464 C 790 464, 800 412, 850 412 C 1030 412, 1120 330, 1280 330">
+    <title>Hearth — self-hosted OSS. Passes all five gates (M3 exactly at the floor). $520/mo HA floor, $1,400 at 10M, $6,800 at 100M.</title>
+  </path>
+  <!-- Quiver: through line -->
+  <path class="rail lq" d="M 104 344 C 158 352, 152 500, 210 500 L 344 500 C 380 500, 390 519, 420 519 C 530 519, 590 446, 683 446 C 740 446, 780 397, 850 397 C 1010 397, 1120 267, 1280 267">
+    <title>Quiver — managed SaaS. Passes all five gates. $180/mo at 1M, $740 today at 4.1M, $1,900 at 10M, $23,000 at 100M.</title>
+  </path>
+
+  <!-- origin hub -->
+  <circle cx="100" cy="336" r="9" class="station" stroke="var(--ink)"/>
+
+  <!-- pre-wall line names -->
+  <text class="t11 b fb halo" x="214" y="159">BRAID</text>
+  <text class="t11 b fp halo" x="214" y="234">PGNEAREST</text>
+  <text class="t11 b fh halo" x="214" y="419">HEARTH</text>
+  <text class="t11 b fq halo" x="214" y="489">QUIVER</text>
+
+  <!-- gate pass/cut markers on the wall -->
+  <g>
+    <circle cx="331" cy="170" r="10" class="critfill"><title>Braid: cut at gate M3 — post-hoc filtered recall 0.71 at 5% selectivity, floor is 0.90.</title></circle>
+    <path d="M 326 165 L 336 175 M 336 165 L 326 175" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="331" cy="245" r="10" class="critfill"><title>pgnearest: cut at gates M1 and M2 — 110 ms p95 filtered and recall@10 of 0.89.</title></circle>
+    <path d="M 326 240 L 336 250 M 336 240 L 326 250" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="331" cy="430" r="8" fill="var(--good)"><title>Hearth: passes all five gates — M3 exactly at the 0.90 floor.</title></circle>
+    <path d="M 327 430 L 330 433.5 L 335.5 426.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="331" cy="500" r="8" fill="var(--good)"><title>Quiver: passes all five gates.</title></circle>
+    <path d="M 327 500 L 330 503.5 L 335.5 496.5" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- cut labels -->
+  <text class="t11 b halo" x="352" y="166"><tspan class="fb">BRAID — embedded ANN library</tspan> <tspan fill="var(--crit)">✗ CUT AT GATE M3</tspan></text>
+  <text class="t11 ink2 halo" x="352" y="181">No native filtered search: post-hoc recall collapses to</text>
+  <text class="t11 ink2 halo" x="352" y="195">0.71 at 5% selectivity (floor 0.90) — structural, not</text>
+  <text class="t11 ink2 halo" x="352" y="209">tunable. Fastest &amp; best in the bakeoff (12 ms p95,</text>
+  <text class="t11 ink2 halo" x="352" y="223">0.98 recall@10) — and it never gets to matter.</text>
+
+  <text class="t11 b halo" x="352" y="249"><tspan class="fp">PGNEAREST — Postgres ext. (v0.9)</tspan> <tspan fill="var(--crit)">✗ CUT AT M1+M2</tspan></text>
+  <text class="t11 ink2 halo" x="352" y="264">110 ms p95 filtered — over the 100 ms budget — and</text>
+  <text class="t11 ink2 halo" x="352" y="278">recall@10 0.89 (&lt;0.92; also under M3's 0.90 floor).</text>
+  <text class="t11 ink2 halo" x="352" y="292">S5: if v1.0 lands recall parity, re-benchmark ≈1 week;</text>
+  <text class="t11 ink2 halo" x="352" y="306">not worth waiting on an undated roadmap.</text>
+
+  <!-- today reference line -->
+  <line class="ref" x1="683" y1="152" x2="683" y2="540"/>
+
+  <!-- infra crossover -->
+  <text class="t11 b halo" x="380" y="390">≈3M: infra fares cross</text>
+  <text class="t11 ink2 halo" x="380" y="405">already behind us — today at 4.1M it's $740 vs $520</text>
+  <line class="ref" x1="540" y1="412" x2="608" y2="453"/>
+  <circle cx="618" cy="462" r="6" class="station" stroke="var(--ink)">
+    <title>Infrastructure-only cost crossover, around 3 million vectors. At today's 4.1M, Quiver's quote is $740/mo vs Hearth's $520/mo.</title>
+  </circle>
+
+  <!-- fare vertex stations + labels -->
+  <circle cx="420" cy="519" r="4.5" class="station lq"/>
+  <text class="t11 halo" x="398" y="526" text-anchor="end">$180</text>
+  <circle cx="683" cy="446" r="4.5" class="station lq"/>
+  <text class="t11 halo" x="668" y="431" text-anchor="end">$740 — today's quote</text>
+  <circle cx="850" cy="397" r="4.5" class="station lq"/>
+  <text class="t11 halo" x="850" y="381" text-anchor="middle">$1,900</text>
+  <circle cx="1280" cy="267" r="4.5" class="station lq"/>
+
+  <circle cx="420" cy="464" r="4.5" class="station lh"/>
+  <text class="t11 halo" x="630" y="482">$520 (3-node HA floor, covers to ≈5M)</text>
+  <circle cx="850" cy="412" r="4.5" class="station lh"/>
+  <text class="t11 halo" x="850" y="429" text-anchor="middle">$1,400</text>
+  <circle cx="1280" cy="330" r="4.5" class="station lh"/>
+
+  <!-- interchange -->
+  <rect x="693" y="434" width="14" height="37" rx="7" fill="var(--surface)" stroke="var(--ink)" stroke-width="2">
+    <title>Checkpoint interchange, 2026-10-01: ride Hearth if the PLAT-7 hire has started and a ≥4-engineer on-call rotation is committed; otherwise transfer to Quiver with a mandatory exit plan.</title>
+  </rect>
+  <circle cx="700" cy="443" r="4" fill="var(--ink)"/>
+  <circle cx="700" cy="462" r="4" fill="var(--ink)"/>
+  <text class="t11 b halo" x="700" y="490" text-anchor="middle">◎ checkpoint 2026-10-01</text>
+
+  <!-- termini labels -->
+  <text class="t11 b halo" x="1348" y="236" text-anchor="end"><tspan class="fq">QUIVER terminus</tspan> — $23,000/mo at 100M</text>
+  <text class="t11 ink2 halo" x="1348" y="251" text-anchor="end">Enterprise tier forced above 50M · lock-in HIGH · in-VPC never</text>
+  <text class="t11 b halo" x="1348" y="384" text-anchor="end"><tspan class="fh">HEARTH terminus</tspan> — $6,800/mo at 100M (9 nodes)</text>
+  <text class="t11 ink2 halo" x="1348" y="399" text-anchor="end">3.4× cheaper up here · lock-in LOW · in-VPC ✓ (N1)</text>
+
+  <!-- labor-adjusted crossover -->
+  <line class="ref" x1="1055" y1="255" x2="1055" y2="540"/>
+  <text class="t11 b halo" x="1063" y="490">≈30M ~2029: labor-adjusted crossover</text>
+  <text class="t11 ink2 halo" x="1063" y="505">with Hearth's ~0.2 FTE ≈ $2,800/mo counted,</text>
+  <text class="t11 ink2 halo" x="1063" y="520">Quiver is cheaper in total until ≈ here.</text>
+
+  <!-- bottom axis -->
+  <line class="axis" x1="360" y1="540" x2="1345" y2="540"/>
+  <g stroke="var(--baseline)" stroke-width="1.5">
+    <line x1="420" y1="540" x2="420" y2="546"/><line x1="625" y1="540" x2="625" y2="546"/>
+    <line x1="683" y1="540" x2="683" y2="546"/><line x1="850" y1="540" x2="850" y2="546"/>
+    <line x1="1055" y1="540" x2="1055" y2="546"/><line x1="1280" y1="540" x2="1280" y2="546"/>
+  </g>
+  <text class="t11 mut" x="420" y="558" text-anchor="middle">1M</text>
+  <text class="t11 mut" x="625" y="558" text-anchor="middle">≈3M</text>
+  <text class="t11 b" x="683" y="558" text-anchor="middle">4.1M — today</text>
+  <text class="t11 mut" x="850" y="558" text-anchor="middle">10M</text>
+  <text class="t11 mut" x="1055" y="558" text-anchor="middle">30M</text>
+  <text class="t11 mut" x="1280" y="558" text-anchor="middle">100M</text>
+  <text class="t10 mut" x="850" y="574" text-anchor="middle">corpus size (log) — doubles yearly: 10M ≈ the 12-month scale · ≈8M mid-2027 · ≈16M mid-2028 · 100M in 4–5 yr</text>
+</svg>
+</div>
+<p class="scroll-hint">Wide map — scroll it sideways.</p>
+</figure>
+
+<div class="legend">
+  <b class="hd">Legend — what maps to what</b>
+  <ul>
+    <li><span class="sw" style="border-color:var(--c-quiver)"></span>Quiver — managed SaaS</li>
+    <li><span class="sw" style="border-color:var(--c-hearth)"></span>Hearth — self-hosted OSS</li>
+    <li><span class="sw" style="border-color:var(--c-pg)"></span>pgnearest — Postgres extension</li>
+    <li><span class="sw" style="border-color:var(--c-braid)"></span>Braid — embedded library</li>
+    <li><span class="sym" style="color:var(--crit)">✗</span>line cut at the wall = eliminated by a must-have fail, not by preference</li>
+    <li><span class="sym">▮</span>the wall = the five must-have gates M1–M5 (defined below)</li>
+    <li><span class="sym">↕</span>height in the fare zone = infrastructure cost, $/mo (log; ops labor only at the ≈30M marker)</li>
+    <li><span class="sym">→</span>distance rightward = corpus size (log) — it doubles yearly whether we like it or not</li>
+    <li><span class="sym">◎</span>interchange = the conditional decision, made at the 2026-10-01 checkpoint</li>
+    <li><span class="sym">┊</span>dashed verticals = today (4.1M) and the labor-adjusted crossover (≈30M)</li>
+  </ul>
+</div>
+
+<div class="gates">
+  <b class="hd">The five gates (must-haves — miss any one and you're out, regardless of other merits)</b>
+  <p><code>M1</code> p95 latency ≤ 100 ms at 10M vectors under the production mix, <em>including</em> the 30% filtered traffic (the search page has 250 ms end-to-end; vector search gets 100 ms) ·
+     <code>M2</code> recall@10 ≥ 0.92 on unfiltered queries vs exact brute-force ground truth ·
+     <code>M3</code> metadata filtering with recall@10 ≥ 0.90 down to 5% filter selectivity — post-hoc filtering that silently drops recall does not count ·
+     <code>M4</code> all product and query data stays in an EU region ·
+     <code>M5</code> ≤ $2,500/month run cost at the 12-month scale (~10M vectors).</p>
+</div>
+
+<main>
+  <h2>Reading this map</h2>
+  <ol class="reading">
+    <li>Four lines leave the departure hub — the prototype index that went GA in March 2026 and is now the top reliability risk in the search stack.</li>
+    <li>Every line must pass the <strong>fare-control wall</strong>: the five must-have gates. Two lines end there; the red tags say exactly which gate cut them.</li>
+    <li>Past the wall, follow the two survivors rightward. Horizontal distance is corpus size; <strong>vertical height is monthly infrastructure fare</strong>. Watch the blue line start cheapest, cross the amber line around 3M vectors, and end 3.4× more expensive at 100M.</li>
+    <li>The <strong>◎ interchange</strong> plus the ticket-rules banner is the actual decision. It is an IF, not a winner: which line Fernwick rides is settled at the 2026-10-01 checkpoint by two headcount conditions, with one standing override.</li>
+  </ol>
+
+  <h2>Stop 1 — the fare-control wall: who got cut, and why it isn't taste</h2>
+  <p>All four candidates ran the same two-week bakeoff (2026-06-08 → 2026-06-19): one frozen 10M-vector snapshot (the 4.1M live corpus plus 5.9M synthetic-but-realistic products; 10M is the scale the decision must hold at), identical hardware for the self-hosted options (up to 3 nodes of 16 vCPU / 64 GB / NVMe), a 48-hour production query log replayed at 120 QPS with the live 30% filter mix, and recall@10 measured against exact brute-force ground truth on 10,000 sampled queries. Quiver was measured from inside the VPC via private peering; its ~2 ms network hop is included in its numbers.</p>
+
+  <div class="cutcard">
+    <b class="who">Braid (embedded library) — cut at gate M3.</b>
+    The fastest, highest-recall thing measured: 12 ms p95 unfiltered, 0.98 recall@10, a 3-minute full index build at 60,000 vectors/s, and the cheapest infrastructure at every scale. None of it matters: Braid has no native filtered search, so filtering is post-hoc and recall collapses as filters get selective — 0.94 at 50% selectivity but <strong>0.71 at 5%</strong>, far below M3's 0.90 floor. This is structural (the index doesn't know about metadata), not tunable. Building a filtering layer plus DIY serving, snapshots, and replication would cost ~1.5 FTE for two quarters — and its ~$4,200/mo 100M estimate excludes that self-built sharding layer (~2 engineer-quarters). <span class="aside">This is the answer to "but the library benchmarks best": it fails a must-have.</span>
+  </div>
+  <div class="cutcard">
+    <b class="who">pgnearest (Postgres extension, v0.9) — cut at gates M1 and M2.</b>
+    Filtered latency is 110 ms p95 — over the 100 ms budget (unfiltered scrapes by at 95 ms) — and recall@10 is 0.89 both ways, under M2's 0.92 and also under M3's 0.90. The recall is an index-architecture ceiling, not a tuning problem. Attractive otherwise: plain SQL, lowest marginal ops (~0.1 FTE, it rides the existing Postgres fleet), minimal lock-in — but it's a young project (two years, effectively one core maintainer). <span class="aside">Signal S5: if the undated v1.0 actually ships recall parity, a ≈1-week re-benchmark reopens this line; waiting for it is not.</span>
+  </div>
+
+  <h2>Stop 2 — the two through lines: Quiver vs Hearth</h2>
+  <p>Both pass all five gates. Neither dominates: every row below favors one or the other.</p>
+  <div class="tablewrap">
+  <table>
+    <tr><th>At 10M vectors</th><th class="q"><span class="dot"></span>Quiver — managed SaaS</th><th class="h"><span class="dot"></span>Hearth — self-hosted OSS</th></tr>
+    <tr><td class="crit">p95 latency (unfiltered / filtered)</td><td>18 ms / 22 ms</td><td>41 ms / 48 ms (projected ~55 ms at 20M — headroom fine through the planning horizon)</td></tr>
+    <tr><td class="crit">Recall@10, unfiltered</td><td>0.97</td><td>0.94</td></tr>
+    <tr><td class="crit">Filtered recall@10</td><td>0.96 at 5% selectivity; holds <strong>0.95 even at 1%</strong> — best curve in the bakeoff</td><td><strong>0.90 at 5% — exactly at the M3 floor</strong>; degraded to 0.86 at 1% in the stress test. Passes, with no margin if facets get more selective</td></tr>
+    <tr><td class="crit">Full 10M re-index</td><td>~21 min (8,000 vectors/s tier limit)</td><td>~7 min (25,000 vectors/s) — best among the service-shaped options</td></tr>
+    <tr><td class="crit">Infra $/mo at 1M / 10M / 100M</td><td>$180 / $1,900 / $23,000 (Enterprise plan forced above 50M)</td><td>$520 (HA floor) / $1,400 / $6,800</td></tr>
+    <tr><td class="crit">Today, at 4.1M</td><td>$740/mo quote</td><td>$520/mo (the 3-node floor covers to ≈5M)</td></tr>
+    <tr><td class="crit">Ops burden</td><td>≈0 FTE — vendor on-call, 99.9% SLA (≈43 min/month allowed downtime, credits only)</td><td>~0.5 FTE the first quarter, settling to ~0.2 FTE, plus a ≥4-engineer on-call rotation; optional vendor support at $1,500/mo not included in the fares above</td></tr>
+    <tr><td class="crit">In-VPC (N1)</td><td>Not offered — ever</td><td>Yes; EU region in our own VPC</td></tr>
+    <tr><td class="crit">Hybrid keyword+vector (N3)</td><td>Built in</td><td>Beta plugin (partial)</td></tr>
+    <tr><td class="crit">Ecosystem</td><td>6-year-old commercial product, polished SDKs</td><td>4-year-old active OSS (~28k stars, quarterly releases); one breaking index-format change in its history (v3→v4, 2025, forced a full re-index)</td></tr>
+    <tr><td class="crit">Lock-in</td><td>Highest of the four: proprietary DSL and hybrid API; JSONL export exists and vectors are reproducible, so exit is feasible but real — ~3 engineer-weeks today, growing with each proprietary feature adopted</td><td>Low: open API, data on our disks, standard deployment</td></tr>
+  </table>
+  </div>
+
+  <h2>Stop 3 — the fare zones: where "cheap" flips</h2>
+  <p>Two crossovers, pointing in different directions:</p>
+  <ul class="tight">
+    <li><strong>Infra-only (≈3M vectors — already behind us).</strong> Quiver is cheapest at 1M ($180 vs Hearth's $520 HA floor), but the curves cross around 3M. At today's 4.1M the quote is already $740 vs $520; the gap widens to $1,900 vs $1,400 at 10M and $23,000 vs $6,800 — 3.4× — at 100M. On infrastructure alone, self-hosting is the cheaper option <em>today</em>.</li>
+    <li><strong>Labor-adjusted (≈30M vectors, ~2029 at 2×/yr growth).</strong> Hearth's ~0.2 FTE steady-state is ≈ $2,800/mo of loaded engineer cost. Counting it, Quiver stays cheaper in total until roughly 30M vectors. So "the SaaS is cheaper" is right until ~2029 — <em>if</em> that labor is truly marginal. It is not, if the PLAT-7 hire happens anyway for broader platform duties.</li>
+  </ul>
+  <p class="aside">The cost argument for Hearth is therefore a bet on Fernwick's own growth curve: at 2×/yr the corpus reaches the labor-adjusted crossover in ~3 years, and every year on Quiver past that point costs more and deepens lock-in. (The 100M-scale fares for the eliminated lines were ~$13,500/mo estimated for pgnearest — on an unvalidated 4-shard fleet whose projected latency fails anyway — and ~$4,200/mo for Braid excluding the serving layer it lacks.)</p>
+
+  <h2>Stop 4 — the interchange: a conditional ticket, not a winner</h2>
+  <p><strong>Primary: Hearth (self-hosted)</strong>, contingent on BOTH holding at the <strong>2026-10-01 checkpoint</strong>:</p>
+  <ul class="tight">
+    <li>the approved platform-infra hire (req PLAT-7) has <strong>signed and started</strong> by 2026-10-01 — the req is approved but <em>not yet filled</em>, and the whole plan leans on it;</li>
+    <li>a <strong>≥4-engineer on-call rotation</strong> for the search-infra service is committed by the Platform team, in writing, by the same date.</li>
+  </ul>
+  <p><strong>Fallback: if either fails, Quiver — with a mandatory exit plan</strong>, not an open-ended commitment: all query construction stays behind the internal <code>SearchIndex</code> interface (no Quiver-proprietary DSL outside the adapter); a quarterly export drill (full JSONL export restored into a scratch Hearth cluster, timed and logged); a standing ~3 engineer-week migration budget re-estimated at each renewal; re-evaluation at <strong>30M vectors or the first contract renewal, whichever comes first</strong>.</p>
+  <p><strong>Standing override (S1), beating both:</strong> if filtered queries exceed 60% of traffic or common facet selectivity drops below ~2%, the recommendation becomes Quiver even if the hire lands — Hearth's filtered recall (0.90 at the 0.90 floor, 0.86 at 1%) has no margin there, while Quiver holds 0.95 at 1%. Filter share has grown every quarter; this is the trigger to watch.</p>
+  <p><strong>Why Hearth first and not the reverse:</strong> at the current growth rate the labor-adjusted crossover (~30M, ~2029) falls inside the lifetime of this decision; lock-in on Quiver compounds with every proprietary feature adopted; and in-VPC residency (N1) is plausibly a hard requirement for 2027 enterprise-seller contracts — a door Quiver keeps closed permanently. Quiver is the better engine today on almost every soft criterion; Hearth is the better position to be standing in come 2029 — reachable only with the headcount to hold it. Dates: headcount checkpoint <strong>2026-10-01</strong>; full decision review <strong>2027-01-15</strong> (re-check the filter-share trend, PLAT-7 status, Quiver renewal posture, pgnearest v1.0).</p>
+
+  <h2>Signals along the track — what flips the decision</h2>
+  <ul class="tight">
+    <li><strong>S1 — filters become primary → flips to Quiver</strong>, regardless of headcount (the standing override above).</li>
+    <li><strong>S2 — the ops headcount doesn't materialize → flips to Quiver.</strong> Hearth without PLAT-7 puts on-call and tuning on four product engineers who already own the search stack — the cost advantage becomes unbudgeted attrition risk.</li>
+    <li><strong>S3 — growth accelerates to 3×/yr → strengthens Hearth.</strong> 100M arrives in ~2.5 years and the labor-adjusted crossover moves under 2 years out; Quiver's Enterprise pricing dominates the picture.</li>
+    <li><strong>S4 — Quiver renewal repricing → strengthens Hearth.</strong> The quote is locked for 12 months only; a 25% renewal increase (their published list moved ~20% last year) moves the labor-adjusted crossover from ~30M to ~20M vectors. This is why the fallback carries a mandatory exit plan.</li>
+    <li><strong>S5 — pgnearest v1.0 ships recall parity → reopens the cheapest low-ops line.</strong> Worth a 1-week re-benchmark when it exists; not worth waiting for on an undated roadmap.</li>
+  </ul>
+
+  <h2>Where the metaphor breaks</h2>
+  <p class="breaknote">On a real transit map, transfers are free and the geometry is permanent. Neither is true here. <strong>Transferring between these lines is a migration</strong> — leaving Quiver costs ~3 engineer-weeks today and more with every proprietary feature adopted; that asymmetry is exactly why the Quiver fallback ships with a pre-paid "return ticket" (adapter boundary, export drills, standing migration budget) instead of an open-ended ride. And <strong>the map's fares are not fixed track</strong>: Quiver's pricing is locked for only 12 months (S4), and pgnearest's cut could be reversed by a v1.0 that doesn't exist yet (S5). Finally, a rider chooses how far to travel; Fernwick doesn't — the corpus doubles every year on its own, carrying the company rightward into the expensive zones whether or not anyone buys a ticket.</p>
+</main>
+
+<footer>tradeoff-decision · visual-metaphor · v1 · 2026-07-01</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meridian — the shape of the codebase</title>
+<style>
+  :root {
+    --page: #f9f9f7;
+    --surface: #ffffff;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --ink-3: #898781;
+    --border: rgba(11, 11, 11, 0.10);
+    --hot: #d03b3b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.45;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0d0d0d; color: #ffffff; }
+    header p, figcaption { color: #c3c2b7 !important; }
+    section { background: #1a1a19 !important; border-color: rgba(255,255,255,0.10) !important; }
+    .diagram { background: #ffffff; border-radius: 6px; padding: 8px; }
+    footer { color: #898781 !important; }
+  }
+  main { max-width: 1160px; margin: 0 auto; padding: 16px 20px 32px; }
+  header { padding: 4px 0 10px; }
+  header h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--ink-2); max-width: 72ch; }
+  section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px 10px;
+    margin: 14px 0;
+  }
+  h2 { font-size: 1.05rem; margin: 0 0 6px; }
+  .diagram { overflow-x: auto; text-align: center; }
+  .diagram .mermaid { display: inline-block; min-width: 320px; text-align: center; }
+  figure { margin: 0; }
+  figcaption {
+    font-size: 0.85rem;
+    color: var(--ink-2);
+    margin-top: 6px;
+    max-width: 96ch;
+  }
+  code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.92em; }
+  footer {
+    font-size: 0.72rem;
+    color: var(--ink-3);
+    text-align: center;
+    padding: 10px 0 4px;
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>meridian — the shape of the codebase</h1>
+  <p>A self-hosted read-later / RSS service: a one-way ingest pipeline writes into a single SQLite
+  file, which a small HTTP API, a vanilla-JS web reader, and a CLI read back out. One process runs
+  the API, one runs the workers — no external broker, cache, or database server.</p>
+</header>
+
+<section>
+  <h2>The whole system</h2>
+  <figure>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  classDef pipe fill:#e5effb,stroke:#2a78d6,color:#0b0b0b
+  classDef hub fill:#dcf4e9,stroke:#1baf7a,color:#0b0b0b
+  classDef readside fill:#fdf0d5,stroke:#eda100,color:#0b0b0b
+  classDef hot fill:#fbdddd,stroke:#d03b3b,stroke-width:2.5px,color:#0b0b0b
+
+  subgraph ING ["pipeline/ + queue/ — one-way ingest"]
+    SCH["scheduler"] --> JQ[("jobs table")]
+    JQ --> FET["fetcher"]
+    FET --> EXT["extractor (pure)"]
+    EXT --> DED["dedup"]
+  end
+  subgraph ST ["store/ — the hub"]
+    WR["writer.py"] --> DB[("SQLite, WAL")]
+    DB -.->|"triggers only"| FTS[("articles_fts")]
+    DB --> RD["reader.py"]
+  end
+  subgraph RS ["read side — HTTP only"]
+    API["api/ (31 endpoints)"] --> WEB["web/ (vanilla JS)"]
+    API --> CLI["cli/"]
+  end
+  DED -->|"survivors"| WR
+  RD --> API
+  API -.->|"fetch-now = enqueue (202)"| JQ
+
+  class SCH,JQ,FET,DED pipe
+  class EXT hot
+  class WR,DB,FTS,RD hub
+  class API,WEB,CLI readside
+</pre>
+    </div>
+    <figcaption>Everything layers on one 1.8&nbsp;GB SQLite file (WAL mode; a typical instance
+    holds ~120,000 articles from ~200 feeds): the pipeline produces articles but never serves
+    them, the API enqueues work but never fetches inline, and only <code>store/writer.py</code>
+    ever writes the database. The red node — <code>pipeline/extractor.py</code>, the repo's
+    largest file at 1,140&nbsp;LOC with 14 site-specific if/elif heuristics (max cyclomatic
+    complexity 38) — is where nearly every extraction bug fix lands, each fix risking the other
+    13 heuristics: tread carefully there.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Write path — from poll to searchable</h2>
+  <figure>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  classDef pipe fill:#e5effb,stroke:#2a78d6,color:#0b0b0b
+  classDef hub fill:#dcf4e9,stroke:#1baf7a,color:#0b0b0b
+  classDef hot fill:#fbdddd,stroke:#d03b3b,stroke-width:2.5px,color:#0b0b0b
+
+  SCH["scheduler"] -->|"60 s tick"| JT[("jobs table")]
+  JT -->|"500 ms poll"| WK["8 worker threads"]
+  WK --> FET["fetcher"]
+  FET -->|"conditional GET, 20 s timeout"| EXT["extractor (pure)"]
+  EXT -->|"p50 45 ms, p95 320 ms"| DED["dedup (simhash)"]
+  DED -->|"~7% dropped as dupes"| WR["writer.py"]
+  WR -->|"one transaction"| DB[("SQLite")]
+  DB -.->|"SQL triggers, never Python"| FTS[("articles_fts")]
+  FET -.->|"failure"| RTY["retry 1 / 5 / 30 min"]
+  RTY -.->|"still failing"| DL["dead-letter"]
+
+  class SCH,JT,WK,FET,DED,RTY,DL pipe
+  class EXT hot
+  class WR,DB,FTS hub
+</pre>
+    </div>
+    <figcaption>The extractor is pure — bytes in, Article out, no network, disk, DB, or clock —
+    enforced by a property test that replays all 1,400 fixture pages on every CI run;
+    end-to-end p50 from dequeue to searchable is 2.1&nbsp;s, dominated by the network fetch.
+    Typical queue depth is 30–60 jobs (the health endpoint alerts at 500), and jobs are
+    idempotent — dedup (Hamming distance ≤ 3 on a 64-bit simhash) plus the writer's upsert keys
+    make retries safe.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Read path</h2>
+  <figure>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  classDef hub fill:#dcf4e9,stroke:#1baf7a,color:#0b0b0b
+  classDef readside fill:#fdf0d5,stroke:#eda100,color:#0b0b0b
+
+  CL["browser / CLI"] -->|"GET /articles/{id}"| RTS["api/routes.py"]
+  RTS --> RDR["reader.py (6 ms p50)"]
+  RDR --> TPL["template.py (14 ms)"]
+  TPL --> ANN["annotations.py (8 ms)"]
+  ANN -->|"p50 28 ms total"| RESP["response"]
+
+  class RDR hub
+  class CL,RTS,TPL,ANN,RESP readside
+</pre>
+    </div>
+    <figcaption>The web reader and the CLI consume the same endpoints — neither has a private
+    backdoor into the database. Highlights are stored as character offsets into the rendered
+    text and merged into <code>&lt;mark&gt;</code> spans, so any markup change in
+    <code>render/template.py</code> silently corrupts existing highlight positions — the cause
+    of 3 of the last 10 user-reported bugs in the untested <code>web/js/reader.js</code>
+    (920&nbsp;LOC, zero tests).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Import rules — and the one violation</h2>
+  <figure>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  classDef pipe fill:#e5effb,stroke:#2a78d6,color:#0b0b0b
+  classDef hub fill:#dcf4e9,stroke:#1baf7a,color:#0b0b0b
+  classDef readside fill:#fdf0d5,stroke:#eda100,color:#0b0b0b
+
+  API["api/"] --> STORE["store/"]
+  API --> RENDER["render/"]
+  API --> QUEUE["queue/"]
+  PIPE["pipeline/"] --> STORE
+  PIPE --> QUEUE
+  RENDER --> STORE
+  QUEUE --> STORE
+  CLI["cli/"] --> CLIENT["client.py"]
+  CLIENT -.->|"HTTP, not an import"| API
+  PIPE -->|"VIOLATION: extractor.py:41 imports clean_html()"| RENDER
+
+  linkStyle 9 stroke:#d03b3b,stroke-width:2.5px
+  class PIPE,QUEUE pipe
+  class STORE hub
+  class API,CLI,CLIENT,RENDER readside
+</pre>
+    </div>
+    <figcaption>Arrows mean "may import"; <code>store/</code> sits at the bottom and imports no
+    other meridian package (stdlib + <code>sqlite3</code> only), and nothing imports
+    <code>api/</code> or <code>cli/</code>. The red edge is the codebase's one known violation —
+    since v0.8, <code>extractor.py</code> line 41 imports <code>clean_html()</code> from
+    <code>render/sanitize.py</code>, so a change to the <em>display</em> sanitizer can silently
+    change what gets <em>stored</em>; two extractor purity tests are marked
+    <code>xfail</code> because of it, and the fix is tracked as issue #214, the top item on the
+    architecture debt list.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Test coverage — where the safety net thins</h2>
+  <figure>
+    <div class="diagram">
+<pre class="mermaid">
+xychart-beta
+  title "Backend line coverage by module (%), frontend = 0"
+  x-axis [store, queue, pipeline, shared, render, api, cli, web]
+  y-axis "coverage %" 0 --> 100
+  bar [91, 88, 84, 79, 76, 62, 41, 0]
+</pre>
+    </div>
+    <figcaption>Exact values — store 91%, queue 88%, pipeline 84%, shared 79%, render 76%,
+    api 62%, cli 41%, frontend 0% — from 412 tests (348 unit + 64 integration, ~41&nbsp;s,
+    77% backend overall); <code>api/routes.py</code> is worse than its module looks: all 31
+    endpoints in one 830-LOC file at 54% file-level coverage, with 11 routes inlining
+    copy-pasted auth checks instead of using <code>auth.py</code>. The 3,280-line
+    <code>web/</code> frontend has no JS test harness at all.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Where your first change goes</h2>
+  <figure>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  classDef pipe fill:#e5effb,stroke:#2a78d6,color:#0b0b0b
+  classDef hub fill:#dcf4e9,stroke:#1baf7a,color:#0b0b0b
+  classDef readside fill:#fdf0d5,stroke:#eda100,color:#0b0b0b
+
+  subgraph S1 ["new source type — a 4-file recipe"]
+    direction TB
+    A1["1. subclass SourceAdapter"] --> A2["2. register adapter"]
+    A2 --> A3["3. add migration"]
+    A3 --> A4["4. expose new type flag"]
+  end
+  subgraph S2 ["new API endpoint"]
+    direction TB
+    B1["routes.py handler"] --> B2["schemas.py types"]
+    B2 --> B3["web/js/api.js if UI uses it"]
+  end
+  subgraph S3 ["new CLI command"]
+    direction TB
+    C1["one module in commands/"] --> C2["main.py auto-discovers it"]
+  end
+
+  class A1,A2 pipe
+  class A3 hub
+  class A4,B1,B2,B3,C1,C2 readside
+</pre>
+    </div>
+    <figcaption>The four files, per <code>docs/adding-a-source-type.md</code> (all three
+    existing adapters — RSS, HTML page, mailbox — followed it): subclass
+    <code>SourceAdapter</code> in <code>pipeline/sources/base.py</code>, register it in
+    <code>SOURCE_REGISTRY</code> in <code>pipeline/sources/__init__.py</code>, add one
+    migration in <code>store/migrations/</code> extending the <code>source_type</code> CHECK
+    constraint, and expose the <code>--type</code> value in
+    <code>cli/commands/add.py</code> — plus a fixture-backed test under
+    <code>tests/unit/pipeline/</code>. A newcomer's first change almost never touches
+    <code>store/</code> or <code>queue/</code>: those layers are stable (91% and 88% covered)
+    and change only with schema migrations.</figcaption>
+  </figure>
+</section>
+
+<footer>codebase-structure · mermaid-diagrams · v1 · 2026-07-01</footer>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "neutral",
+    themeVariables: {
+      xyChart: {
+        plotColorPalette: "#2a78d6",
+        backgroundColor: "#ffffff",
+        titleColor: "#0b0b0b",
+        xAxisLabelColor: "#52514e",
+        yAxisLabelColor: "#52514e",
+        xAxisTitleColor: "#52514e",
+        yAxisTitleColor: "#52514e"
+      }
+    }
+  });
+</script>
+</body>
+</html>

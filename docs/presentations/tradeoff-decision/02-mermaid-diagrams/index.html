@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choosing a vector-search engine — Fernwick decision brief</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --ink: #1c2333;
+    --muted: #5a6472;
+    --line: #e3e6ea;
+    --accent: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181f;
+      --ink: #e8ebf0;
+      --muted: #a3adba;
+      --line: #2a313c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.45;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 20px 20px 8px; }
+  header h1 {
+    margin: 4px 0 6px;
+    font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+    letter-spacing: -0.01em;
+  }
+  p.framing {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: clamp(0.95rem, 1.4vw, 1.05rem);
+    max-width: 70ch;
+  }
+  h2 { font-size: 1.05rem; margin: 26px 0 8px; }
+  header h1 + p.framing strong { color: var(--ink); }
+  figure {
+    margin: 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px 4px;
+    overflow-x: auto;
+  }
+  /* Diagram cards stay light so Mermaid's neutral theme is always readable */
+  @media (prefers-color-scheme: dark) {
+    figure { background: #f4f5f7; border-color: #3a424e; }
+  }
+  pre.mermaid {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    background: transparent;
+    visibility: hidden;
+  }
+  pre.mermaid[data-processed="true"] { visibility: visible; }
+  pre.mermaid svg { max-width: 100%; height: auto; }
+  figcaption, p.caption {
+    font-size: 0.86rem;
+    color: var(--muted);
+    margin: 8px 2px 18px;
+    max-width: 90ch;
+  }
+  #overview pre.mermaid svg { max-height: 660px; }
+  footer {
+    margin: 30px 0 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Choosing a vector-search engine for Fernwick product search</h1>
+  <p class="framing">Four candidates, five hard requirements, no dominant option — the recommendation is a
+  conditional IF/THEN with dated triggers, not a winner (4.1M vectors today, doubling yearly).</p>
+</header>
+
+<section id="overview">
+  <h2>The whole decision in one picture</h2>
+  <figure>
+<pre class="mermaid">
+flowchart TB
+  Q["Quiver<br/>managed SaaS"]
+  H["Hearth<br/>self-hosted OSS"]
+  P["pgnearest<br/>Postgres extension"]
+  B["Braid<br/>embedded library"]
+  OUT["ELIMINATED<br/>must-have failures, not taste"]
+  T["Survivors — no dominant option<br/>Quiver wins ops ~0 FTE + filtered-recall margin<br/>Hearth wins cost trajectory + low lock-in"]
+  Q -->|"all 5 must-haves pass"| T
+  H -->|"all 5 must-haves pass"| T
+  P -->|"M1 fail 110 ms filtered p95 · M2 fail recall 0.89"| OUT
+  B -->|"M3 fail filtered recall 0.71"| OUT
+  T -->|"IF PLAT-7 hire starts AND ≥4-eng on-call committed by 2026-10-01"| RH["PRIMARY — Hearth"]
+  T -->|"IF either condition fails"| RQ["FALLBACK — Quiver<br/>with budgeted exit plan"]
+  RH -.->|"standing override — filters over 60% of traffic or facet selectivity under 2%"| RQ
+  classDef opt fill:#eef1f8,stroke:#5a6b8c,color:#243247
+  classDef fail fill:#fde8e8,stroke:#c0392b,color:#7b241c
+  classDef ok fill:#e8f6ee,stroke:#1e8e5a,color:#145a38
+  classDef cond fill:#fdf3d7,stroke:#c98a06,color:#7a5104
+  class Q,H,P,B,T opt
+  class OUT fail
+  class RH ok
+  class RQ cond
+</pre>
+  <figcaption>Two of four options fall to hard requirements before any tradeoff is weighed; between the
+  survivors nothing dominates, so the pick is conditional on headcount at a dated checkpoint. The dotted
+  standing trigger flips to Quiver even if the hire lands, because Hearth's filtered recall sits exactly
+  at the 0.90 must-have floor (0.86 at 1% selectivity) while Quiver holds 0.95 even at 1%.</figcaption>
+  </figure>
+</section>
+
+<section id="benchmarks">
+  <h2>Why the benchmark winner lost</h2>
+  <figure>
+<pre class="mermaid">
+xychart-beta
+  title "Recall@10 with metadata filters at 5% selectivity (must-have floor 0.90)"
+  x-axis ["Quiver 0.96", "Hearth 0.90 at floor", "pgnearest 0.89 fail", "Braid 0.71 fail"]
+  y-axis "recall@10" 0 --> 1
+  bar [0.96, 0.90, 0.89, 0.71]
+</pre>
+  <figcaption>30% of production queries carry filters (share growing every quarter), so filtered recall is
+  a must-have, not a nicety. Braid is the fastest, highest-recall engine unfiltered — 12 ms p95, 0.98
+  recall@10, best in the bakeoff — but post-hoc filtering collapses it to 0.71 here, a structural limit,
+  not a tuning problem; pgnearest's 0.89 also misses both the 0.92 unfiltered and 0.90 filtered floors,
+  and its 110 ms filtered p95 breaks the 100 ms latency ceiling too.</figcaption>
+  </figure>
+</section>
+
+<section id="cost">
+  <h2>The cost ranking inverts with scale</h2>
+  <figure>
+<pre class="mermaid">
+%%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#2563eb,#1e8e5a"}}}}%%
+xychart-beta
+  title "Infra cost in USD/mo — blue Quiver SaaS, green Hearth self-hosted"
+  x-axis ["1M vectors", "4.1M (today)", "10M (12-month scale)"]
+  y-axis "USD per month" 0 --> 2000
+  line [180, 740, 1900]
+  line [520, 520, 1400]
+</pre>
+  <figcaption>Quiver is cheapest at 1M ($180/mo vs Hearth's $520 HA floor), but the infra curves cross
+  around 3M vectors — already behind today's 4.1M — and the gap widens to $1,900 vs $1,400 at 10M and
+  $23,000 vs $6,800 (3.4×) at 100M. Counting Hearth's ~0.2 FTE steady-state ops labor (≈$2,800/mo
+  loaded), Quiver stays cheaper in total until roughly 30M vectors — around 2029 at 2×/yr growth — so
+  "the SaaS is cheaper" is true only until then, and only if the PLAT-7 labor is truly marginal.</figcaption>
+  </figure>
+</section>
+
+<section id="triggers">
+  <h2>What would change our mind</h2>
+  <figure>
+<pre class="mermaid">
+flowchart TB
+  CHK{"2026-10-01<br/>headcount checkpoint"}
+  CHK -->|"PLAT-7 signed + started AND ≥4-engineer on-call committed in writing"| HE["Adopt Hearth"]
+  CHK -->|"either condition fails"| QU["Adopt Quiver — mandatory exit plan"]
+  QU --> EP["Keep queries behind SearchIndex adapter<br/>quarterly JSONL export drill into scratch Hearth<br/>standing ~3 eng-week migration budget<br/>re-evaluate at 30M vectors or first renewal"]
+  S1["S1 — filters over 60% of traffic<br/>or selectivity under 2%"] -.->|"flips to Quiver even if hire lands"| QU
+  S3["S3 — growth accelerates to 3x/yr"] -.->|"strengthens Hearth"| HE
+  S4["S4 — Quiver renewal +25%<br/>moves crossover to ~20M"] -.->|"strengthens Hearth"| HE
+  S5["S5 — pgnearest v1.0 reaches recall parity"] -.-> RB["1-week re-benchmark, not worth waiting for"]
+  HE --> REV["Full review 2027-01-15"]
+  QU --> REV
+  classDef ok fill:#e8f6ee,stroke:#1e8e5a,color:#145a38
+  classDef cond fill:#fdf3d7,stroke:#c98a06,color:#7a5104
+  classDef trig fill:#eef1f8,stroke:#5a6b8c,color:#243247
+  class HE ok
+  class QU,EP cond
+  class S1,S3,S4,S5,RB,REV trig
+</pre>
+  <figcaption>Hearth is primary only while both headcount conditions hold — PLAT-7 is approved but not
+  yet filled, and that is the plan's biggest risk. The fallback is deliberately not open-ended: Quiver's
+  quote is price-locked for 12 months only (their published list moved ~20% last year), so the exit plan
+  is mandatory.</figcaption>
+  </figure>
+</section>
+
+<section id="dates">
+  <h2>The dates that matter</h2>
+  <figure>
+<pre class="mermaid">
+timeline
+  title Corpus growth and decision dates
+  2026-03 : Semantic search GA on prototype index, now the top reliability risk
+  2026-06 : Two-week bakeoff — 4 engines, one 10M-vector snapshot, 120 QPS replay
+  2026-07 : Decision proposed — 4.1M vectors live
+  2026-10-01 : Headcount checkpoint — PLAT-7 + on-call decide Hearth vs Quiver
+  2027-01-15 : Full review — filter-share trend, renewal posture, pgnearest v1.0
+  2027-2028 : ~8M then ~16M vectors at 2x/yr
+  ~2029 : ~30M vectors — labor-adjusted cost crossover lands
+</pre>
+  <figcaption>The corpus has doubled every year since beta, which puts the labor-adjusted crossover
+  (~30M vectors) inside this decision's lifetime, and 100M on a 4–5 year horizon. The check-in dates
+  exist to re-test the conditions, not to reopen the eliminations.</figcaption>
+  </figure>
+</section>
+
+<footer>tradeoff-decision · mermaid-diagrams · v1 · 2026-07-01</footer>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+</body>
+</html>

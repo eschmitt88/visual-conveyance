@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meridian — codebase at a glance</title>
+<style>
+  :root{
+    --bg:#0d1420; --panel:#151f30; --panel2:#1a2740; --line:#2a3b55;
+    --ink:#e9eff8; --muted:#93a5bd;
+    --a1:#4cc3ff; --a1-soft:rgba(76,195,255,.16);
+    --a2:#ffb02e; --a2-soft:rgba(255,176,46,.14);
+    --hero:clamp(2.6rem,6vw,4.6rem);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);
+    font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .poster{max-width:1120px;margin:0 auto;padding:28px 24px 40px}
+  section{margin-top:34px}
+  h2{font-size:1.05rem;letter-spacing:.12em;text-transform:uppercase;color:var(--a1);margin-bottom:14px}
+  .muted{color:var(--muted)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+
+  /* ---------- hero ---------- */
+  .hero{display:grid;grid-template-columns:1.5fr 1fr;gap:24px;align-items:center}
+  .eyebrow{letter-spacing:.14em;text-transform:uppercase;font-size:.8rem;color:var(--muted);margin-bottom:10px}
+  h1{font-size:clamp(1.7rem,3.4vw,2.6rem);line-height:1.15;font-weight:800}
+  h1 .hl{color:var(--a1)}
+  .heronum{text-align:right}
+  .heronum .big{font-size:var(--hero);font-weight:800;color:var(--a1);line-height:1;letter-spacing:-.02em}
+  .heronum .sub{color:var(--muted);margin-top:6px;font-size:.95rem}
+
+  /* ---------- flow ---------- */
+  .flowwrap{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 16px;margin-top:20px}
+  .pathlabels{display:flex;justify-content:space-between;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 4px 10px}
+  .flow{display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;gap:2px}
+  .node{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+        padding:9px 11px;font-size:.85rem;font-weight:600;white-space:nowrap;text-align:center}
+  .node.warn{border-color:var(--a2);background:var(--a2-soft)}
+  .node.db{border-color:var(--a1);background:var(--a1-soft);display:flex;align-items:center;gap:8px;padding:10px 14px}
+  .node small{display:block;font-weight:400;color:var(--muted);font-size:.72rem}
+  .stackpair{display:flex;flex-direction:column;gap:6px}
+  .arrow{flex:0 0 auto;display:flex;align-items:center;color:var(--a1)}
+  .arrow svg{display:block}
+
+  /* ---------- stat tiles ---------- */
+  .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 14px}
+  .tile .n{font-size:clamp(1.6rem,2.6vw,2.3rem);font-weight:800;color:var(--a1);line-height:1.05}
+  .tile .l{color:var(--muted);font-size:.82rem;margin-top:6px;line-height:1.35}
+  .tile.warn .n{color:var(--a2)}
+
+  /* ---------- LOC bars ---------- */
+  .legend{font-size:.8rem;color:var(--muted);margin-bottom:12px}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin:0 5px 0 12px}
+  .rowbar{display:grid;grid-template-columns:96px 1fr 118px;gap:10px;align-items:center;margin:7px 0}
+  .rowbar .mod{font-size:.86rem;font-weight:600;text-align:right}
+  .rowbar .nums{font-size:.8rem;color:var(--muted);white-space:nowrap}
+  .track{height:18px;border-radius:5px;background:var(--a1-soft);border:1px solid var(--line);overflow:hidden}
+  .track .fill{height:100%;background:var(--a1);opacity:.85}
+  .track.warn{background:transparent;border:1px dashed var(--a2)}
+  .rowbar.warn .mod,.rowbar.warn .nums{color:var(--a2)}
+
+  /* ---------- panels ---------- */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .panel h3{font-size:1rem;margin-bottom:4px}
+  .panel h3 code{color:var(--a1)}
+  .panel .k{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  ol.recipe{list-style:none;margin-top:12px}
+  ol.recipe li{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-top:1px dashed var(--line);font-size:.88rem}
+  ol.recipe li:first-child{border-top:0}
+  ol.recipe .step{flex:0 0 22px;height:22px;border-radius:50%;background:var(--a1-soft);color:var(--a1);
+                  font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;align-self:center}
+  ol.recipe span.what{color:var(--muted)}
+
+  /* ---------- scary section ---------- */
+  .scary{border-color:var(--a2)}
+  .scary h3{color:var(--a2)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .chip{border:1px solid var(--a2);background:var(--a2-soft);color:var(--ink);
+        border-radius:999px;padding:5px 12px;font-size:.8rem;font-weight:600}
+  .scarygrid{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:center}
+  .caption{font-size:.85rem;color:var(--muted);margin-top:10px}
+  .caption code{color:var(--a2)}
+
+  /* ---------- rules ---------- */
+  .rules{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .rule{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 14px;font-size:.86rem;line-height:1.4}
+  .rule svg{display:block;margin-bottom:10px;color:var(--a1)}
+  .rule code{color:var(--a1)}
+
+  /* ---------- caveat ---------- */
+  .caveat{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--a2);
+          background:var(--a2-soft);border-radius:14px;padding:16px;font-size:.9rem;line-height:1.45}
+  .caveat svg{flex:0 0 auto;color:var(--a2);margin-top:2px}
+  .caveat code{color:var(--a2)}
+
+  footer{margin-top:38px;font-size:.72rem;color:var(--muted);text-align:center}
+
+  @media (max-width:760px){
+    .hero{grid-template-columns:1fr}
+    .heronum{text-align:left}
+    .flow{flex-direction:column}
+    .arrow svg{transform:rotate(90deg)}
+    .pathlabels{flex-direction:column;gap:2px}
+    .tiles{grid-template-columns:1fr 1fr}
+    .duo,.scarygrid,.rules{grid-template-columns:1fr}
+    .rowbar{grid-template-columns:74px 1fr 104px;gap:6px}
+    .rowbar .mod{font-size:.78rem}
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div>
+      <div class="eyebrow">meridian · self-hosted read-later / RSS</div>
+      <h1>One pipeline in.<br>One <span class="hl">SQLite file</span>.<br>Everything reads back out.</h1>
+    </div>
+    <div class="heronum">
+      <div class="big">1.8&thinsp;GB</div>
+      <div class="sub">one SQLite file · WAL mode<br>no broker, no server</div>
+    </div>
+  </header>
+
+  <div class="flowwrap">
+    <div class="pathlabels"><span>write →</span><span>→ read</span></div>
+    <div class="flow">
+      <div class="node">scheduler</div>
+      <span class="arrow"><svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M1 7h16M13 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+      <div class="node">fetcher</div>
+      <span class="arrow"><svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M1 7h16M13 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+      <div class="node warn">extractor<small>⚠</small></div>
+      <span class="arrow"><svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M1 7h16M13 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+      <div class="node">dedup</div>
+      <span class="arrow"><svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M1 7h16M13 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+      <div class="node db">
+        <svg width="30" height="36" viewBox="0 0 30 36" aria-hidden="true">
+          <ellipse cx="15" cy="6" rx="13" ry="5" fill="none" stroke="var(--a1)" stroke-width="2"/>
+          <path d="M2 6v24c0 2.8 5.8 5 13 5s13-2.2 13-5V6" fill="none" stroke="var(--a1)" stroke-width="2"/>
+          <path d="M2 18c0 2.8 5.8 5 13 5s13-2.2 13-5" fill="none" stroke="var(--a1)" stroke-width="2"/>
+        </svg>
+        <span>SQLite<small>+ FTS5</small></span>
+      </div>
+      <span class="arrow"><svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M1 7h16M13 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+      <div class="node">API<small>31 endpoints</small></div>
+      <span class="arrow"><svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><path d="M1 7h16M13 2l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+      <div class="stackpair">
+        <div class="node">web reader</div>
+        <div class="node">CLI</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STAT ROW ============ -->
+  <section class="tiles">
+    <div class="tile"><div class="n">13,710</div><div class="l">backend Python LOC</div></div>
+    <div class="tile"><div class="n">31</div><div class="l">endpoints, one <code>routes.py</code></div></div>
+    <div class="tile"><div class="n">412</div><div class="l">tests · suite ≈41&thinsp;s</div></div>
+    <div class="tile warn"><div class="n">77%</div><div class="l">backend coverage · frontend <strong>0%</strong></div></div>
+    <div class="tile"><div class="n">2.1&thinsp;s</div><div class="l">fetch → searchable, p50</div></div>
+  </section>
+
+  <!-- ============ LOC BARS ============ -->
+  <section>
+    <h2>Where code lives</h2>
+    <div class="legend">length = LOC <i style="background:var(--a1)"></i> fill = coverage</div>
+
+    <div class="rowbar"><span class="mod"><code>pipeline/</code></span><div><div class="track" style="width:100%"><div class="fill" style="width:84%"></div></div></div><span class="nums">4,180 · 84%</span></div>
+    <div class="rowbar warn"><span class="mod"><code>web/</code></span><div><div class="track warn" style="width:78.5%"></div></div><span class="nums">3,280 · 0% ⚠</span></div>
+    <div class="rowbar"><span class="mod"><code>api/</code></span><div><div class="track" style="width:70.3%"><div class="fill" style="width:62%"></div></div></div><span class="nums">2,940 · 62%</span></div>
+    <div class="rowbar"><span class="mod"><code>store/</code></span><div><div class="track" style="width:55.3%"><div class="fill" style="width:91%"></div></div></div><span class="nums">2,310 · 91%</span></div>
+    <div class="rowbar"><span class="mod"><code>render/</code></span><div><div class="track" style="width:38.5%"><div class="fill" style="width:76%"></div></div></div><span class="nums">1,610 · 76%</span></div>
+    <div class="rowbar"><span class="mod"><code>queue/</code></span><div><div class="track" style="width:26.8%"><div class="fill" style="width:88%"></div></div></div><span class="nums">1,120 · 88%</span></div>
+    <div class="rowbar"><span class="mod"><code>cli/</code></span><div><div class="track" style="width:23.4%"><div class="fill" style="width:41%"></div></div></div><span class="nums">980 · 41%</span></div>
+    <div class="rowbar"><span class="mod">shared</span><div><div class="track" style="width:13.6%"><div class="fill" style="width:79%"></div></div></div><span class="nums">570 · 79%</span></div>
+  </section>
+
+  <!-- ============ HOT PATHS ============ -->
+  <section>
+    <h2>First changes land here — rarely in <code>store/</code> or <code>queue/</code></h2>
+    <div class="duo">
+      <div class="panel">
+        <h3>Add a source type · <code>4 files</code></h3>
+        <ol class="recipe">
+          <li><span class="step">1</span><code>pipeline/sources/base.py</code><span class="what">subclass SourceAdapter</span></li>
+          <li><span class="step">2</span><code>pipeline/sources/__init__.py</code><span class="what">register</span></li>
+          <li><span class="step">3</span><code>store/migrations/</code><span class="what">extend CHECK constraint</span></li>
+          <li><span class="step">4</span><code>cli/commands/add.py</code><span class="what">expose <code>--type</code></span></li>
+        </ol>
+      </div>
+      <div class="panel">
+        <h3>Add an API endpoint</h3>
+        <ol class="recipe">
+          <li><span class="step">1</span><code>api/routes.py</code><span class="what">handler</span></li>
+          <li><span class="step">2</span><code>api/schemas.py</code><span class="what">schema</span></li>
+          <li><span class="step">3</span><code>web/js/api.js</code><span class="what">if frontend consumes it</span></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCARY HOTSPOT ============ -->
+  <section>
+    <div class="panel scary">
+      <h3>⚠ Tread carefully: <code>pipeline/extractor.py</code></h3>
+      <div class="scarygrid">
+        <div>
+          <div class="chips">
+            <span class="chip">1,140 LOC — largest file</span>
+            <span class="chip">14 site heuristics</span>
+            <span class="chip">complexity 38</span>
+            <span class="chip">2 purity tests xfail</span>
+          </div>
+          <p class="caption">Imports <code>render/sanitize.clean_html()</code> (issue #214) — a display-sanitizer
+          change can silently change what gets <em>stored</em>.
+          Only safety net: the 1,400-page fixture corpus.</p>
+        </div>
+        <svg viewBox="0 0 340 195" width="100%" role="img" aria-label="Import layers with one sideways violation from pipeline to render">
+          <defs>
+            <marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0 0l7 4-7 4z" fill="var(--a2)"/>
+            </marker>
+          </defs>
+          <g font-family="ui-monospace,Menlo,monospace" font-size="14" text-anchor="middle">
+            <rect x="20" y="12" width="150" height="30" rx="6" fill="var(--panel2)" stroke="var(--line)"/>
+            <text x="95" y="32" fill="var(--ink)">api/</text>
+            <rect x="185" y="12" width="135" height="30" rx="6" fill="var(--panel2)" stroke="var(--line)"/>
+            <text x="252" y="32" fill="var(--ink)">cli/</text>
+            <rect x="20" y="70" width="95" height="30" rx="6" fill="var(--panel2)" stroke="var(--a2)"/>
+            <text x="67" y="90" fill="var(--ink)">pipeline/</text>
+            <rect x="135" y="70" width="90" height="30" rx="6" fill="var(--panel2)" stroke="var(--line)"/>
+            <text x="180" y="90" fill="var(--ink)">render/</text>
+            <rect x="245" y="70" width="75" height="30" rx="6" fill="var(--panel2)" stroke="var(--line)"/>
+            <text x="282" y="90" fill="var(--ink)">queue/</text>
+            <rect x="20" y="128" width="300" height="30" rx="6" fill="var(--a1-soft)" stroke="var(--a1)"/>
+            <text x="170" y="148" fill="var(--ink)">store/</text>
+            <path d="M115 85h12" stroke="var(--a2)" stroke-width="2.5" stroke-dasharray="4 3" marker-end="url(#ah)"/>
+            <text x="170" y="62" fill="var(--a2)" font-size="12" font-family="system-ui,sans-serif">the violation</text>
+            <text x="170" y="182" fill="var(--muted)" font-size="12" font-family="system-ui,sans-serif">imports point down</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RULES ============ -->
+  <section>
+    <h2>The four rules</h2>
+    <div class="rules">
+      <div class="rule">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20l4-1L19 8l-3-3L5 16l-1 4z"/></svg>
+        Only <code>store/writer.py</code> writes the DB.
+      </div>
+      <div class="rule">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="7" y="6" width="10" height="12" rx="2"/><path d="M1 12h5M18 12h5"/></svg>
+        Extractor is pure — bytes in, Article out.
+      </div>
+      <div class="rule">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 2L4 14h7l-2 8 9-12h-7l2-8z"/></svg>
+        FTS index updated by triggers only.
+      </div>
+      <div class="rule">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 14l9 5 9-5"/></svg>
+        <code>store/</code> imports nothing; nothing imports <code>api/</code> or <code>cli/</code>.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CAVEAT ============ -->
+  <section>
+    <div class="caveat">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3L1 21h22L12 3z"/><path d="M12 10v5M12 18.5v.5"/></svg>
+      <div>The 3,280-line <code>web/</code> frontend has zero tests. <code>reader.js</code>
+      (920 LOC) pins highlights to character offsets in rendered HTML — template changes silently
+      corrupt them; 3 of the last 10 user-reported bugs.</div>
+    </div>
+  </section>
+
+  <footer>codebase-structure · svg-infographic · v1 · 2026-07-01</footer>
+</div>
+</body>
+</html>

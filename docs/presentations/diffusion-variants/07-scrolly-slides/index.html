@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion models and their variants</title>
+<style>
+  :root {
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --line: rgba(255,255,255,.10);
+    --grid: #2c2c2a;
+    --chip: #242423;
+    --blue: #3987e5;   /* generation / reverse direction */
+    --red: #e66767;    /* destruction / forward direction */
+    --gold: #c98500;   /* guidance / highlight */
+    --aqua: #199e70;   /* compression / latent */
+  }
+  * { box-sizing: border-box; }
+  html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+  @media (max-width: 600px), (max-height: 640px) {
+    html { scroll-snap-type: y proximity; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .cue svg { animation: none !important; }
+  }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  section.slide {
+    min-height: 100vh; min-height: 100svh;
+    scroll-snap-align: start;
+    display: flex; align-items: center; justify-content: center;
+    padding: 56px 56px 64px; position: relative;
+  }
+  .inner { max-width: 860px; width: 100%; display: grid; gap: 16px; }
+  .kicker {
+    color: var(--muted); font-size: 12px; letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+  h1, h2 { margin: 0; line-height: 1.12; letter-spacing: -0.015em; }
+  h1 { font-size: clamp(30px, 4.6vw, 52px); }
+  h2 { font-size: clamp(24px, 3.4vw, 40px); }
+  .visual {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: clamp(12px, 2.4vw, 24px);
+  }
+  .visual svg { display: block; width: 100%; height: auto; }
+  .visual svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .body { color: var(--ink-2); font-size: clamp(15px, 1.5vw, 19px); max-width: 66ch; margin: 0; }
+  .cap { color: var(--muted); font-size: 13px; margin: 0; }
+  .hero {
+    margin: 0; font-size: clamp(56px, 9vw, 108px); font-weight: 750;
+    letter-spacing: -0.02em; line-height: 1; color: var(--ink); text-align: center;
+  }
+  .herosub { margin: 6px 0 14px; text-align: center; color: var(--muted); font-size: clamp(13px, 1.4vw, 16px); }
+  .formula {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: clamp(13px, 2vw, 19px); text-align: center; margin: 0 0 14px;
+    color: var(--ink-2);
+  }
+  .formula .g { color: var(--gold); font-weight: 700; }
+  .formula .c { color: var(--blue); }
+  .formula .u { color: var(--muted); }
+  .duo { display: flex; gap: 16px; flex-wrap: wrap; }
+  .duo svg { flex: 1 1 280px; min-width: 0; }
+  ul.recap { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  ul.recap li {
+    color: var(--ink-2); font-size: clamp(15px, 1.5vw, 18px);
+    padding-left: 22px; position: relative;
+  }
+  ul.recap li::before {
+    content: ""; position: absolute; left: 0; top: .52em;
+    width: 10px; height: 10px; border-radius: 3px; background: var(--dot, var(--blue));
+  }
+  ul.recap a {
+    color: var(--muted); text-decoration: none; font-size: 12px;
+    background: var(--chip); border: 1px solid var(--line); border-radius: 999px;
+    padding: 1px 9px; margin-left: 6px; white-space: nowrap;
+  }
+  ul.recap a:hover { color: var(--ink); border-color: var(--muted); }
+  .cue {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: grid; justify-items: center; gap: 2px;
+    color: var(--muted); font-size: 12.5px; letter-spacing: .06em;
+  }
+  .cue svg { width: 18px; height: 18px; animation: bob 1.7s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+  nav.rail {
+    position: fixed; right: 16px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 10px; z-index: 10;
+  }
+  nav.rail a {
+    width: 9px; height: 9px; border-radius: 50%; background: #383835;
+    position: relative; display: block; transition: background .15s, transform .15s;
+  }
+  nav.rail a.on { background: var(--blue); transform: scale(1.35); }
+  nav.rail a .tip {
+    position: absolute; right: 22px; top: 50%; transform: translateY(-50%);
+    white-space: nowrap; background: var(--chip); color: var(--ink-2);
+    border: 1px solid var(--line); font-size: 12px; padding: 3px 9px;
+    border-radius: 7px; opacity: 0; pointer-events: none; transition: opacity .15s;
+  }
+  nav.rail a:hover .tip, nav.rail a:focus-visible .tip { opacity: 1; }
+  #pcount {
+    position: fixed; top: 14px; right: 16px; z-index: 10;
+    color: var(--muted); font-size: 12px; letter-spacing: .08em;
+    font-variant-numeric: tabular-nums;
+  }
+  footer {
+    position: absolute; bottom: 8px; left: 0; right: 0; text-align: center;
+    color: var(--muted); font-size: 11px;
+  }
+  @media (max-width: 600px) {
+    section.slide { padding: 44px 20px 56px; }
+    nav.rail { right: 7px; gap: 8px; }
+    nav.rail a { width: 7px; height: 7px; }
+    nav.rail a .tip { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<span id="pcount" aria-hidden="true">1 / 12</span>
+
+<nav class="rail" aria-label="Slides">
+  <a href="#s1"><span class="tip">1 · Out of pure noise</span></a>
+  <a href="#s2"><span class="tip">2 · First, destroy — carefully</span></a>
+  <a href="#s3"><span class="tip">3 · One skill: guess the noise</span></a>
+  <a href="#s4"><span class="tip">4 · Run destruction backwards</span></a>
+  <a href="#s5"><span class="tip">5 · The catch: ~1000 passes</span></a>
+  <a href="#s6"><span class="tip">6 · DDIM: 20–50 steps</span></a>
+  <a href="#s7"><span class="tip">7 · One framework, one ODE</span></a>
+  <a href="#s8"><span class="tip">8 · Latent: ≈48× smaller</span></a>
+  <a href="#s9"><span class="tip">9 · Guidance (CFG)</span></a>
+  <a href="#s10"><span class="tip">10 · Distillation: 1–4 steps</span></a>
+  <a href="#s11"><span class="tip">11 · Flow matching</span></a>
+  <a href="#s12"><span class="tip">12 · Recap</span></a>
+</nav>
+
+<!-- ─────────────────── 1 · COVER ─────────────────── -->
+<section class="slide" id="s1" data-title="Out of pure noise">
+  <div class="inner">
+    <p class="kicker">Diffusion models &amp; their variants — a guided tour</p>
+    <h1>Every AI-generated image starts as pure random noise</h1>
+    <div class="visual">
+      <svg viewBox="0 0 720 172" role="img" aria-label="Five tiles progress from pure static to a finished landscape picture along an arrow labeled learned denoising">
+        <defs>
+          <g id="scnA">
+            <rect width="96" height="96" fill="#274b73"/>
+            <circle cx="64" cy="26" r="11" fill="#c98500"/>
+            <path d="M0 96 L30 46 L52 78 L70 56 L96 96 Z" fill="#16283c"/>
+            <path d="M0 96 L24 68 L48 96 Z" fill="#0f1c2b"/>
+          </g>
+          <clipPath id="clpA"><rect width="96" height="96" rx="10"/></clipPath>
+          <filter id="nzA" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" stitchTiles="stitch"/>
+            <feColorMatrix type="saturate" values="0"/>
+            <feComponentTransfer><feFuncA type="linear" slope="2.5" intercept="0"/></feComponentTransfer>
+          </filter>
+          <marker id="arwA" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#3987e5"/>
+          </marker>
+        </defs>
+        <g transform="translate(0,0)" clip-path="url(#clpA)"><use href="#scnA"/><rect width="96" height="96" filter="url(#nzA)" opacity="1"/></g>
+        <g transform="translate(156,0)"><g clip-path="url(#clpA)"><use href="#scnA"/><rect width="96" height="96" filter="url(#nzA)" opacity=".78"/></g></g>
+        <g transform="translate(312,0)"><g clip-path="url(#clpA)"><use href="#scnA"/><rect width="96" height="96" filter="url(#nzA)" opacity=".5"/></g></g>
+        <g transform="translate(468,0)"><g clip-path="url(#clpA)"><use href="#scnA"/><rect width="96" height="96" filter="url(#nzA)" opacity=".24"/></g></g>
+        <g transform="translate(624,0)"><g clip-path="url(#clpA)"><use href="#scnA"/></g></g>
+        <text x="48" y="118" text-anchor="middle" font-size="15" fill="#898781">pure random noise</text>
+        <text x="672" y="118" text-anchor="middle" font-size="15" fill="#898781">a new image</text>
+        <line x1="8" y1="140" x2="700" y2="140" stroke="#3987e5" stroke-width="2.5" marker-end="url(#arwA)"/>
+        <text x="360" y="166" text-anchor="middle" font-size="16" fill="#c3c2b7">learned denoising — many small steps</text>
+      </svg>
+    </div>
+    <p class="body">A trained network reverses gradual destruction — no photo edited, no
+      database searched (image-to-image modes, where you supply one, are explicit
+      opt-ins). The variants — DDIM, latent diffusion, CFG, flow matching — mostly
+      exist to cut ~1000 steps to 1–4.</p>
+  </div>
+  <div class="cue" aria-hidden="true">
+    <span>scroll · 12 slides</span>
+    <svg viewBox="0 0 24 24" fill="none"><path d="M5 9 L12 16 L19 9" stroke="#898781" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+</section>
+
+<!-- ─────────────────── 2 · FORWARD ─────────────────── -->
+<section class="slide" id="s2" data-title="First, destroy — carefully">
+  <div class="inner">
+    <p class="kicker">02 · The mechanism — forward</p>
+    <h2>First, destroy — carefully</h2>
+    <div class="visual">
+      <svg viewBox="0 0 720 188" role="img" aria-label="Five tiles progress from a clean landscape to pure static along an arrow labeled fixed noising, about one thousand tiny steps">
+        <defs>
+          <g id="scnB">
+            <rect width="96" height="96" fill="#274b73"/>
+            <circle cx="64" cy="26" r="11" fill="#c98500"/>
+            <path d="M0 96 L30 46 L52 78 L70 56 L96 96 Z" fill="#16283c"/>
+            <path d="M0 96 L24 68 L48 96 Z" fill="#0f1c2b"/>
+          </g>
+          <clipPath id="clpB"><rect width="96" height="96" rx="10"/></clipPath>
+          <filter id="nzB" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="11" stitchTiles="stitch"/>
+            <feColorMatrix type="saturate" values="0"/>
+            <feComponentTransfer><feFuncA type="linear" slope="2.5" intercept="0"/></feComponentTransfer>
+          </filter>
+          <marker id="arwB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#e66767"/>
+          </marker>
+        </defs>
+        <g clip-path="url(#clpB)"><use href="#scnB"/></g>
+        <g transform="translate(156,0)"><g clip-path="url(#clpB)"><use href="#scnB"/><rect width="96" height="96" filter="url(#nzB)" opacity=".24"/></g></g>
+        <g transform="translate(312,0)"><g clip-path="url(#clpB)"><use href="#scnB"/><rect width="96" height="96" filter="url(#nzB)" opacity=".5"/></g></g>
+        <g transform="translate(468,0)"><g clip-path="url(#clpB)"><use href="#scnB"/><rect width="96" height="96" filter="url(#nzB)" opacity=".78"/></g></g>
+        <g transform="translate(624,0)"><g clip-path="url(#clpB)"><use href="#scnB"/><rect width="96" height="96" filter="url(#nzB)" opacity="1"/></g></g>
+        <text x="48" y="118" text-anchor="middle" font-size="15" fill="#898781">t = 0</text>
+        <text x="204" y="118" text-anchor="middle" font-size="15" fill="#898781">t ≈ 200</text>
+        <text x="204" y="134" text-anchor="middle" font-size="13" fill="#52514e">grainy</text>
+        <text x="360" y="118" text-anchor="middle" font-size="15" fill="#898781">t ≈ 600</text>
+        <text x="360" y="134" text-anchor="middle" font-size="13" fill="#52514e">coarse shapes</text>
+        <text x="672" y="118" text-anchor="middle" font-size="15" fill="#898781">t = 1000</text>
+        <text x="672" y="134" text-anchor="middle" font-size="13" fill="#52514e">pure static</text>
+        <line x1="8" y1="156" x2="700" y2="156" stroke="#e66767" stroke-width="2.5" marker-end="url(#arwB)"/>
+        <text x="360" y="182" text-anchor="middle" font-size="16" fill="#c3c2b7">fixed noising — ~1000 tiny additions of Gaussian noise</text>
+      </svg>
+    </div>
+    <p class="body">The forward process is fixed — no learning. Gaussian noise is added
+      over ~1000 small steps. Step 200: slightly grainy. Step 600: only coarse shapes.
+      Step 1000: statistically pure static.</p>
+    <p class="cap">A preset noise schedule sets how much each step adds.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 3 · THE NETWORK ─────────────────── -->
+<section class="slide" id="s3" data-title="One skill: guess the noise">
+  <div class="inner">
+    <p class="kicker">03 · The mechanism — the network</p>
+    <h2>The network learns one skill: guess the noise</h2>
+    <div class="visual">
+      <svg viewBox="0 0 720 224" role="img" aria-label="A noisy image and a timestep feed a denoising network, which outputs its guess of the added noise">
+        <defs>
+          <g id="scnC">
+            <rect width="96" height="96" fill="#274b73"/>
+            <circle cx="64" cy="26" r="11" fill="#c98500"/>
+            <path d="M0 96 L30 46 L52 78 L70 56 L96 96 Z" fill="#16283c"/>
+            <path d="M0 96 L24 68 L48 96 Z" fill="#0f1c2b"/>
+          </g>
+          <clipPath id="clpC"><rect width="96" height="96" rx="10"/></clipPath>
+          <filter id="nzC" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="21" stitchTiles="stitch"/>
+            <feColorMatrix type="saturate" values="0"/>
+            <feComponentTransfer><feFuncA type="linear" slope="2.5" intercept="0"/></feComponentTransfer>
+          </filter>
+          <marker id="arwC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#898781"/>
+          </marker>
+        </defs>
+        <g transform="translate(30,34)"><g clip-path="url(#clpC)"><use href="#scnC"/><rect width="96" height="96" filter="url(#nzC)" opacity=".62"/></g></g>
+        <text x="78" y="152" text-anchor="middle" font-size="15" fill="#898781">noisy image</text>
+        <text x="78" y="171" text-anchor="middle" font-size="14" fill="#52514e">+ t = 700</text>
+        <line x1="140" y1="82" x2="212" y2="82" stroke="#898781" stroke-width="2" marker-end="url(#arwC)"/>
+        <rect x="220" y="50" width="212" height="64" rx="12" fill="#242423" stroke="rgba(255,255,255,.14)"/>
+        <text x="326" y="79" text-anchor="middle" font-size="17" fill="#ffffff">denoising network</text>
+        <text x="326" y="100" text-anchor="middle" font-size="13" fill="#898781">a U-Net, or a transformer (DiT)</text>
+        <line x1="440" y1="82" x2="512" y2="82" stroke="#898781" stroke-width="2" marker-end="url(#arwC)"/>
+        <g transform="translate(518,34)"><g clip-path="url(#clpC)"><rect width="96" height="96" fill="#111110"/><rect width="96" height="96" filter="url(#nzC)" opacity="1"/></g></g>
+        <text x="566" y="152" text-anchor="middle" font-size="15" fill="#898781">its guess: the noise</text>
+        <text x="566" y="171" text-anchor="middle" font-size="15" fill="#898781">that was added</text>
+        <text x="360" y="200" text-anchor="middle" font-size="15" fill="#c3c2b7">subtract the guess (scaled) → a slightly less noisy image</text>
+        <text x="360" y="220" text-anchor="middle" font-size="13" fill="#52514e">t, the timestep — position along the noising; higher t = more noise</text>
+      </svg>
+    </div>
+    <p class="body">Removing all the noise in one jump is near-impossible — countless
+      clean images fit a noisy input. Removing a little is tractable. Training:
+      billions of guess-the-added-noise quizzes, scored by mean-squared error. That
+      stability — no adversarial GAN game — is why diffusion won.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 4 · GENERATION ─────────────────── -->
+<section class="slide" id="s4" data-title="Run destruction backwards">
+  <div class="inner">
+    <p class="kicker">04 · The mechanism — generation</p>
+    <h2>Generation runs the destruction backwards</h2>
+    <div class="visual">
+      <svg viewBox="0 0 720 172" role="img" aria-label="Five tiles from static to finished image: blobs, then layout, then shapes, then texture, driven by the same learned step">
+        <defs>
+          <g id="scnD">
+            <rect width="96" height="96" fill="#274b73"/>
+            <circle cx="64" cy="26" r="11" fill="#c98500"/>
+            <path d="M0 96 L30 46 L52 78 L70 56 L96 96 Z" fill="#16283c"/>
+            <path d="M0 96 L24 68 L48 96 Z" fill="#0f1c2b"/>
+          </g>
+          <clipPath id="clpD"><rect width="96" height="96" rx="10"/></clipPath>
+          <filter id="nzD" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="31" stitchTiles="stitch"/>
+            <feColorMatrix type="saturate" values="0"/>
+            <feComponentTransfer><feFuncA type="linear" slope="2.5" intercept="0"/></feComponentTransfer>
+          </filter>
+          <marker id="arwD" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#3987e5"/>
+          </marker>
+        </defs>
+        <g clip-path="url(#clpD)"><use href="#scnD"/><rect width="96" height="96" filter="url(#nzD)" opacity="1"/></g>
+        <g transform="translate(156,0)"><g clip-path="url(#clpD)"><use href="#scnD"/><rect width="96" height="96" filter="url(#nzD)" opacity=".78"/></g></g>
+        <g transform="translate(312,0)"><g clip-path="url(#clpD)"><use href="#scnD"/><rect width="96" height="96" filter="url(#nzD)" opacity=".5"/></g></g>
+        <g transform="translate(468,0)"><g clip-path="url(#clpD)"><use href="#scnD"/><rect width="96" height="96" filter="url(#nzD)" opacity=".24"/></g></g>
+        <g transform="translate(624,0)"><g clip-path="url(#clpD)"><use href="#scnD"/></g></g>
+        <text x="48" y="118" text-anchor="middle" font-size="15" fill="#898781">t = 1000</text>
+        <text x="204" y="118" text-anchor="middle" font-size="15" fill="#898781">blobs of tone</text>
+        <text x="360" y="118" text-anchor="middle" font-size="15" fill="#898781">coarse layout</text>
+        <text x="516" y="118" text-anchor="middle" font-size="15" fill="#898781">shapes</text>
+        <text x="672" y="118" text-anchor="middle" font-size="15" fill="#898781">t = 0 · texture</text>
+        <line x1="8" y1="140" x2="700" y2="140" stroke="#3987e5" stroke-width="2.5" marker-end="url(#arwD)"/>
+        <text x="360" y="166" text-anchor="middle" font-size="16" fill="#c3c2b7">the same learned step, repeated: t = 1000, 999, 998, … 0</text>
+      </svg>
+    </div>
+    <p class="body">Start from fresh random noise; denoise step by step — blobs, layout,
+      shapes, texture. The image never existed anywhere. Weights encode statistics,
+      not copies; only images repeated many times in training risk rare
+      near-duplication — exceptional, not the mechanism.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 5 · BOTTLENECK ─────────────────── -->
+<section class="slide" id="s5" data-title="The catch: ~1000 passes">
+  <div class="inner">
+    <p class="kicker">05 · The bottleneck</p>
+    <h2>The catch: the walk back is long</h2>
+    <div class="visual">
+      <p class="hero">~1000</p>
+      <p class="herosub">sequential full-network passes per image (naive DDPM sampling)</p>
+      <svg viewBox="0 0 720 92" role="img" aria-label="A chain of steps one after another; every pass waits for the one before">
+        <defs>
+          <marker id="arwE" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#52514e"/>
+          </marker>
+        </defs>
+        <g font-size="15" fill="#c3c2b7" text-anchor="middle">
+          <rect x="10" y="10" width="64" height="36" rx="8" fill="#242423" stroke="rgba(255,255,255,.12)"/><text x="42" y="33">1</text>
+          <rect x="110" y="10" width="64" height="36" rx="8" fill="#242423" stroke="rgba(255,255,255,.12)"/><text x="142" y="33">2</text>
+          <rect x="210" y="10" width="64" height="36" rx="8" fill="#242423" stroke="rgba(255,255,255,.12)"/><text x="242" y="33">3</text>
+          <rect x="310" y="10" width="64" height="36" rx="8" fill="#242423" stroke="rgba(255,255,255,.12)"/><text x="342" y="33">…</text>
+          <rect x="410" y="10" width="64" height="36" rx="8" fill="#242423" stroke="rgba(255,255,255,.12)"/><text x="442" y="33">998</text>
+          <rect x="510" y="10" width="64" height="36" rx="8" fill="#242423" stroke="rgba(255,255,255,.12)"/><text x="542" y="33">999</text>
+          <rect x="610" y="10" width="64" height="36" rx="8" fill="#242423" stroke="rgba(255,255,255,.12)"/><text x="642" y="33">1000</text>
+        </g>
+        <g stroke="#52514e" stroke-width="2">
+          <line x1="76" y1="28" x2="104" y2="28" marker-end="url(#arwE)"/>
+          <line x1="176" y1="28" x2="204" y2="28" marker-end="url(#arwE)"/>
+          <line x1="276" y1="28" x2="304" y2="28" marker-end="url(#arwE)"/>
+          <line x1="376" y1="28" x2="404" y2="28" marker-end="url(#arwE)"/>
+          <line x1="476" y1="28" x2="504" y2="28" marker-end="url(#arwE)"/>
+          <line x1="576" y1="28" x2="604" y2="28" marker-end="url(#arwE)"/>
+        </g>
+        <text x="360" y="80" text-anchor="middle" font-size="15" fill="#898781">every pass consumes the previous one's output — nothing runs in parallel</text>
+      </svg>
+    </div>
+    <p class="body">Training touches one noise level at a time, but sampling walks the
+      whole chain: ~1000 full network passes, each waiting on the last — nothing
+      parallelizes. In 2020 one image took nearly a minute. Every variant below asks:
+      fewer steps, how?</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 6 · DDIM ─────────────────── -->
+<section class="slide" id="s6" data-title="DDIM: 20–50 steps">
+  <div class="inner">
+    <p class="kicker">06 · The fixes — smarter sampling</p>
+    <h2>DDIM: same model, 20–50 deterministic steps</h2>
+    <div class="visual">
+      <svg viewBox="0 0 720 208" role="img" aria-label="Two rails from noise to image: DDPM visits all one thousand steps; DDIM visits twenty to fifty of them">
+        <text x="14" y="66" font-size="15" fill="#898781">noise</text>
+        <text x="706" y="66" font-size="15" fill="#898781" text-anchor="end">image</text>
+        <line x1="72" y1="60" x2="648" y2="60" stroke="#52514e" stroke-width="16" stroke-dasharray="1.5 1.9"/>
+        <text x="360" y="98" text-anchor="middle" font-size="15" fill="#c3c2b7">DDPM: visit all ~1000 steps — fresh randomness at each one</text>
+        <line x1="72" y1="150" x2="648" y2="150" stroke="#383835" stroke-width="2"/>
+        <g fill="#3987e5">
+          <circle cx="72" cy="150" r="5"/><circle cx="120" cy="150" r="5"/><circle cx="168" cy="150" r="5"/>
+          <circle cx="216" cy="150" r="5"/><circle cx="264" cy="150" r="5"/><circle cx="312" cy="150" r="5"/>
+          <circle cx="360" cy="150" r="5"/><circle cx="408" cy="150" r="5"/><circle cx="456" cy="150" r="5"/>
+          <circle cx="504" cy="150" r="5"/><circle cx="552" cy="150" r="5"/><circle cx="600" cy="150" r="5"/>
+          <circle cx="648" cy="150" r="5"/>
+        </g>
+        <text x="360" y="188" text-anchor="middle" font-size="15" fill="#c3c2b7">DDIM: the same trained network — visit only 20–50, no randomness</text>
+      </svg>
+    </div>
+    <p class="body">The same trained network admits a deterministic sampler that
+      tolerates big jumps: 20–50 steps instead of 1000, with modest quality loss.
+      Fixed starting noise → identical image every time — enabling inversion and
+      interpolation. Your tool's "steps" slider is exactly this tradeoff.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 7 · ODE VIEW ─────────────────── -->
+<section class="slide" id="s7" data-title="One framework, one ODE">
+  <div class="inner">
+    <p class="kicker">07 · The fixes — one framework</p>
+    <h2>It's all one equation, solved two ways</h2>
+    <div class="visual">
+      <svg viewBox="0 0 720 244" role="img" aria-label="From a noise point to an image point: a jagged random walk labeled SDE, and a smooth deterministic curve labeled probability-flow ODE with about ten solver steps marked">
+        <path d="M70 190 L110 160 L130 178 L170 140 L195 158 L235 118 L260 136 L300 100 L330 118 L365 84 L395 102 L430 70 L460 88 L495 60 L525 76 L560 48 L590 64 L620 44 L650 50" fill="none" stroke="#52514e" stroke-width="2"/>
+        <text x="96" y="122" font-size="15" fill="#898781">reverse-time SDE — a random walk (DDPM-like)</text>
+        <path d="M70 190 C 250 192, 430 62, 650 50" fill="none" stroke="#3987e5" stroke-width="2.5"/>
+        <g fill="#3987e5">
+          <circle cx="128" cy="188" r="4"/><circle cx="186" cy="181" r="4"/><circle cx="244" cy="169" r="4"/>
+          <circle cx="302" cy="151" r="4"/><circle cx="360" cy="128" r="4"/><circle cx="418" cy="104" r="4"/>
+          <circle cx="476" cy="83" r="4"/><circle cx="534" cy="67" r="4"/><circle cx="592" cy="56" r="4"/>
+        </g>
+        <text x="330" y="216" font-size="15" fill="#c3c2b7">probability-flow ODE — deterministic; DDIM ≈ one discretization of it</text>
+        <circle cx="70" cy="190" r="7" fill="#898781"/>
+        <text x="70" y="216" text-anchor="middle" font-size="15" fill="#898781">noise</text>
+        <circle cx="650" cy="50" r="7" fill="#3987e5"/>
+        <text x="650" y="30" text-anchor="middle" font-size="15" fill="#898781">image</text>
+        <text x="70" y="34" font-size="13" fill="#52514e">both need only the learned score — one framework, different paths</text>
+      </svg>
+    </div>
+    <p class="body">In the unified 2021 view, noising is a stochastic differential
+      equation; generation just solves it backwards — randomly (DDPM-like) or as a
+      deterministic ODE (DDIM, in essence). Purpose-built ODE solvers (DPM-Solver)
+      reach good samples in ~10–20 steps — no retraining.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 8 · LATENT ─────────────────── -->
+<section class="slide" id="s8" data-title="Latent: ≈48× smaller">
+  <div class="inner">
+    <p class="kicker">08 · The fixes — where it runs</p>
+    <h2>Latent diffusion: shrink first, generate small</h2>
+    <div class="visual">
+      <svg viewBox="0 0 720 268" role="img" aria-label="A large image is encoded by a VAE into a small latent square where diffusion runs, then decoded back to full resolution, about forty-eight times fewer numbers per step">
+        <defs>
+          <g id="scnH">
+            <rect width="96" height="96" fill="#274b73"/>
+            <circle cx="64" cy="26" r="11" fill="#c98500"/>
+            <path d="M0 96 L30 46 L52 78 L70 56 L96 96 Z" fill="#16283c"/>
+            <path d="M0 96 L24 68 L48 96 Z" fill="#0f1c2b"/>
+          </g>
+          <clipPath id="clpH"><rect width="96" height="96" rx="7"/></clipPath>
+          <marker id="arwH" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="#199e70"/>
+          </marker>
+        </defs>
+        <text x="360" y="28" text-anchor="middle" font-size="19" font-weight="650" fill="#ffffff">≈48× fewer numbers at every denoising step</text>
+        <text x="85" y="54" text-anchor="middle" font-size="14" fill="#898781">image · 512 × 512 × 3</text>
+        <g transform="translate(10,62)"><g transform="scale(1.5625)" clip-path="url(#clpH)"><use href="#scnH"/></g>
+          <rect width="150" height="150" rx="10" fill="none" stroke="rgba(255,255,255,.18)"/></g>
+        <text x="85" y="236" text-anchor="middle" font-size="14" fill="#c3c2b7">786,432 numbers</text>
+        <line x1="170" y1="137" x2="243" y2="137" stroke="#199e70" stroke-width="2.2" marker-end="url(#arwH)"/>
+        <text x="208" y="120" text-anchor="middle" font-size="14" fill="#898781">encode</text>
+        <text x="208" y="158" text-anchor="middle" font-size="12" fill="#52514e">8× per side</text>
+        <rect x="252" y="85" width="124" height="124" rx="12" fill="none" stroke="#199e70" stroke-dasharray="5 4"/>
+        <rect x="295" y="128" width="38" height="38" rx="5" fill="#199e70" opacity=".85"/>
+        <text x="314" y="76" text-anchor="middle" font-size="14" fill="#199e70">diffusion runs here</text>
+        <text x="314" y="236" text-anchor="middle" font-size="14" fill="#c3c2b7">latent: 64 × 64 × 4 = 16,384</text>
+        <line x1="385" y1="137" x2="453" y2="137" stroke="#199e70" stroke-width="2.2" marker-end="url(#arwH)"/>
+        <text x="419" y="120" text-anchor="middle" font-size="14" fill="#898781">decode</text>
+        <text x="419" y="158" text-anchor="middle" font-size="12" fill="#52514e">one pass</text>
+        <text x="535" y="54" text-anchor="middle" font-size="14" fill="#898781">back to 512 × 512</text>
+        <g transform="translate(460,62)"><g transform="scale(1.5625)" clip-path="url(#clpH)"><use href="#scnH"/></g>
+          <rect width="150" height="150" rx="10" fill="none" stroke="rgba(255,255,255,.18)"/></g>
+        <text x="535" y="236" text-anchor="middle" font-size="14" fill="#c3c2b7">looks essentially identical</text>
+        <text x="360" y="262" text-anchor="middle" font-size="13" fill="#52514e">VAE — a separately trained encoder–decoder (variational autoencoder)</text>
+      </svg>
+    </div>
+    <p class="body">A VAE compresses each image ≈48×; diffusion runs entirely in that
+      small latent space; one decode restores full resolution — putting
+      Stable-Diffusion-class models on consumer GPUs, at a slight compression-quality
+      cost. The VAE only compresses; the diffusion model generates.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 9 · CFG ─────────────────── -->
+<section class="slide" id="s9" data-title="Guidance (CFG)">
+  <div class="inner">
+    <p class="kicker">09 · Steering — classifier-free guidance</p>
+    <h2>CFG: predict twice, exaggerate the difference</h2>
+    <div class="visual">
+      <p class="formula"><span class="g">guided</span> = <span class="u">unconditional</span> + s × ( <span class="c">conditional</span> − <span class="u">unconditional</span> )</p>
+      <svg viewBox="0 0 720 240" role="img" aria-label="Two prediction arrows from the current noisy image, with and without the prompt; the guided prediction extrapolates past the prompted one by the guidance scale">
+        <defs>
+          <marker id="arwIu" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#898781"/></marker>
+          <marker id="arwIc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#3987e5"/></marker>
+          <marker id="arwIg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#c98500"/></marker>
+        </defs>
+        <line x1="110" y1="200" x2="400" y2="22" stroke="#c98500" stroke-width="3" marker-end="url(#arwIg)"/>
+        <line x1="320" y1="152" x2="392" y2="35" stroke="#c98500" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="110" y1="200" x2="320" y2="152" stroke="#898781" stroke-width="2.4" marker-end="url(#arwIu)"/>
+        <line x1="110" y1="200" x2="352" y2="100" stroke="#3987e5" stroke-width="2.4" marker-end="url(#arwIc)"/>
+        <circle cx="110" cy="200" r="5" fill="#c3c2b7"/>
+        <text x="110" y="226" text-anchor="middle" font-size="15" fill="#898781">current noisy image</text>
+        <text x="334" y="172" font-size="15" fill="#c3c2b7">without the prompt</text>
+        <text x="366" y="106" font-size="15" fill="#c3c2b7">with the prompt</text>
+        <text x="412" y="30" font-size="15" fill="#c3c2b7">guided — s stretches the gap</text>
+        <text x="700" y="200" text-anchor="end" font-size="14" fill="#898781">one network — prompt dropped ~10–20% of training</text>
+        <text x="700" y="222" text-anchor="end" font-size="14" fill="#898781">2 network passes per step</text>
+      </svg>
+    </div>
+    <p class="body">Conditioning alone follows prompts loosely. Each step runs the
+      network twice — with and without the prompt — and exaggerates the difference by
+      scale s (≈7.5 default). Higher s: stronger adherence, less diversity; past
+      ~12–15, oversaturated artifacts. It doubles per-step cost.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 10 · DISTILLATION ─────────────────── -->
+<section class="slide" id="s10" data-title="Distillation: 1–4 steps">
+  <div class="inner">
+    <p class="kicker">10 · The fixes — retraining for speed</p>
+    <h2>Distillation &amp; consistency: 1–4 steps</h2>
+    <div class="visual">
+      <p class="hero">1–4</p>
+      <p class="herosub">steps, after retraining the model to take big jumps</p>
+      <div class="duo">
+        <svg viewBox="0 0 340 150" role="img" aria-label="Progressive distillation halves the step count each round, one thousand down to four">
+          <text x="170" y="58" text-anchor="middle" font-size="19" fill="#ffffff">1000 → 500 → 250 → … → 4</text>
+          <text x="170" y="98" text-anchor="middle" font-size="14" fill="#c3c2b7">progressive distillation</text>
+          <text x="170" y="120" text-anchor="middle" font-size="12.5" fill="#898781">a student does in 1 step what its</text>
+          <text x="170" y="136" text-anchor="middle" font-size="12.5" fill="#898781">teacher does in 2 — repeat</text>
+        </svg>
+        <svg viewBox="0 0 340 150" role="img" aria-label="Consistency models: every noisy point on a trajectory maps directly to the same clean endpoint">
+          <path d="M20 110 C 100 110, 220 60, 320 30" fill="none" stroke="#52514e" stroke-width="2"/>
+          <path d="M95 97 Q 210 8 314 26" fill="none" stroke="#3987e5" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <path d="M170 79 Q 250 20 313 27" fill="none" stroke="#3987e5" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <path d="M245 55 Q 285 28 312 28" fill="none" stroke="#3987e5" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <circle cx="95" cy="97" r="4.5" fill="#c3c2b7"/>
+          <circle cx="170" cy="79" r="4.5" fill="#c3c2b7"/>
+          <circle cx="245" cy="55" r="4.5" fill="#c3c2b7"/>
+          <circle cx="320" cy="30" r="6" fill="#3987e5"/>
+          <text x="170" y="120" text-anchor="middle" font-size="12.5" fill="#898781">consistency: any point ↦ the same endpoint</text>
+          <text x="170" y="136" text-anchor="middle" font-size="12.5" fill="#898781">1 step (2–4 to refine) · LCM: ≈4 on latents</text>
+        </svg>
+      </div>
+    </div>
+    <p class="body">Below the ~10-step floor, retrain for big jumps: progressive
+      distillation matches two teacher steps in one (1000→500→…→4); consistency
+      models send any noisy point straight to its clean endpoint — 1-step generation.
+      Outputs: slightly softer, less varied — the tech behind real-time demos.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 11 · FLOW MATCHING ─────────────────── -->
+<section class="slide" id="s11" data-title="Flow matching">
+  <div class="inner">
+    <p class="kicker">11 · The fixes — reformulation</p>
+    <h2>Flow matching: take the straight path</h2>
+    <div class="visual">
+      <svg viewBox="0 0 720 224" role="img" aria-label="From a noise point to an image point: diffusion follows a curved path, rectified flow a straight line with only a few solver steps">
+        <text x="700" y="26" text-anchor="end" font-size="14" fill="#898781">SD3 · Flux are trained this way</text>
+        <path d="M70 180 C 300 176, 490 148, 650 50" fill="none" stroke="#52514e" stroke-width="2"/>
+        <text x="330" y="192" text-anchor="middle" font-size="15" fill="#898781">diffusion's curved path</text>
+        <line x1="70" y1="180" x2="650" y2="50" stroke="#3987e5" stroke-width="2.5"/>
+        <g fill="#3987e5">
+          <circle cx="215" cy="147.5" r="4.5"/><circle cx="360" cy="115" r="4.5"/><circle cx="505" cy="82.5" r="4.5"/>
+        </g>
+        <text x="280" y="96" text-anchor="middle" font-size="15" fill="#c3c2b7">rectified flow — a straight line</text>
+        <circle cx="70" cy="180" r="7" fill="#898781"/>
+        <text x="70" y="206" text-anchor="middle" font-size="15" fill="#898781">noise</text>
+        <circle cx="650" cy="50" r="7" fill="#3987e5"/>
+        <text x="650" y="30" text-anchor="middle" font-size="15" fill="#898781">image</text>
+        <text x="360" y="218" text-anchor="middle" font-size="13" fill="#52514e">regression target: a constant velocity (image − noise) · straighter path, fewer solver steps</text>
+      </svg>
+    </div>
+    <p class="body">Rectified flow replaces diffusion's curved paths with straight
+      lines: a training point is a linear image/noise blend; the target, their
+      constant difference. Straight paths need fewer steps. It reframes diffusion
+      rather than rivaling it — SD3 and Flux train this way.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── 12 · RECAP ─────────────────── -->
+<section class="slide" id="s12" data-title="Recap">
+  <div class="inner">
+    <p class="kicker">12 · Recap — where to look deeper</p>
+    <h2>The whole story, five lines</h2>
+    <ul class="recap">
+      <li style="--dot:#3987e5">Images are grown from pure noise by learned denoising <a href="#s2">slides 2–4</a></li>
+      <li style="--dot:#e66767">Variants mostly buy speed: ~1000 → 20–50 → 10–20 → 1–4 steps <a href="#s5">5–7</a><a href="#s10">10</a></li>
+      <li style="--dot:#199e70">Latent space cut every step ≈48× <a href="#s8">8</a></li>
+      <li style="--dot:#c98500">CFG (s ≈ 7.5) trades diversity for adherence; doubles cost <a href="#s9">9</a></li>
+      <li style="--dot:#9085e9">One framework — different samplers, paths, parameterizations <a href="#s7">7</a><a href="#s11">11</a></li>
+    </ul>
+    <div class="visual">
+      <svg viewBox="0 0 720 196" role="img" aria-label="Typical sampling step counts by family: DDPM about one thousand, DDIM twenty to fifty, ODE solvers ten to twenty, rectified flow about twenty to thirty, distilled one to four">
+        <g font-size="14" fill="#c3c2b7" text-anchor="end">
+          <text x="178" y="31">DDPM</text>
+          <text x="178" y="64">DDIM</text>
+          <text x="178" y="97">ODE solvers</text>
+          <text x="178" y="130">rectified flow</text>
+          <text x="178" y="163">distilled / LCM</text>
+        </g>
+        <g fill="#3987e5">
+          <rect x="190" y="18" width="459" height="16" rx="4"/>
+          <rect x="190" y="51" width="232" height="16" rx="4"/>
+          <rect x="190" y="84" width="177" height="16" rx="4"/>
+          <rect x="190" y="117" width="215" height="16" rx="4"/>
+          <rect x="190" y="150" width="60" height="16" rx="4"/>
+        </g>
+        <g font-size="14" fill="#898781">
+          <text x="600" y="31" text-anchor="end" fill="#ffffff">~1000 steps</text>
+          <text x="430" y="64">20–50</text>
+          <text x="375" y="97">10–20</text>
+          <text x="413" y="130">~20–30 (fewer viable)</text>
+          <text x="258" y="163">1–4</text>
+        </g>
+        <text x="360" y="190" text-anchor="middle" font-size="12.5" fill="#52514e">bar lengths on a log scale · below ~10, undistilled models degrade · past ~50, imperceptible gains · CFG doubles every count</text>
+      </svg>
+    </div>
+  </div>
+  <footer>diffusion-variants · scrolly-slides · v1 · 2026-07-01</footer>
+</section>
+
+<script>
+  const slides = [...document.querySelectorAll('section.slide')];
+  const dots = [...document.querySelectorAll('nav.rail a')];
+  const counter = document.getElementById('pcount');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      const i = slides.indexOf(e.target);
+      dots.forEach((d, j) => d.classList.toggle('on', j === i));
+      counter.textContent = (i + 1) + ' / ' + slides.length;
+    });
+  }, { threshold: 0.55 });
+  slides.forEach((s) => io.observe(s));
+</script>
+</body>
+</html>

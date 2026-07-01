@@ -33,4 +33,4 @@ render:
 
 # git SHA of approaches/ + testcases/ at generation time — filled when
 # generation starts.
-inputs_sha: TBD
+inputs_sha: d75e3dd

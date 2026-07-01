@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choosing a vector-search engine — Fernwick decision brief</title>
+<style>
+:root{
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,.10);
+  --q:#2a78d6; --h:#1baf7a; --crit:#d03b3b; --good:#006300;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,.10);
+    --q:#3987e5; --h:#199e70; --crit:#d03b3b; --good:#0ca30c;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-snap-type:y proximity; scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} }
+body{
+  margin:0; background:var(--page); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.45;
+}
+.slide{
+  min-height:100vh; scroll-snap-align:start;
+  display:flex; align-items:center; justify-content:center;
+  padding:40px 76px 40px 28px;
+}
+.inner{max-width:920px; width:100%}
+.kicker{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 6px}
+h1{font-size:clamp(26px,3.4vw,42px); line-height:1.15; margin:0 0 18px}
+h2{font-size:clamp(22px,2.6vw,32px); line-height:1.2; margin:0 0 20px}
+.caption{color:var(--ink2); font-size:15.5px; max-width:760px; margin:20px 0 0}
+.card{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px}
+b{font-weight:650}
+.crit{color:var(--crit); font-weight:650}
+.pass{color:var(--good); font-weight:650}
+.small{font-size:12.5px; color:var(--muted)}
+
+/* progress rail */
+#rail{position:fixed; right:16px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:10px; z-index:5}
+.dot{width:11px; height:11px; border-radius:50%; border:1.5px solid var(--muted); background:transparent; padding:0; cursor:pointer; position:relative}
+.dot.active{background:var(--ink); border-color:var(--ink)}
+.dot::after{
+  content:attr(data-title); position:absolute; right:22px; top:50%; transform:translateY(-50%);
+  background:var(--surface); color:var(--ink); border:1px solid var(--border); border-radius:6px;
+  padding:3px 9px; font-size:12px; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .12s;
+}
+.dot:hover::after,.dot:focus-visible::after{opacity:1}
+
+/* cover */
+.cue{margin-top:26px; color:var(--muted); font-size:13px}
+.cue .arr{display:inline-block; animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+@media (prefers-reduced-motion: reduce){ .cue .arr{animation:none} }
+.opts{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+.opt{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 12px 10px; font-size:13.5px}
+.opt b{display:block; font-size:15.5px}
+.opt .arch{color:var(--ink2); display:block; margin:1px 0 7px}
+.opt.out{opacity:.85}
+.opt .tag{display:block; font-size:12.5px; line-height:1.35}
+.cond{margin-top:12px; display:grid; gap:8px}
+.cond .card{font-size:14.5px; padding:12px 16px}
+.cond .why{color:var(--ink2); font-size:13px}
+
+/* stat tiles */
+.tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:12px}
+.tile{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px}
+.tile .n{font-size:clamp(24px,2.6vw,34px); font-weight:700; line-height:1.1}
+.tile .l{color:var(--ink2); font-size:13.5px; margin-top:6px}
+
+/* option cards (slide 3) */
+.cands{display:grid; grid-template-columns:repeat(2,1fr); gap:12px}
+.cands .card p{margin:6px 0 0; color:var(--ink2); font-size:14px}
+.cands .card h3{margin:0; font-size:17px}
+
+/* must-have list */
+.gates{list-style:none; margin:0; padding:0; display:grid; gap:8px}
+.gates li{background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-size:15px}
+.gates .gid{display:inline-block; min-width:44px; font-weight:700}
+
+/* elimination tiles */
+.fails{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.fail .n{font-size:clamp(26px,3vw,38px); font-weight:700}
+.fail .vs{color:var(--ink2); font-size:13.5px; margin-top:4px}
+
+/* head-to-head table */
+table{width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; font-size:14.5px}
+th,td{text-align:left; padding:8px 12px; border-top:1px solid var(--grid); font-variant-numeric:tabular-nums}
+thead th{border-top:none; font-size:14px}
+td:first-child{color:var(--ink2); font-size:13.5px}
+.sw{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px; vertical-align:baseline}
+.sw.q{background:var(--q)} .sw.h{background:var(--h)}
+.win{font-weight:700}
+
+/* cost chart */
+.legend{display:flex; gap:18px; font-size:13.5px; color:var(--ink2); margin-bottom:14px}
+.legend span{display:inline-flex; align-items:center}
+.ccwrap{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.ccg{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 14px}
+.ccg h4{margin:0 0 10px; font-size:14px}
+.ccg h4 .small{font-weight:400}
+.ccrow{display:grid; grid-template-columns:52px 1fr 76px; align-items:center; gap:8px; margin-bottom:6px; font-size:13px}
+.ccrow:last-child{margin-bottom:0}
+.cctrack{position:relative; height:14px; border-left:1px solid var(--baseline)}
+.ccbar{position:absolute; left:0; top:0; height:14px; border-radius:0 4px 4px 0}
+.ccbar.q{background:var(--q)} .ccbar.h{background:var(--h)}
+.ccval{text-align:right; font-variant-numeric:tabular-nums}
+.ccval.win{font-weight:700}
+.ccname{color:var(--ink2)}
+
+/* IF/THEN */
+.iff{display:grid; gap:10px}
+.iff .branch{border-left:4px solid var(--h); padding-left:14px}
+.iff .branch.else{border-left-color:var(--q)}
+.iff h3{margin:0 0 4px; font-size:16.5px}
+.iff ul{margin:6px 0 0; padding-left:18px; color:var(--ink2); font-size:14px}
+.iff ul li{margin:3px 0}
+.checks{display:grid; gap:6px; margin:0 0 4px; padding:0; list-style:none; font-size:15px}
+.checks li::before{content:"☐ "; color:var(--muted)}
+
+/* recap */
+.recap{list-style:none; margin:0; padding:0; display:grid; gap:9px; counter-reset:tk}
+.recap li{background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:11px 14px; font-size:15px; counter-increment:tk; display:flex; gap:12px}
+.recap li::before{content:counter(tk); font-weight:700; color:var(--muted)}
+.recap .ref{margin-left:auto; white-space:nowrap; color:var(--muted); font-size:12.5px; align-self:center}
+
+footer{display:block; text-align:center; font-size:11.5px; color:var(--muted); padding:8px 0 14px}
+
+@media (max-width:700px){
+  .slide{padding:28px 34px 28px 18px}
+  .opts,.tiles,.cands,.fails,.ccwrap{grid-template-columns:1fr}
+  .dot::after{display:none}
+  #rail{right:8px; gap:8px}
+  .dot{width:9px; height:9px}
+  table{font-size:12.5px} th,td{padding:6px 8px}
+  .recap .ref{display:none}
+}
+</style>
+</head>
+<body>
+
+<nav id="rail" aria-label="Slides"></nav>
+
+<!-- 1 · COVER -->
+<section class="slide" data-title="The decision" id="s1">
+  <div class="inner">
+    <p class="kicker">Fernwick · production vector-search engine · decision brief — 1 / 12</p>
+    <h1>Hearth if the infra hire lands by Oct 1; otherwise Quiver, with a budgeted exit plan</h1>
+    <div class="opts">
+      <div class="opt"><b>Quiver</b><span class="arch">managed SaaS</span><span class="tag"><span class="pass">✓ passes all 5 must-haves</span> · zero ops, but $23,000/mo at 100M vectors</span></div>
+      <div class="opt"><b>Hearth</b><span class="arch">self-hosted OSS</span><span class="tag"><span class="pass">✓ passes all 5 must-haves</span> · $6,800/mo at 100M, but needs headcount</span></div>
+      <div class="opt out"><b>pgnearest</b><span class="arch">Postgres extension</span><span class="tag"><span class="crit">✗ eliminated</span> — filtered latency 110 ms, recall 0.89 (M1, M2)</span></div>
+      <div class="opt out"><b>Braid</b><span class="arch">embedded library</span><span class="tag"><span class="crit">✗ eliminated</span> — filtered recall 0.71 (M3), despite the best speed (12 ms) and recall (0.98)</span></div>
+    </div>
+    <div class="cond">
+      <div class="card"><b>IF</b> the approved hire (PLAT-7) starts by <b>2026-10-01</b> and a ≥4-engineer on-call rotation is committed → <b>Hearth</b> <span class="why">— on infra, already cheaper past ~3M vectors (we're at 4.1M); low lock-in</span></div>
+      <div class="card"><b>ELSE</b> → <b>Quiver</b> + mandatory exit plan <span class="why">— cheapest total until ~30M vectors (~2029), then the trajectory turns against it</span></div>
+    </div>
+    <p class="caption">Fernwick's vector-search pick. No option dominates: two fail must-haves, and the survivors trade cost trajectory against ops burden. The call is an IF/THEN with a 2026-10-01 checkpoint.</p>
+    <p class="cue"><span class="arr">▼</span> scroll — 12 slides</p>
+  </div>
+</section>
+
+<!-- 2 · WHY NOW -->
+<section class="slide" data-title="Why now" id="s2">
+  <div class="inner">
+    <p class="kicker">2 / 12 · why care</p>
+    <h2>The prototype index is now the top reliability risk in the search stack</h2>
+    <div class="tiles">
+      <div class="tile"><div class="n">4.1M</div><div class="l">product vectors today, roughly doubling every year — ~8M mid-2027, 100M on a 4–5 year horizon</div></div>
+      <div class="tile"><div class="n">30%</div><div class="l">of queries carry metadata filters — a share that has grown every quarter</div></div>
+      <div class="tile"><div class="n">100 ms</div><div class="l">p95 budget for the vector stage, out of the page's 250 ms total</div></div>
+      <div class="tile"><div class="n">$2,500/mo</div><div class="l">the Director's run-cost ceiling at ~10M vectors (M5)</div></div>
+    </div>
+    <p class="caption">Semantic search went GA in March 2026 on a prototype. Fernwick must pick a production engine this quarter, and the decision has to hold at 10M vectors — the 12-month scale.</p>
+  </div>
+</section>
+
+<!-- 3 · THE FIELD -->
+<section class="slide" data-title="Four candidates" id="s3">
+  <div class="inner">
+    <p class="kicker">3 / 12 · the field</p>
+    <h2>Four candidates, four architectures</h2>
+    <div class="cands">
+      <div class="card"><h3><span class="sw q"></span>Quiver — managed SaaS</h3><p>Vendor-operated, usage-priced, EU-west region. The "pay to not think about it" option. 6-year-old commercial product.</p></div>
+      <div class="card"><h3><span class="sw h"></span>Hearth — self-hosted OSS</h3><p>Clustered service on our nodes. 4 years old, ~28k GitHub stars, quarterly releases; optional $1,500/mo support.</p></div>
+      <div class="card"><h3>pgnearest — Postgres extension</h3><p>v0.9; rides the existing Postgres fleet and DBA practice. Queries are plain SQL. Effectively one core maintainer.</p></div>
+      <div class="card"><h3>Braid — embedded library</h3><p>ANN library linked into the search service. 8 years old, battle-tested as a library; serving, replication, sharding all DIY.</p></div>
+    </div>
+    <p class="caption">All four ran a two-week bakeoff (2026-06-08 → 06-19): the same frozen 10M-vector snapshot, a 48-hour production log replayed at 120 QPS with the live 30% filter mix, identical hardware for the self-hosted three.</p>
+  </div>
+</section>
+
+<!-- 4 · MUST-HAVES -->
+<section class="slide" data-title="Five must-haves" id="s4">
+  <div class="inner">
+    <p class="kicker">4 / 12 · the gates</p>
+    <h2>Five must-haves — miss one and you're out</h2>
+    <ul class="gates">
+      <li><span class="gid">M1</span> p95 latency ≤ 100 ms at 10M vectors — <b>including</b> the 30% filtered traffic</li>
+      <li><span class="gid">M2</span> recall@10 ≥ 0.92 on unfiltered queries (vs exact brute-force ground truth)</li>
+      <li><span class="gid">M3</span> filtered recall@10 ≥ 0.90 down to 5% filter selectivity — no silent post-hoc recall drops</li>
+      <li><span class="gid">M4</span> all product and query data stays in an EU region</li>
+      <li><span class="gid">M5</span> ≤ $2,500/month run cost at the 12-month scale (~10M vectors)</li>
+    </ul>
+    <p class="caption">These are gates, not preferences: an option that misses any one is out regardless of its other merits. Two of the four fell here.</p>
+  </div>
+</section>
+
+<!-- 5 · PGNEAREST OUT -->
+<section class="slide" data-title="pgnearest eliminated" id="s5">
+  <div class="inner">
+    <p class="kicker">5 / 12 · elimination one</p>
+    <h2>pgnearest: <span class="crit">✗ out</span> on filtered latency and recall</h2>
+    <div class="fails">
+      <div class="card fail"><div class="n">110 ms</div><div class="vs">filtered p95 — over the 100 ms ceiling under the production mix → <span class="crit">fails M1</span> (unfiltered squeaks by at 95 ms)</div></div>
+      <div class="card fail"><div class="n">0.89</div><div class="vs">recall@10, filtered and unfiltered alike — below the 0.92 floor → <span class="crit">fails M2</span> (and misses M3's 0.90 by the same number)</div></div>
+    </div>
+    <p class="caption">SQL filtering is exact, but the planner's index-scan interplay blows the latency budget, and 0.89 recall is the index architecture's ceiling — not a tuning problem. A v1.0 promising recall parity exists only as an undated roadmap.</p>
+  </div>
+</section>
+
+<!-- 6 · BRAID OUT -->
+<section class="slide" data-title="The fastest option lost" id="s6">
+  <div class="inner">
+    <p class="kicker">6 / 12 · elimination two</p>
+    <h2>Braid: the fastest, highest-recall option measured — <span class="crit">✗ still out</span></h2>
+    <div class="card">
+      <svg viewBox="0 0 640 250" role="img" aria-label="Braid recall@10 by filter selectivity: 0.98 unfiltered, 0.94 at 50 percent selectivity, 0.71 at 5 percent selectivity, below the M3 floor of 0.90" style="width:100%;height:auto;display:block">
+        <line x1="40" y1="225" x2="620" y2="225" stroke="var(--baseline)" stroke-width="1"/>
+        <line x1="40" y1="45" x2="620" y2="45" stroke="var(--crit)" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <text x="620" y="38" text-anchor="end" font-size="12.5" style="fill:var(--crit)">M3 floor 0.90</text>
+        <rect x="90"  y="29" width="90" height="196" rx="4" style="fill:var(--muted)"/>
+        <rect x="270" y="37" width="90" height="188" rx="4" style="fill:var(--muted)"/>
+        <rect x="450" y="83" width="90" height="142" rx="4" style="fill:var(--crit)"/>
+        <text x="135" y="20" text-anchor="middle" font-size="15" font-weight="700" style="fill:var(--ink)">0.98</text>
+        <text x="315" y="28" text-anchor="middle" font-size="15" font-weight="700" style="fill:var(--ink)">0.94</text>
+        <text x="495" y="74" text-anchor="middle" font-size="15" font-weight="700" style="fill:var(--crit)">0.71 ✗</text>
+        <text x="135" y="243" text-anchor="middle" font-size="12.5" style="fill:var(--ink2)">unfiltered (best in bakeoff)</text>
+        <text x="315" y="243" text-anchor="middle" font-size="12.5" style="fill:var(--ink2)">50% selectivity</text>
+        <text x="495" y="243" text-anchor="middle" font-size="12.5" style="fill:var(--ink2)">5% selectivity — the M3 test</text>
+      </svg>
+      <p class="small" style="margin:8px 0 0">Braid recall@10 as filters tighten. Also fastest measured: 12 ms p95 unfiltered, in-process.</p>
+    </div>
+    <p class="caption">Braid has no native filtered search; post-hoc filtering collapses recall as filters tighten. Structural — the index doesn't know about metadata — so its chart-topping speed never gets to matter. Raw benchmarks did not decide this.</p>
+  </div>
+</section>
+
+<!-- 7 · HEAD TO HEAD -->
+<section class="slide" data-title="Quiver vs Hearth" id="s7">
+  <div class="inner">
+    <p class="kicker">7 / 12 · the survivors</p>
+    <h2>Quiver vs Hearth: neither column dominates</h2>
+    <table>
+      <thead><tr><th>at 10M vectors</th><th><span class="sw q"></span>Quiver (managed)</th><th><span class="sw h"></span>Hearth (self-hosted)</th></tr></thead>
+      <tbody>
+        <tr><td>p95 filtered (M1 ≤ 100 ms)</td><td class="win">22 ms</td><td>48 ms</td></tr>
+        <tr><td>recall@10 (M2 ≥ 0.92)</td><td class="win">0.97</td><td>0.94</td></tr>
+        <tr><td>filtered recall @5% sel. (M3 ≥ 0.90)</td><td class="win">0.96</td><td>0.90 — at the floor</td></tr>
+        <tr><td>filtered recall @1% (stress)</td><td class="win">0.95</td><td>0.86</td></tr>
+        <tr><td>full 10M re-index (N2)</td><td>~21 min</td><td class="win">~7 min</td></tr>
+        <tr><td>cost @10M (M5 ≤ $2,500)</td><td>$1,900</td><td class="win">$1,400</td></tr>
+        <tr><td>ops, steady-state</td><td class="win">~0 FTE · vendor on-call, 99.9% SLA (≈43 min/mo allowed)</td><td>~0.2 FTE + ≥4-engineer rotation</td></tr>
+        <tr><td>in-VPC (N1 — likely 2027 contracts)</td><td>never offered</td><td class="win">yes</td></tr>
+        <tr><td>lock-in / exit</td><td>high — ~3 eng-weeks, growing</td><td class="win">low — open API, our disks</td></tr>
+        <tr><td>hybrid search (N3)</td><td class="win">built in</td><td>beta plugin</td></tr>
+      </tbody>
+    </table>
+    <p class="small" style="margin-top:8px">Hearth history: one breaking index-format change (v3→v4, 2025) — major upgrades are migrations.</p>
+    <p class="caption">Quiver wins operational simplicity and filtered-recall margin; Hearth wins cost trajectory, lock-in, and in-VPC residency. Both pass every must-have — Hearth's filtered recall exactly at the 0.90 floor.</p>
+  </div>
+</section>
+
+<!-- 8 · INFRA COST -->
+<section class="slide" data-title="Infra cost inverts" id="s8">
+  <div class="inner">
+    <p class="kicker">8 / 12 · cost, part one</p>
+    <h2>Infra cost inverts around ~3M vectors — a point already behind us</h2>
+    <div class="legend"><span><span class="sw q"></span>Quiver (managed)</span><span><span class="sw h"></span>Hearth (self-hosted)</span></div>
+    <div class="ccwrap">
+      <div class="ccg"><h4>at 1M vectors <span class="small">— Quiver's turf</span></h4>
+        <div class="ccrow"><span class="ccname">Quiver</span><span class="cctrack"><i class="ccbar q" style="width:35%"></i></span><span class="ccval win">$180/mo</span></div>
+        <div class="ccrow"><span class="ccname">Hearth</span><span class="cctrack"><i class="ccbar h" style="width:100%"></i></span><span class="ccval">$520/mo</span></div>
+      </div>
+      <div class="ccg"><h4>at 4.1M — today <span class="small">— already flipped</span></h4>
+        <div class="ccrow"><span class="ccname">Quiver</span><span class="cctrack"><i class="ccbar q" style="width:100%"></i></span><span class="ccval">$740/mo</span></div>
+        <div class="ccrow"><span class="ccname">Hearth</span><span class="cctrack"><i class="ccbar h" style="width:70%"></i></span><span class="ccval win">$520/mo</span></div>
+      </div>
+      <div class="ccg"><h4>at 10M <span class="small">— the 12-month scale; both under the $2,500 ceiling</span></h4>
+        <div class="ccrow"><span class="ccname">Quiver</span><span class="cctrack"><i class="ccbar q" style="width:100%"></i></span><span class="ccval">$1,900/mo</span></div>
+        <div class="ccrow"><span class="ccname">Hearth</span><span class="cctrack"><i class="ccbar h" style="width:74%"></i></span><span class="ccval win">$1,400/mo</span></div>
+      </div>
+      <div class="ccg"><h4>at 100M <span class="small">— 4–5 years out; a 3.4× gap</span></h4>
+        <div class="ccrow"><span class="ccname">Quiver</span><span class="cctrack"><i class="ccbar q" style="width:100%"></i></span><span class="ccval">$23,000/mo</span></div>
+        <div class="ccrow"><span class="ccname">Hearth</span><span class="cctrack"><i class="ccbar h" style="width:30%"></i></span><span class="ccval win">$6,800/mo</span></div>
+      </div>
+    </div>
+    <p class="small" style="margin-top:10px">Bars scaled within each panel. Infrastructure/subscription only — labor is the next slide. Hearth's $520 is its 3-node HA floor (covers to ~5M). Quiver's 100M figure reflects a forced Enterprise dedicated-cluster plan above 50M.</p>
+    <p class="caption">Quiver is cheapest only below ~3M vectors. At today's 4.1M the quote is already $740 vs Hearth's $520 HA floor; by 100M the gap is 3.4×. On infrastructure alone, self-hosting is already cheaper.</p>
+  </div>
+</section>
+
+<!-- 9 · LABOR-ADJUSTED -->
+<section class="slide" data-title="Count the labor: ~2029" id="s9">
+  <div class="inner">
+    <p class="kicker">9 / 12 · cost, part two</p>
+    <h2>Count the labor, and the crossover moves out to ~30M vectors</h2>
+    <div class="card" style="text-align:center; padding:28px 18px">
+      <div style="font-size:15px; color:var(--ink2)">Hearth's real price: ~0.5 FTE the first quarter, then ~0.2 FTE steady-state</div>
+      <div style="font-size:clamp(30px,4vw,48px); font-weight:700; margin:10px 0 4px">~0.2 FTE ≈ $2,800/mo</div>
+      <div style="font-size:15px; color:var(--ink2)">of loaded engineer cost — so Quiver stays cheaper <b>in total</b> until roughly</div>
+      <div style="font-size:clamp(30px,4vw,48px); font-weight:700; margin:10px 0 4px">~30M vectors ≈ 2029</div>
+      <div style="font-size:15px; color:var(--ink2)">at the current 2×/yr growth (3×/yr growth pulls it under 2 years out)</div>
+    </div>
+    <p class="caption">"The SaaS is cheaper" is right until ~2029 — if the labor is truly marginal. It isn't, if PLAT-7 is hired anyway for broader platform duties. Past the crossover, every Quiver year costs more and deepens lock-in.</p>
+  </div>
+</section>
+
+<!-- 10 · THE CONDITION -->
+<section class="slide" data-title="The IF/THEN recommendation" id="s10">
+  <div class="inner">
+    <p class="kicker">10 / 12 · the recommendation</p>
+    <h2>The recommendation is an IF, not a winner</h2>
+    <div class="iff">
+      <div class="card branch">
+        <h3>IF — at the 2026-10-01 checkpoint, BOTH hold:</h3>
+        <ul class="checks">
+          <li>the approved platform-infra hire (req PLAT-7) has <b>signed and started</b></li>
+          <li>a <b>≥4-engineer on-call rotation</b> is committed by the Platform team, in writing</li>
+        </ul>
+        <p style="margin:6px 0 0"><b>→ adopt Hearth</b> (self-hosted), the primary recommendation.</p>
+      </div>
+      <div class="card branch else">
+        <h3>ELSE → adopt Quiver — with a mandatory exit plan, not open-ended:</h3>
+        <ul>
+          <li>all query construction behind the internal <b>SearchIndex</b> interface — no proprietary DSL outside the adapter</li>
+          <li>quarterly export drill: full JSONL restore into a scratch Hearth cluster, timed and logged</li>
+          <li>standing ~3 engineer-week migration budget, re-estimated at each renewal</li>
+          <li>re-evaluate at <b>30M vectors or first contract renewal</b>, whichever comes first</li>
+        </ul>
+        <p class="small" style="margin:8px 0 0">Why the exit plan: the quote is price-locked 12 months only, and Quiver's list prices moved ~20% last year. A 25% renewal bump pulls the labor-adjusted crossover from ~30M to ~20M vectors.</p>
+      </div>
+    </div>
+    <p class="caption">Hearth's plan leans entirely on headcount: ~0.5 FTE the first quarter, ~0.2 steady-state, plus on-call. Without the hire, that lands on four product engineers who already own search — unbudgeted attrition risk.</p>
+  </div>
+</section>
+
+<!-- 11 · FLIP TRIGGER -->
+<section class="slide" data-title="The standing flip trigger" id="s11">
+  <div class="inner">
+    <p class="kicker">11 / 12 · what overrides everything</p>
+    <h2>One standing trigger overrides both branches: the filter mix</h2>
+    <div class="card" style="margin-bottom:12px">
+      <p style="margin:0; font-size:16.5px">If filtered queries exceed <b>~60% of traffic</b>, or common facet selectivity drops below <b>~2%</b> → the recommendation becomes <b>Quiver even if the hire lands</b>.</p>
+    </div>
+    <div class="fails">
+      <div class="card fail"><div class="n"><span class="sw h"></span>0.90 → 0.86</div><div class="vs">Hearth filtered recall at 5% → 1% selectivity: at the M3 floor, then below it. No margin.</div></div>
+      <div class="card fail"><div class="n"><span class="sw q"></span>0.96 → 0.95</div><div class="vs">Quiver at the same selectivities: the best filtered-recall curve in the bakeoff. Barely flinches.</div></div>
+    </div>
+    <p class="caption">Hearth has no filtered-recall margin; Quiver holds. Filter share has grown every quarter — this is the standing trigger, re-checked at the 2027-01-15 review alongside PLAT-7, Quiver's renewal posture, and pgnearest v1.0.</p>
+  </div>
+</section>
+
+<!-- 12 · RECAP -->
+<section class="slide" data-title="Recap" id="s12">
+  <div class="inner">
+    <p class="kicker">12 / 12 · recap — where to look deeper</p>
+    <h2>Five things to walk out with</h2>
+    <ol class="recap">
+      <li><span><b>No dominant option.</b> pgnearest (M1, M2) and Braid (M3) fail must-haves — eliminated by gates, not taste; Quiver vs Hearth is the real choice.</span><span class="ref">slides 4–7</span></li>
+      <li><span><b>Benchmarks didn't decide.</b> The fastest, highest-recall option (Braid: 12 ms, 0.98) is out on filtered search.</span><span class="ref">slide 6</span></li>
+      <li><span><b>Cost inverts with scale.</b> Quiver: $180/mo at 1M but $23,000 at 100M vs Hearth's $6,800. Infra crossover ~3M (behind us); labor-adjusted ~30M, ≈2029.</span><span class="ref">slides 8–9</span></li>
+      <li><span><b>The call is conditional.</b> Hearth IF PLAT-7 starts by 2026-10-01 and ≥4-engineer on-call is committed; ELSE Quiver + mandatory exit plan.</span><span class="ref">slide 10</span></li>
+      <li><span><b>One standing override.</b> Filtered traffic &gt;60% or selectivity &lt;~2% flips it to Quiver regardless — Hearth has no recall margin there.</span><span class="ref">slide 11</span></li>
+    </ol>
+    <p class="caption">"What would change your mind?" — the hire (2026-10-01), the filter mix (standing), the growth rate, and Quiver's renewal price. All re-checked at the full review, 2027-01-15.</p>
+    <footer>tradeoff-decision · scrolly-slides · v1 · 2026-07-01</footer>
+  </div>
+</section>
+
+<script>
+const slides = [...document.querySelectorAll('.slide')];
+const rail = document.getElementById('rail');
+const dots = slides.map((s, i) => {
+  const b = document.createElement('button');
+  b.className = 'dot';
+  b.dataset.title = (i + 1) + ' · ' + s.dataset.title;
+  b.setAttribute('aria-label', 'Slide ' + (i + 1) + ': ' + s.dataset.title);
+  b.addEventListener('click', () => s.scrollIntoView({ behavior: 'smooth' }));
+  rail.appendChild(b);
+  return b;
+});
+const io = new IntersectionObserver((entries) => {
+  entries.forEach((e) => {
+    if (e.isIntersecting) {
+      const i = slides.indexOf(e.target);
+      dots.forEach((d, j) => d.classList.toggle('active', j === i));
+    }
+  });
+}, { threshold: 0.5 });
+slides.forEach((s) => io.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Denoising Line — a transit map of diffusion models</title>
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --ink: #1a1d21;
+    --muted: #5b6169;
+    --panel: #ffffff;
+    --tunnel: #e9edf3;
+    --tunnel-edge: #b9c2cf;
+    --rule: #d8d5cd;
+    --grey: #8a8f98;
+    --l1: #d3543f;  /* DDPM local */
+    --l2: #2f6fd0;  /* DDIM express */
+    --l3: #2f9e6e;  /* ODE limited */
+    --l4: #8a5fd3;  /* rectified flow */
+    --l5: #c98a0b;  /* distilled shuttle */
+    --cfg: #b0499b; /* guided service */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --ink: #e8e6e1;
+      --muted: #a0a7b0;
+      --panel: #1d2026;
+      --tunnel: #1b2028;
+      --tunnel-edge: #3a4452;
+      --rule: #33373d;
+      --grey: #7d838d;
+      --l1: #e4705c;
+      --l2: #5f93e6;
+      --l3: #46b585;
+      --l4: #a37fe8;
+      --l5: #e0a52e;
+      --cfg: #d06cbb;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  .hero {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 18px 20px 0;
+  }
+  h1 {
+    font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+    margin: 0 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .standfirst {
+    margin: 0 0 10px;
+    color: var(--muted);
+    font-size: clamp(0.85rem, 1.4vw, 1rem);
+  }
+  .map-wrap { overflow-x: auto; }
+  .map-wrap svg {
+    display: block;
+    width: 100%;
+    min-width: 980px;
+    height: auto;
+  }
+  /* SVG text */
+  svg text { font-family: inherit; fill: var(--ink); }
+  svg .t-line { font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+  svg .t-cap  { font-size: 12.5px; fill: var(--muted); }
+  svg .t-sm   { font-size: 12px; fill: var(--muted); }
+  svg .t-big  { font-size: 14px; font-weight: 700; }
+  svg .t-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+
+  .legend {
+    max-width: 1280px;
+    margin: 6px auto 0;
+    padding: 8px 20px 6px;
+  }
+  .legend h2 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+  .legend-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px 18px;
+    font-size: 0.82rem;
+  }
+  .legend-grid .item b { font-weight: 650; }
+  .legend-grid .item span { color: var(--muted); }
+  .legend .note { font-size: 0.78rem; color: var(--muted); margin: 6px 0 0; }
+  .swatch {
+    display: inline-block; width: 14px; height: 5px; border-radius: 3px;
+    vertical-align: middle; margin-right: 5px;
+  }
+  .dotkey {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--panel); border: 2.5px solid var(--ink);
+    vertical-align: middle; margin-right: 6px;
+  }
+  @media (max-width: 900px) { .legend-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px)  { .legend-grid { grid-template-columns: 1fr; } }
+
+  main {
+    max-width: 840px;
+    margin: 0 auto;
+    padding: 10px 20px 30px;
+  }
+  main h2 {
+    font-size: 1.25rem;
+    margin: 2.1em 0 0.5em;
+    letter-spacing: -0.01em;
+  }
+  main h3 { font-size: 1.02rem; margin: 1.5em 0 0.4em; }
+  p, li { font-size: 0.97rem; }
+  .chip {
+    display: inline-block;
+    font-size: 0.68em;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #fff;
+    border-radius: 999px;
+    padding: 2px 10px;
+    vertical-align: 0.18em;
+    margin-right: 8px;
+  }
+  .gloss { color: var(--muted); font-size: 0.9em; }
+  .formula {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.92rem;
+    overflow-x: auto;
+  }
+  ol.recipe li, ul.tight li { margin-bottom: 0.35em; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9rem;
+    margin: 0.8em 0;
+  }
+  th, td {
+    text-align: left;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+  }
+  td.num { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; }
+  .linecell { font-weight: 650; }
+  .linecell i {
+    display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+    margin-right: 7px; vertical-align: -1px;
+  }
+  .break-note {
+    background: var(--tunnel);
+    border: 1px dashed var(--tunnel-edge);
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+  .break-note p:first-child { margin-top: 0; }
+  .break-note p:last-child { margin-bottom: 0; }
+  dl.glossary { font-size: 0.92rem; }
+  dl.glossary dt { font-weight: 650; margin-top: 0.55em; }
+  dl.glossary dd { margin: 0 0 0 0; color: var(--muted); }
+  .misc dt { font-weight: 650; margin-top: 0.8em; }
+  .misc dd { margin-left: 0; }
+  footer {
+    max-width: 840px;
+    margin: 0 auto;
+    padding: 8px 20px 22px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    border-top: 1px solid var(--rule);
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>The Denoising Line: a transit map of diffusion image generators</h1>
+  <p class="standfirst">Every AI-generated image is a trip from pure random static to a finished picture. The variants — DDPM, DDIM, latent diffusion, CFG, flow matching — are just different ways to ride the same railway with fewer stops.</p>
+
+  <div class="map-wrap">
+  <svg viewBox="0 0 1240 660" role="img" aria-label="Transit map: five colored lines run left to right from a Pure-Noise Terminus to a Clean-Latent Arrival inside a shaded Latent Underground; a grey outbound line runs the other way; an escalator (VAE decoder) exits right to street-level pixels; a Guided Service box explains classifier-free guidance.">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--grey)"/>
+      </marker>
+      <marker id="arrInk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/>
+      </marker>
+    </defs>
+
+    <!-- Latent underground zone -->
+    <rect x="20" y="20" width="1015" height="620" rx="14" fill="var(--tunnel)" stroke="var(--tunnel-edge)" stroke-dasharray="7 5"/>
+    <text x="40" y="45" class="t-big">THE LATENT UNDERGROUND</text>
+    <text x="40" y="63" class="t-sm">the whole journey runs in VAE-compressed space: 64×64×4 = 16,384 values — ≈48× fewer than the 512×512×3 = 786,432 pixels above ground</text>
+
+    <!-- Grey outbound (forward) line -->
+    <text x="125" y="88" class="t-cap"><tspan font-weight="700" fill="var(--grey)">GREY LINE · OUTBOUND</tspan> — the fixed forward (noising) process: no learning, ~1000 tiny additions of Gaussian noise <tspan font-style="italic">(runs right → left)</tspan></text>
+    <line x1="935" y1="110" x2="135" y2="110" stroke="var(--grey)" stroke-width="4" stroke-dasharray="10 7" marker-end="url(#arr)"/>
+    <text x="773" y="132" class="t-sm" text-anchor="middle">t ≈ 200 — slightly grainy</text>
+    <text x="449" y="132" class="t-sm" text-anchor="middle">t ≈ 600 — only coarse shapes</text>
+    <text x="160" y="132" class="t-sm">t = 1000 — pure static</text>
+
+    <!-- LINE 1: DDPM local (wavy, dense stops) -->
+    <text x="125" y="170" class="t-line" fill="var(--l1)">LINE 1 · DDPM LOCAL — ~1000 stops</text>
+    <text x="935" y="170" class="t-cap" text-anchor="end">every stop, in order · superb quality, impractically slow</text>
+    <polyline points="125,200 179,208 233,212 287,208 341,200 395,192 449,188 503,192 557,200 611,208 665,212 719,208 773,200 827,192 881,188 935,200"
+      fill="none" stroke="var(--l1)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline points="125,200 179,208 233,212 287,208 341,200 395,192 449,188 503,192 557,200 611,208 665,212 719,208 773,200 827,192 881,188 935,200"
+      fill="none" stroke="var(--tunnel)" stroke-width="2.4" stroke-dasharray="2.4 6" stroke-linejoin="round"/>
+
+    <!-- LINE 2: DDIM express -->
+    <text x="125" y="242" class="t-line" fill="var(--l2)">LINE 2 · DDIM EXPRESS — 20–50 stops</text>
+    <text x="935" y="242" class="t-cap" text-anchor="end">same trained network · deterministic · the everyday range</text>
+    <polyline points="125,268 179,273 233,277 287,273 341,268 395,263 449,259 503,263 557,268 611,273 665,277 719,273 773,268 827,263 881,259 935,268"
+      fill="none" stroke="var(--l2)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+    <g fill="var(--tunnel)" stroke="var(--l2)" stroke-width="2.4">
+      <circle cx="125" cy="268" r="4.5"/><circle cx="179" cy="273" r="4.5"/><circle cx="233" cy="277" r="4.5"/><circle cx="287" cy="273" r="4.5"/>
+      <circle cx="341" cy="268" r="4.5"/><circle cx="395" cy="263" r="4.5"/><circle cx="449" cy="259" r="4.5"/><circle cx="503" cy="263" r="4.5"/>
+      <circle cx="557" cy="268" r="4.5"/><circle cx="611" cy="273" r="4.5"/><circle cx="665" cy="277" r="4.5"/><circle cx="719" cy="273" r="4.5"/>
+      <circle cx="773" cy="268" r="4.5"/><circle cx="827" cy="263" r="4.5"/><circle cx="881" cy="259" r="4.5"/><circle cx="935" cy="268" r="4.5"/>
+    </g>
+
+    <!-- LINE 3: ODE limited -->
+    <text x="125" y="310" class="t-line" fill="var(--l3)">LINE 3 · ODE LIMITED (DPM-Solver) — 10–20 stops</text>
+    <text x="935" y="310" class="t-cap" text-anchor="end">smarter numerics on the same track · no retraining</text>
+    <polyline points="125,336 179,339 233,341 287,339 341,336 395,333 449,331 503,333 557,336 611,339 665,341 719,339 773,336 827,333 881,331 935,336"
+      fill="none" stroke="var(--l3)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+    <g fill="var(--tunnel)" stroke="var(--l3)" stroke-width="2.4">
+      <circle cx="125" cy="336" r="4.5"/><circle cx="233" cy="341" r="4.5"/><circle cx="341" cy="336" r="4.5"/><circle cx="449" cy="331" r="4.5"/>
+      <circle cx="557" cy="336" r="4.5"/><circle cx="665" cy="341" r="4.5"/><circle cx="773" cy="336" r="4.5"/><circle cx="881" cy="331" r="4.5"/>
+      <circle cx="935" cy="336" r="4.5"/>
+    </g>
+
+    <!-- LINE 4: rectified flow (ruler straight) -->
+    <text x="125" y="378" class="t-line" fill="var(--l4)">LINE 4 · RECTIFIED-FLOW STRAIGHTAWAY — ~20–30 stops (fewer viable)</text>
+    <text x="935" y="378" class="t-cap" text-anchor="end">track rebuilt dead straight · SD3 &amp; Flux ride here</text>
+    <line x1="125" y1="404" x2="935" y2="404" stroke="var(--l4)" stroke-width="5" stroke-linecap="round"/>
+    <g fill="var(--tunnel)" stroke="var(--l4)" stroke-width="2.4">
+      <circle cx="125" cy="404" r="4.5"/><circle cx="199" cy="404" r="4.5"/><circle cx="272" cy="404" r="4.5"/><circle cx="346" cy="404" r="4.5"/>
+      <circle cx="419" cy="404" r="4.5"/><circle cx="493" cy="404" r="4.5"/><circle cx="566" cy="404" r="4.5"/><circle cx="640" cy="404" r="4.5"/>
+      <circle cx="713" cy="404" r="4.5"/><circle cx="787" cy="404" r="4.5"/><circle cx="860" cy="404" r="4.5"/><circle cx="935" cy="404" r="4.5"/>
+    </g>
+
+    <!-- LINE 5: distilled shuttle -->
+    <text x="125" y="446" class="t-line" fill="var(--l5)">LINE 5 · DISTILLED SHUTTLE — 1–4 stops</text>
+    <text x="935" y="446" class="t-cap" text-anchor="end">retrained for giant jumps · slightly softer, less varied</text>
+    <path d="M125,472 Q260,448 395,472 Q530,448 665,472 Q800,448 935,472" fill="none" stroke="var(--l5)" stroke-width="5" stroke-linecap="round"/>
+    <g fill="var(--tunnel)" stroke="var(--l5)" stroke-width="2.6">
+      <circle cx="125" cy="472" r="5.5"/><circle cx="395" cy="472" r="5.5"/><circle cx="665" cy="472" r="5.5"/><circle cx="935" cy="472" r="5.5"/>
+    </g>
+
+    <!-- Terminus + arrival capsules -->
+    <rect x="110" y="186" width="30" height="300" rx="15" fill="var(--panel)" stroke="var(--ink)" stroke-width="3"/>
+    <rect x="920" y="186" width="30" height="300" rx="15" fill="var(--panel)" stroke="var(--ink)" stroke-width="3"/>
+    <text x="110" y="508" class="t-big">PURE-NOISE TERMINUS (t = 1000)</text>
+    <text x="110" y="526" class="t-sm">every trip boards with fresh random static — never a photo — and runs left → right</text>
+    <text x="950" y="508" class="t-big" text-anchor="end">CLEAN-LATENT ARRIVAL (t = 0)</text>
+    <text x="950" y="526" class="t-sm" text-anchor="end">structure emerges en route: tone blobs → coarse layout → object shapes → fine texture</text>
+
+    <!-- Guided service (CFG) box -->
+    <rect x="110" y="545" width="840" height="82" rx="10" fill="var(--panel)" stroke="var(--cfg)" stroke-width="2"/>
+    <text x="126" y="567" class="t-cap"><tspan font-weight="700" fill="var(--cfg)">GUIDED SERVICE · CLASSIFIER-FREE GUIDANCE (CFG)</tspan> — how the prompt steers every line above</text>
+    <text x="126" y="586" class="t-sm">Each segment is driven twice — once with the prompt, once without — and the driver extrapolates past the difference:</text>
+    <text x="126" y="605" class="t-mono">guided = unconditional + s × (conditional − unconditional)</text>
+    <text x="126" y="622" class="t-sm">s ≈ 7.5 is a common default (s = 1: no guidance; past s ≈ 12–15: oversaturated, burned-in artifacts) · two runs per stop = double the fare</text>
+
+    <!-- Street level (right) -->
+    <text x="1137" y="45" class="t-big" text-anchor="middle">STREET LEVEL</text>
+    <text x="1137" y="63" class="t-sm" text-anchor="middle">full-resolution pixels</text>
+
+    <line x1="957" y1="330" x2="1072" y2="290" stroke="var(--ink)" stroke-width="4" marker-end="url(#arrInk)"/>
+    <text x="1012" y="266" class="t-cap" text-anchor="middle" font-weight="700">VAE DECODER</text>
+    <text x="1012" y="283" class="t-sm" text-anchor="middle">one single pass, up to pixels</text>
+
+    <rect x="1080" y="235" width="115" height="90" rx="6" fill="var(--panel)" stroke="var(--ink)" stroke-width="2"/>
+    <circle cx="1110" cy="258" r="8" fill="var(--l5)"/>
+    <path d="M1084,320 L1114,280 L1133,303 L1147,288 L1191,320 Z" fill="var(--grey)"/>
+    <text x="1137" y="345" class="t-sm" text-anchor="middle" font-weight="700">finished image</text>
+    <text x="1137" y="362" class="t-sm" text-anchor="middle">512 × 512 × 3 pixels</text>
+
+    <line x1="1080" y1="345" x2="962" y2="400" stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#arr)"/>
+    <text x="1137" y="392" class="t-sm" text-anchor="middle">VAE ENCODER (training only):</text>
+    <text x="1137" y="408" class="t-sm" text-anchor="middle">real images ride down, 8× per side</text>
+
+    <text x="1137" y="445" class="t-sm" text-anchor="middle">toll: a slight compression</text>
+    <text x="1137" y="461" class="t-sm" text-anchor="middle">bottleneck — fine text &amp; small</text>
+    <text x="1137" y="477" class="t-sm" text-anchor="middle">faces historically suffer</text>
+  </svg>
+  </div>
+</header>
+
+<section class="legend">
+  <h2>Legend — what maps to what</h2>
+  <div class="legend-grid">
+    <div class="item"><span class="dotkey"></span><b>Station dot</b> <span>= one noise level (timestep t)</span></div>
+    <div class="item"><span class="swatch" style="background:var(--ink)"></span><b>Track segment</b> <span>= one run of the neural network (one denoising step)</span></div>
+    <div class="item"><span class="swatch" style="background:linear-gradient(90deg,var(--l1),var(--l2),var(--l3),var(--l4),var(--l5))"></span><b>A colored line</b> <span>= a sampler / model variant making the same trip</span></div>
+    <div class="item"><b>A full trip, left → right</b> <span>= generating one image from fresh random noise</span></div>
+    <div class="item"><span class="swatch" style="background:var(--grey)"></span><b>Grey outbound line</b> <span>= the fixed noising process (used to make training material)</span></div>
+    <div class="item"><span class="swatch" style="background:var(--tunnel);border:1px dashed var(--tunnel-edge)"></span><b>Shaded tunnel</b> <span>= VAE latent space, ≈48× fewer numbers than pixels</span></div>
+    <div class="item"><b>Escalator at right</b> <span>= VAE decoder, one pass back to pixels</span></div>
+    <div class="item"><span class="swatch" style="background:var(--cfg)"></span><b>Guided service</b> <span>= CFG: two network runs per step, steered by scale s</span></div>
+  </div>
+  <p class="note">Station dots are drawn schematically — the printed counts (~1000, 20–50, 10–20, ~20–30, 1–4) are the real ones.</p>
+</section>
+
+<main>
+  <h2>Reading this map</h2>
+  <p>Diffusion models are defined by two processes running in opposite directions. The <b>grey outbound line</b> destroys: it takes a real image and adds a little Gaussian noise <span class="gloss">(TV-static randomness)</span>, over and over, until nothing survives. The <b>colored lines</b> rebuild: a trained neural network undoes that destruction one small step at a time, starting from pure random static at the terminus. Every colored line is the <em>same journey</em> — they differ in how many stops they make and whether the network had to be retrained to skip stops. The whole railway runs underground, in a compressed "latent" space; only the final escalator returns to full-resolution pixels.</p>
+
+  <h2><span class="chip" style="background:var(--grey)">GREY LINE</span>Outbound: destruction runs on a fixed timetable</h2>
+  <p>The forward (noising) process involves <b>no learning at all</b>. Take a real image, add a small amount of Gaussian noise, and repeat — in the original DDPM formulation, about <b>T = 1000 steps</b> — following a predefined <b>noise schedule</b> <span class="gloss">(the recipe for how much noise each step adds)</span>. The ride is gradual: at stop 200 the image is slightly grainy, at stop 600 only coarse shapes survive, and by stop 1000 the result is statistically indistinguishable from pure Gaussian noise, like analog TV static.</p>
+
+  <h2>Learning to drive the return trip</h2>
+  <p>The reverse (denoising) process is what gets learned. A neural network is trained to undo <em>one small segment</em>: given a noisy image and the stop number <i>t</i> (the "timestep"), estimate a slightly less noisy version. Removing all the noise in one jump would be nearly impossible — countless clean images are consistent with a very noisy input — but removing <em>a little</em> noise is a tractable prediction, and chaining many small steps is what makes the whole thing work.</p>
+  <p><b>Generation</b> is then a trip on this map: board at the terminus with a fresh image of pure random noise and apply the learned denoising step repeatedly — t = 1000, 999, 998, … down to 0. Structure emerges gradually: first blobs of tone, then coarse layout, then object shapes, finally fine texture. The output is a new image that never existed anywhere; the only inputs were random numbers and the network's learned weights.</p>
+  <p>Training is a denoising exercise repeated billions of times:</p>
+  <ol class="recipe">
+    <li>Draw a real image from the training set.</li>
+    <li>Draw a random timestep <i>t</i> — anywhere from light to total noise.</li>
+    <li>Add the corresponding noise <em>in one shot</em>: a closed-form formula produces the correctly noised image for any <i>t</i> without simulating the intermediate stops.</li>
+    <li>Ask the network to predict the noise that was added; penalize it with a simple mean-squared error <span class="gloss">(average squared difference)</span> between predicted and actual noise.</li>
+  </ol>
+  <p>That is the entire objective — formally a weighted variational bound on the data likelihood, but in practice "guess the noise, MSE". Each example exercises one random noise level, so over billions of examples the network learns denoising at <em>every</em> level: at high noise, global composition ("where could a horizon plausibly go?"); at low noise, fine texture. The objective is stable and scalable — no adversarial game as in GANs, where a generator and discriminator must be kept in delicate balance — and that stability is a big reason diffusion displaced GANs for large-scale image generation.</p>
+
+  <h3>One ticket, three ways to punch it</h3>
+  <p>"The network denoises" hides a design choice: what exactly does it output? Three conventions coexist, and simple algebra converts between them — they are the same ticket, punched differently:</p>
+  <ul class="tight">
+    <li><b>Noise (ε) prediction</b> — predict the noise that was added; subtracting a scaled version recovers a clean-image estimate. The original DDPM choice and still the most common.</li>
+    <li><b>Score prediction</b> — predict the <em>score</em>, the gradient of the log-probability density: the direction in pixel space that makes the image more probable. The predicted noise is just a negatively scaled score.</li>
+    <li><b>Velocity (v) prediction</b> — predict a defined mixture of image and noise. Introduced with progressive distillation; numerically better behaved at very high noise.</li>
+  </ul>
+  <p>The rolling stock varies too: typically a <b>U-Net</b> <span class="gloss">(convolutional encoder–decoder with skip connections)</span> in the Stable-Diffusion-1/2 generation, or a <b>diffusion transformer (DiT)</b> in newer systems like SD3 and Flux. In text-to-image models the network also sees a representation of the prompt (see Guided Service below).</p>
+
+  <h2><span class="chip" style="background:var(--l1)">LINE 1</span>DDPM Local: why the trip takes forever</h2>
+  <p>Training looks at one noise level at a time, but <em>sampling</em> must ride the whole line. Naive DDPM sampling runs the full network once per stop — <b>~1000 sequential forward passes</b> per image — and the stops cannot be parallelized, since each depends on the previous one. Even on a fast GPU, a single image took the better part of a minute in 2020. Nearly every other line on this map exists to attack that cost; read the rest of the network as one long answer to: <em>how do we make fewer stops?</em></p>
+
+  <h2><span class="chip" style="background:var(--l2)">LINE 2</span>DDIM Express: same train, fewer and deterministic stops</h2>
+  <p>DDIM (Denoising Diffusion Implicit Models, 2020) was the first big win, built on two observations:</p>
+  <ul class="tight">
+    <li>DDPM injects fresh randomness at every stop, but an alternative sampler — using the <em>same trained network, unchanged</em> — can be <b>deterministic</b>: fix the initial noise and you get exactly the same image every time.</li>
+    <li>That deterministic sampler tolerates much larger jumps: visit a subsequence of stops instead of all 1000. <b>20–50 stops is the typical practical range</b>, with only a modest quality loss.</li>
+  </ul>
+  <p>Determinism has side benefits beyond speed: noise → image becomes a well-defined function, so a generated image can be <em>inverted</em> back to its noise (useful for editing), and interpolating between two noises smoothly interpolates the images. When a tool exposes a "steps" slider defaulting to something like 30, it is exposing exactly this line's tradeoff.</p>
+
+  <h2><span class="chip" style="background:var(--l3)">LINE 3</span>The track was continuous all along: the score/ODE view</h2>
+  <p>In 2021, a parallel line of work (score-based generative models) was shown to be the <em>same thing</em> as diffusion in a continuous-time limit — the stations are samples along a continuous track. In this merged view, the field's standard mental model today:</p>
+  <ul class="tight">
+    <li>The forward process is a <b>stochastic differential equation (SDE)</b> <span class="gloss">(a continuous random drift of images toward noise)</span>.</li>
+    <li>Reversing it needs exactly one learned quantity — the score — and there are two ways back: a reverse-time SDE (random, like DDPM) or a <b>probability flow ODE</b> <span class="gloss">(an ordinary differential equation — fully deterministic)</span> that produces the same distribution of images. DDIM is essentially a discretization of this ODE.</li>
+  </ul>
+  <p>Why care? Once sampling is "just solving an ODE", the entire toolbox of numerical ODE solvers applies. Purpose-built higher-order solvers (DPM-Solver and successors) get good samples in <b>~10–20 stops with no retraining</b>. This view also explains in one picture why so many lines coexist: they are different discretizations, different paths, or different parameterizations of the same underlying track.</p>
+
+  <h2><span class="chip" style="background:var(--tunnel-edge)">TUNNEL</span>The Latent Underground: run the railway in compressed space</h2>
+  <p>Pixels are expensive: a 512×512 RGB image is 512 × 512 × 3 = <b>786,432 numbers</b>, all processed by the network at every one of dozens-to-hundreds of stops. <b>Latent diffusion</b> (2022) digs a tunnel. A separately trained <b>variational autoencoder (VAE)</b> <span class="gloss">(an encoder–decoder pair)</span> maps each image into a much smaller <em>latent</em> representation and back. In Stable Diffusion the encoder downsamples 8× in each spatial dimension: 512×512×3 becomes a <b>64×64 latent with 4 channels = 16,384 numbers — roughly 48× fewer values</b>. The compression is perceptual, not lossless: reconstructions look essentially identical, with imperceptible detail discarded.</p>
+  <p>The entire railway — forward noising, training, sampling, exactly as described above — then runs in this latent space:</p>
+  <ol class="recipe">
+    <li>Sample random noise <em>in latent space</em> (e.g. 64×64×4) at the terminus.</li>
+    <li>Ride the learned denoising line there — every stop ~48× cheaper than in pixel space.</li>
+    <li>Take the escalator: decode the final clean latent through the VAE decoder — one single pass — to get the full-resolution image.</li>
+  </ol>
+  <p>This is the change that made Stable-Diffusion-class models run on consumer GPUs, and it is why the model is called "latent". The costs are minor: a slight quality ceiling from the compression bottleneck (historically visible in fine text and small faces, much improved in newer VAEs) and one extra decode pass. Note the division of labor: <b>the VAE is only a compressor/decompressor — the diffusion model in the tunnel is what generates.</b></p>
+
+  <h2><span class="chip" style="background:var(--cfg)">GUIDED</span>Guided Service: steering every line with the prompt</h2>
+  <p>Text conditioning gets the prompt <em>into</em> the network — as embeddings from a text encoder such as CLIP or T5, attended to at each denoising stop — but conditioning alone tends to produce images that only loosely follow the prompt. <b>Classifier-free guidance (CFG)</b> is the fix used by essentially every modern text-to-image system:</p>
+  <ul class="tight">
+    <li><b>At training time</b>, the prompt is randomly dropped (replaced by an empty prompt) for a small fraction of examples — typically <b>~10–20%</b> — so one network learns both prompt-conditioned and unconditional denoising.</li>
+    <li><b>At sampling time</b>, every segment is driven <b>twice</b>: once with the prompt, once without. The two predictions are blended by <em>extrapolation</em>:</li>
+  </ul>
+  <p class="formula">guided&nbsp;=&nbsp;unconditional&nbsp;+&nbsp;s&nbsp;×&nbsp;(conditional&nbsp;−&nbsp;unconditional)</p>
+  <p>The difference between the two predictions is "the direction the prompt pulls", and the <b>guidance scale s</b> exaggerates it. s = 1 means no guidance; <b>s ≈ 7.5 is a common default</b> in Stable-Diffusion-class models. The tradeoff is real and visible: higher s gives stronger prompt adherence and cleaner-looking, more "typical" images, but reduces diversity — and pushed too far (roughly s &gt; 12–15 in classic SD) it produces oversaturated colors and burned-in artifacts. CFG also <b>doubles the network evaluations per stop</b>, which matters when counting the fare.</p>
+
+  <h2><span class="chip" style="background:var(--l5)">LINE 5</span>The Distilled Shuttle: 1–4 stops</h2>
+  <p>Fast samplers plateau around 10–20 stops. Going lower means <em>training</em> a model to take big jumps rather than cleverly scheduling small ones:</p>
+  <ul class="tight">
+    <li><b>Progressive distillation</b> trains a student network to match, in one step, what a teacher does in two — then repeats, halving the stop count each round (1000 → 500 → … → 4).</li>
+    <li><b>Consistency models</b> (2023) train the network so that <em>any</em> noisy point on a given trajectory maps directly to the same clean endpoint. That self-consistency allows <b>1-stop generation</b>, with 2–4 stops as a refinement option. Latent consistency models (LCMs) apply this to Stable-Diffusion-class latents, giving ~4-stop generation.</li>
+    <li><b>Adversarial distillation</b> (SDXL-Turbo-style) adds a GAN-like critic to sharpen few-step outputs.</li>
+  </ul>
+  <p>The tradeoff: distilled few-step models trade some quality and diversity for speed — outputs tend to be slightly softer or less varied than the 20–50-stop teacher — and the extra training stage adds pipeline complexity. This is the technology behind "real-time" generation demos that redraw as you type.</p>
+
+  <h2><span class="chip" style="background:var(--l4)">LINE 4</span>The Straightaway: flow matching &amp; rectified flow</h2>
+  <p>The newest mainstream reformulation asks: why follow the curved paths that Gaussian noising dictates at all? <b>Flow matching</b> trains a network to predict a <b>velocity field</b> that transports noise to data along prescribed paths; <b>rectified flow</b> chooses the simplest possible ones — <b>straight lines</b>. A training point is just a linear blend of an image and a noise sample, and the regression target is the constant velocity (their difference) along that line.</p>
+  <p>Why it matters: solving an ODE along nearly straight track needs far fewer stops than along curved track, and the formulation drops the diffusion-specific scaffolding — noise schedules, timestep-dependent scalings — for a cleaner recipe. Mathematically it is a close sibling of diffusion: with Gaussian paths, flow matching recovers diffusion's probability-flow ODE, and the score / noise / velocity quantities remain interconvertible. Read it as a <em>reframing that generalizes</em>, not a rival mechanism. <b>Stable Diffusion 3 and Flux-class models are trained this way</b>, combined with transformer backbones and latent-space operation.</p>
+
+  <h2>All lines at a glance</h2>
+  <table>
+    <thead><tr><th>Line / family</th><th>Typical stops</th><th>Character</th></tr></thead>
+    <tbody>
+      <tr><td class="linecell"><i style="background:var(--l1)"></i>DDPM (ancestral)</td><td class="num">~1000</td><td>Original formulation; excellent quality; impractically slow</td></tr>
+      <tr><td class="linecell"><i style="background:var(--l2)"></i>DDIM</td><td class="num">20–50</td><td>Same trained model; deterministic; the everyday workhorse range</td></tr>
+      <tr><td class="linecell"><i style="background:var(--l3)"></i>ODE solvers (DPM-Solver++ etc.)</td><td class="num">10–20</td><td>Better numerics, no retraining; near-DDIM quality</td></tr>
+      <tr><td class="linecell"><i style="background:var(--l4)"></i>Rectified flow / flow matching</td><td class="num">~20–30 (fewer viable)</td><td>Retrained objective; straight paths; SD3/Flux generation</td></tr>
+      <tr><td class="linecell"><i style="background:var(--l5)"></i>Distilled / consistency / LCM</td><td class="num">1–4</td><td>Retrained for big jumps; fastest; mild quality &amp; diversity cost</td></tr>
+    </tbody>
+  </table>
+  <p>Rules of thumb: below ~10 stops, undistilled models degrade visibly; above ~50, returns diminish rapidly. "More stops" refines the <em>same</em> trajectory — it is not a search over more images. And remember Guided Service doubles the per-stop cost.</p>
+
+  <h2>Lost property: common misconceptions</h2>
+  <dl class="misc">
+    <dt>"It searches a database and collages existing images."</dt>
+    <dd>False. No training images are stored or consulted at generation time; a network of a few billion parameters trained on billions of images cannot and does not keep copies. Its weights encode statistics of what plausible images look like at every noise level, and sampling starts from random noise. <em>Nuance the map keeps honest:</em> rare near-duplication of training images <em>has</em> been demonstrated, essentially for images repeated many times in the training set — a real but exceptional memorization failure mode, not the mechanism.</dd>
+    <dt>"It denoises a real photo."</dt>
+    <dd>False for text-to-image generation, which boards at the Pure-Noise Terminus with purely synthetic static. Image-to-image and inpainting modes <em>do</em> start from a user-supplied image — by partially noising it and denoising back — but that is an explicit variant, not the default mechanism.</dd>
+    <dt>"The VAE is the generator."</dt>
+    <dd>No; the VAE only compresses and decompresses. The diffusion model operating in latent space does the generating.</dd>
+    <dt>"More steps always means better images."</dt>
+    <dd>Only up to a point (see the table). Past the workhorse range, extra stops refine imperceptibly — and for distilled models, the intended stop count is part of the design.</dd>
+    <dt>"The guidance scale is a 'quality' knob."</dt>
+    <dd>It is an adherence-vs-diversity knob with an artifact regime at high values; "better" depends on what you want.</dd>
+    <dt>"Diffusion, DDIM, score-based models, and flow matching are competing technologies."</dt>
+    <dd>They are one framework — one railway: identical or interconvertible training targets, different samplers, paths, and parameterizations.</dd>
+  </dl>
+
+  <h2>Where the map breaks</h2>
+  <div class="break-note">
+    <p>Every metaphor misleads somewhere; here is where this one would, if pushed:</p>
+    <p><b>A train carries its passengers unchanged between places; here the "passenger" is transformed at every segment.</b> The stations are not locations in space but noise levels, and the thing riding the line — the image — is itself what changes. Relatedly, riding more stops does not show you more city: extra steps refine the <em>same</em> trajectory toward one image, never a tour past alternative images. And the stations themselves are an artifact of the schematic — the modern view says the track is a continuous ODE/SDE, and each sampler simply chooses where along it to stop.</p>
+  </div>
+
+  <h2>Pocket glossary</h2>
+  <dl class="glossary">
+    <dt>Timestep (t)</dt><dd>Position along the noising process; high t = more noise.</dd>
+    <dt>Noise schedule</dt><dd>The predefined recipe for how much noise each forward step adds.</dd>
+    <dt>ε / score / velocity</dt><dd>Three interconvertible choices of network output.</dd>
+    <dt>Sampler</dt><dd>The algorithm that turns many network predictions into an image (DDPM, DDIM, DPM-Solver, …).</dd>
+    <dt>Latent space</dt><dd>The VAE-compressed representation where latent diffusion operates (e.g. 64×64×4 for a 512×512 image).</dd>
+    <dt>CFG scale (s)</dt><dd>Strength of the classifier-free-guidance extrapolation.</dd>
+    <dt>Distillation</dt><dd>Training a fast student model to imitate a slow teacher.</dd>
+    <dt>NFE (number of function evaluations)</dt><dd>How many times the network runs during sampling — the honest cost metric (CFG doubles it per step).</dd>
+  </dl>
+</main>
+
+<footer>diffusion-variants · visual-metaphor · v1 · 2026-07-01</footer>
+
+</body>
+</html>

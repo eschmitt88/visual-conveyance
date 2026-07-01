@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meridian — codebase structure</title>
+<style>
+  :root {
+    --surface-1: #fcfcfb;      /* card / chart surface */
+    --plane: #f9f9f7;          /* page plane */
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --accent: #2a78d6;         /* categorical slot 1, validated (light) */
+    --accent-wash: rgba(42,120,214,0.10);
+    --serious: #ec835a;        /* status: serious (icon+label always) */
+    --critical: #d03b3b;       /* status: critical */
+    --warn-wash: rgba(236,131,90,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1: #1a1a19;
+      --plane: #0d0d0d;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --accent: #3987e5;       /* dark-stepped slot 1, validated (dark) */
+      --accent-wash: rgba(57,135,229,0.14);
+      --serious: #ec835a;
+      --critical: #d03b3b;
+      --warn-wash: rgba(236,131,90,0.14);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--plane);
+    color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { font-size: 0.92em; background: var(--accent-wash); border-radius: 4px; padding: 0 4px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ---------- sticky nav (persistent affordance) ---------- */
+  nav.top {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 8px 20px;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--grid);
+    font-size: 13px;
+  }
+  nav.top .brand { font-weight: 700; margin-right: 4px; }
+  nav.top a { color: var(--ink-2); }
+  nav.top a:hover { color: var(--accent); text-decoration: none; }
+  nav.top .navctl { margin-left: auto; display: flex; gap: 6px; }
+  nav.top button {
+    font: 12px system-ui, sans-serif; color: var(--ink-2);
+    background: none; border: 1px solid var(--grid); border-radius: 6px;
+    padding: 3px 10px; cursor: pointer;
+  }
+  nav.top button:hover { color: var(--accent); border-color: var(--accent); }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 20px; }
+
+  /* ---------- layer 1 — glance ---------- */
+  header.glance { padding: 22px 0 10px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  h1 { font-size: 27px; line-height: 1.3; margin: 0 0 8px; max-width: 68rem; font-weight: 700; }
+  h1 .hub { color: var(--accent); }
+  .subline { color: var(--ink-2); font-size: 14px; margin: 0 0 16px; max-width: 68rem; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .tile {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px 11px; min-height: 92px;
+  }
+  .tile .lbl { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .tile .val { font-size: 22px; font-weight: 600; line-height: 1.2; }
+  .tile .val.small { font-size: 16px; }
+  .tile .sub { font-size: 12px; color: var(--ink-2); margin-top: 3px; line-height: 1.4; }
+  .tile.verdict { border-left: 3px solid var(--accent); }
+  .tile.warn { border-left: 3px solid var(--serious); background: linear-gradient(var(--warn-wash), var(--warn-wash)) var(--surface-1); }
+  .tile.warn .lbl::before { content: "⚠ "; color: var(--critical); }
+
+  .hero {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px 6px; overflow-x: auto;
+  }
+  .hero svg { display: block; min-width: 960px; width: 100%; height: auto; }
+  .hero-cap { font-size: 12.5px; color: var(--ink-2); margin: 6px 4px 12px; }
+  .hero-cap strong { color: var(--ink); }
+
+  /* ---------- layers 2 & 3 — cards ---------- */
+  main.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 12px; padding: 14px 0 8px; }
+  @media (max-width: 420px) { main.cards { grid-template-columns: 1fr; } }
+  section.card {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px 12px; scroll-margin-top: 52px;
+  }
+  section.card h2 { font-size: 16px; margin: 0 0 6px; display: flex; gap: 8px; align-items: baseline; }
+  section.card h2 .ci { color: var(--accent); font-size: 14px; }
+  p.lead { margin: 0 0 10px; color: var(--ink-2); font-size: 14px; }
+  p.lead strong { color: var(--ink); }
+  .kn { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; }
+  .kn b { font-size: 19px; color: var(--ink); font-weight: 600; }
+
+  details { border-top: 1px solid var(--grid); margin-top: 8px; }
+  summary {
+    cursor: pointer; padding: 8px 0 6px; font-size: 13px; font-weight: 600; color: var(--accent);
+    list-style-position: inside;
+  }
+  details .body { font-size: 13.5px; color: var(--ink-2); padding-bottom: 6px; }
+  details .body strong { color: var(--ink); }
+  details ol, details ul { padding-left: 20px; margin: 6px 0; }
+  details li { margin-bottom: 5px; }
+  pre.tree {
+    font-size: 11.5px; line-height: 1.5; overflow-x: auto; color: var(--ink-2);
+    background: var(--plane); border: 1px solid var(--grid); border-radius: 8px; padding: 10px 12px; margin: 8px 0;
+  }
+  pre.tree b { color: var(--ink); }
+  pre.tree .warnmark { color: var(--critical); font-weight: 700; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin: 8px 0; }
+  th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--baseline); padding: 4px 8px 4px 0; }
+  td { border-bottom: 1px solid var(--grid); padding: 5px 8px 5px 0; vertical-align: top; color: var(--ink-2); }
+  td:first-child { color: var(--ink); white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* consistent caveat style, all layers */
+  .caveat {
+    border-left: 3px solid var(--serious); background: var(--warn-wash);
+    border-radius: 0 8px 8px 0; padding: 8px 12px; margin: 8px 0; font-size: 13px; color: var(--ink-2);
+  }
+  .caveat b.tag { color: var(--critical); }
+  .caveat strong { color: var(--ink); }
+
+  /* bar rows (single series — slot-1 blue, direct-labeled) */
+  .bars { margin: 6px 0 4px; }
+  .brow { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; margin-bottom: 4px; font-size: 12px; }
+  .brow .bl { color: var(--ink-2); text-align: right; white-space: nowrap; }
+  .brow .bt { position: relative; height: 14px; border-left: 1px solid var(--baseline); }
+  .brow .bar {
+    position: absolute; left: 0; top: 1px; height: 12px;
+    background: var(--accent); border-radius: 0 4px 4px 0;
+  }
+  .brow .bv { position: absolute; top: -2px; font-size: 11px; color: var(--ink-2); white-space: nowrap; }
+  .brow.warnrow .bl { color: var(--critical); font-weight: 600; }
+
+  /* SVG diagram text */
+  .hero text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .hero .pfx { font-size: 10px; fill: var(--muted); }
+  .hero .bname { font-size: 12.5px; font-weight: 600; fill: var(--ink); }
+  .hero .bsub { font-size: 10.5px; fill: var(--ink-2); }
+  .hero .lane { font-size: 11px; font-weight: 700; letter-spacing: .06em; fill: var(--muted); }
+  .hero .warntxt { font-size: 11px; fill: var(--critical); font-weight: 600; }
+  .hero .box { fill: var(--surface-1); stroke: var(--border); }
+  .hero .boxwarn { fill: var(--warn-wash); stroke: var(--serious); }
+  .hero .db { fill: var(--accent-wash); stroke: var(--accent); }
+  .hero .flow { stroke: var(--baseline); stroke-width: 1.5; fill: none; }
+  .hero .vio { stroke: var(--critical); stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+
+  footer.colophon {
+    text-align: center; font-size: 11px; color: var(--muted);
+    padding: 14px 0 18px; border-top: 1px solid var(--grid); margin-top: 10px;
+  }
+  @media (max-width: 640px) {
+    h1 { font-size: 21px; }
+    nav.top { gap: 10px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top" aria-label="Sections">
+  <span class="brand">meridian</span>
+  <a href="#modules">Modules</a>
+  <a href="#write">Write path</a>
+  <a href="#read">Read path</a>
+  <a href="#rules">Layering</a>
+  <a href="#invariants">Invariants</a>
+  <a href="#hotspots">Hotspots</a>
+  <a href="#tests">Tests</a>
+  <a href="#start">First change</a>
+  <span class="navctl"></span>
+</nav>
+
+<div class="wrap">
+
+<!-- ============ LAYER 1 — GLANCE ============ -->
+<header class="glance">
+  <p class="eyebrow">meridian · codebase structure — for your first contribution</p>
+  <h1>A one-way ingest pipeline writes into a single SQLite file; a small HTTP API, a vanilla-JS reader, and a CLI read it back out. <span class="hub">The store is the hub</span> — everything layers on top of it.</h1>
+  <p class="subline">Self-hosted read-later / RSS service. Two processes — one API, one set of workers — with no external broker, cache, or database server. A typical instance tracks ~200 feeds and holds ~120,000 articles in one 1.8&nbsp;GB SQLite file (WAL mode).</p>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="lbl">Backend Python</div>
+      <div class="val">13,710 LOC</div>
+      <div class="sub">77% line coverage · 412 tests run in ~41&nbsp;s</div>
+    </div>
+    <div class="tile verdict">
+      <div class="lbl">Where first changes land</div>
+      <div class="val small"><code>pipeline/sources/</code> · <code>api/routes.py</code></div>
+      <div class="sub">New source type = a 4-file recipe; newcomers almost never touch <code>store/</code> or <code>queue/</code></div>
+    </div>
+    <div class="tile verdict">
+      <div class="lbl">The core rule</div>
+      <div class="val small">Only <code>store/writer.py</code> writes the DB</div>
+      <div class="sub">Extractor is pure; the FTS index is updated only by SQLite triggers</div>
+    </div>
+    <div class="tile warn">
+      <div class="lbl">Handle with care</div>
+      <div class="val small"><code>pipeline/extractor.py</code></div>
+      <div class="sub">1,140 LOC — largest file · 14 site-specific heuristics · the one layering violation</div>
+    </div>
+    <div class="tile warn">
+      <div class="lbl">Untested frontend</div>
+      <div class="val">0 tests</div>
+      <div class="sub"><code>web/</code> is 3,280 lines of vanilla JS/CSS/HTML with no JS test harness at all</div>
+    </div>
+  </div>
+
+  <div class="hero" role="img" aria-label="Diagram: write path scheduler to jobs to fetcher to extractor to dedup to writer into SQLite; read path SQLite to reader to render to API to web reader and CLI; one dashed violation edge from extractor to render.">
+    <svg viewBox="0 0 1300 412" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L8 4 L0 8 z" fill="var(--baseline)"/>
+        </marker>
+        <marker id="arrw" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L8 4 L0 8 z" fill="var(--critical)"/>
+        </marker>
+      </defs>
+
+      <text class="lane" x="16" y="28">WRITE PATH — ONE-WAY INGEST · P50 2.1 S FROM JOB DEQUEUE TO SEARCHABLE</text>
+
+      <!-- write row -->
+      <rect class="box" x="16" y="46" width="150" height="62" rx="8"/>
+      <text class="pfx" x="28" y="62">pipeline/</text>
+      <text class="bname" x="28" y="78">scheduler.py</text>
+      <text class="bsub" x="28" y="94">60 s tick · due feeds</text>
+
+      <rect class="box" x="196" y="46" width="130" height="62" rx="8"/>
+      <text class="pfx" x="208" y="62">queue/</text>
+      <text class="bname" x="208" y="78">jobs table</text>
+      <text class="bsub" x="208" y="94">8 worker threads</text>
+
+      <rect class="box" x="356" y="46" width="130" height="62" rx="8"/>
+      <text class="pfx" x="368" y="62">pipeline/</text>
+      <text class="bname" x="368" y="78">fetcher.py</text>
+      <text class="bsub" x="368" y="94">cond. GET · 20 s cap</text>
+
+      <rect class="boxwarn" x="516" y="46" width="160" height="62" rx="8"/>
+      <text class="pfx" x="528" y="62">pipeline/</text>
+      <text class="bname" x="528" y="78">extractor.py ⚠</text>
+      <text class="bsub" x="528" y="94">pure · 1,140 LOC</text>
+
+      <rect class="box" x="706" y="46" width="130" height="62" rx="8"/>
+      <text class="pfx" x="718" y="62">pipeline/</text>
+      <text class="bname" x="718" y="78">dedup.py</text>
+      <text class="bsub" x="718" y="94">64-bit simhash</text>
+
+      <rect class="box" x="866" y="46" width="140" height="62" rx="8"/>
+      <text class="pfx" x="878" y="62">store/</text>
+      <text class="bname" x="878" y="78">writer.py</text>
+      <text class="bsub" x="878" y="94">all writes · 1 txn</text>
+
+      <!-- write arrows -->
+      <path class="flow" d="M166 77 H192" marker-end="url(#arr)"/>
+      <path class="flow" d="M326 77 H352" marker-end="url(#arr)"/>
+      <path class="flow" d="M486 77 H512" marker-end="url(#arr)"/>
+      <path class="flow" d="M676 77 H702" marker-end="url(#arr)"/>
+      <path class="flow" d="M836 77 H862" marker-end="url(#arr)"/>
+      <path class="flow" d="M1006 77 H1176 V114" marker-end="url(#arr)"/>
+
+      <!-- SQLite hub -->
+      <path class="db" d="M1076 138 a100 15 0 0 0 200 0 v128 a100 15 0 0 1 -200 0 z"/>
+      <ellipse class="db" cx="1176" cy="138" rx="100" ry="15"/>
+      <text class="bname" x="1176" y="180" text-anchor="middle">store/ — the hub</text>
+      <text class="bsub" x="1176" y="199" text-anchor="middle">SQLite · one 1.8 GB file · WAL</text>
+      <text class="bsub" x="1176" y="216" text-anchor="middle">9 tables + articles_fts (FTS5)</text>
+      <text class="bsub" x="1176" y="233" text-anchor="middle">FTS updated by triggers only</text>
+      <text class="bsub" x="1176" y="252" text-anchor="middle">only writer.py writes it</text>
+
+      <!-- read row -->
+      <path class="flow" d="M1176 281 V331 H1012" marker-end="url(#arr)"/>
+
+      <rect class="box" x="866" y="300" width="140" height="62" rx="8"/>
+      <text class="pfx" x="878" y="316">store/</text>
+      <text class="bname" x="878" y="332">reader.py</text>
+      <text class="bsub" x="878" y="348">6 ms p50</text>
+
+      <path class="flow" d="M866 331 H832" marker-end="url(#arr)"/>
+
+      <rect class="box" x="666" y="300" width="160" height="62" rx="8"/>
+      <text class="pfx" x="678" y="316">render/</text>
+      <text class="bname" x="678" y="332">template + annotations</text>
+      <text class="bsub" x="678" y="348">14 ms + 8 ms</text>
+
+      <path class="flow" d="M666 331 H632" marker-end="url(#arr)"/>
+
+      <rect class="box" x="456" y="300" width="170" height="62" rx="8"/>
+      <text class="pfx" x="468" y="316">api/</text>
+      <text class="bname" x="468" y="332">routes.py</text>
+      <text class="bsub" x="468" y="348">31 REST endpoints</text>
+
+      <path class="flow" d="M456 318 L252 305" marker-end="url(#arr)"/>
+      <path class="flow" d="M456 344 L252 351" marker-end="url(#arr)"/>
+
+      <rect class="box" x="16" y="286" width="230" height="38" rx="8"/>
+      <text class="bname" x="30" y="309">web/ <tspan class="bsub">vanilla-JS reader, no build step</tspan></text>
+      <rect class="box" x="16" y="334" width="230" height="38" rx="8"/>
+      <text class="bname" x="30" y="357">cli/ <tspan class="bsub">speaks HTTP via client.py</tspan></text>
+
+      <!-- the violation -->
+      <path class="vio" d="M596 108 V214 H746 V296" marker-end="url(#arrw)"/>
+      <text class="warntxt" x="608" y="190">⚠ extractor.py imports clean_html() from render/sanitize.py —</text>
+      <text class="warntxt" x="608" y="206">the codebase's one layering violation (issue #214)</text>
+
+      <text class="lane" x="16" y="402">READ PATH — GET /articles/{id} · P50 28 MS TOTAL · WEB AND CLI USE THE SAME ENDPOINTS, NO DB BACKDOOR</text>
+    </svg>
+  </div>
+  <p class="hero-cap"><strong>Import layering:</strong> <code>store/</code> sits at the bottom and imports no other meridian package; <code>queue/</code>, <code>pipeline/</code>, <code>render/</code>, and <code>api/</code> stack above it; <code>cli/</code> imports only <code>client.py</code>; <strong>nothing imports <code>api/</code> or <code>cli/</code></strong>. The dashed red edge is the one known exception.</p>
+</header>
+
+<!-- ============ LAYERS 2 & 3 — CARDS ============ -->
+<main class="cards">
+
+  <section class="card" id="modules">
+    <h2><span class="ci">▦</span> The seven parts</h2>
+    <p class="lead"><strong>Six Python packages plus one frontend, and <code>store/</code> is the only module that touches SQLite.</strong> <code>pipeline/</code> is the largest module (4,180 LOC); the <code>web/</code> frontend adds 3,280 untested lines; tests add 6,240 LOC, so the whole repo is ~23,230 lines.</p>
+    <div class="bars" aria-label="Lines of code per backend module">
+      <div class="brow"><span class="bl"><code>pipeline/</code></span><span class="bt"><span class="bar" style="width:100%" title="pipeline/: 4,180 LOC"></span><span class="bv" style="left:calc(100% - 66px);color:#fff">4,180 LOC</span></span></div>
+      <div class="brow"><span class="bl"><code>api/</code></span><span class="bt"><span class="bar" style="width:70.3%" title="api/: 2,940 LOC"></span><span class="bv" style="left:calc(70.3% + 6px)">2,940</span></span></div>
+      <div class="brow"><span class="bl"><code>store/</code></span><span class="bt"><span class="bar" style="width:55.3%" title="store/: 2,310 LOC"></span><span class="bv" style="left:calc(55.3% + 6px)">2,310</span></span></div>
+      <div class="brow"><span class="bl"><code>render/</code></span><span class="bt"><span class="bar" style="width:38.5%" title="render/: 1,610 LOC"></span><span class="bv" style="left:calc(38.5% + 6px)">1,610</span></span></div>
+      <div class="brow"><span class="bl"><code>queue/</code></span><span class="bt"><span class="bar" style="width:26.8%" title="queue/: 1,120 LOC"></span><span class="bv" style="left:calc(26.8% + 6px)">1,120</span></span></div>
+      <div class="brow"><span class="bl"><code>cli/</code></span><span class="bt"><span class="bar" style="width:23.4%" title="cli/: 980 LOC"></span><span class="bv" style="left:calc(23.4% + 6px)">980</span></span></div>
+      <div class="brow"><span class="bl">shared</span><span class="bt"><span class="bar" style="width:13.6%" title="shared (config.py, client.py, __init__.py): 570 LOC"></span><span class="bv" style="left:calc(13.6% + 6px)">570</span></span></div>
+    </div>
+    <details>
+      <summary>Full detail — responsibilities & annotated tree</summary>
+      <div class="body">
+        <table>
+          <tr><th>Module</th><th>Responsibility</th><th class="num">LOC</th><th class="num">Cov.</th></tr>
+          <tr><td><code>pipeline/</code></td><td>Ingest: schedule polls, fetch, extract readable text, dedup. Produces articles, never serves them.</td><td class="num">4,180</td><td class="num">84%</td></tr>
+          <tr><td><code>api/</code></td><td>HTTP surface: 31 REST endpoints, auth, pagination, OPML. Enqueues work; never fetches inline.</td><td class="num">2,940</td><td class="num">62%</td></tr>
+          <tr><td><code>store/</code></td><td>All persistence. Owns the SQLite file, schema, migrations, FTS. The only module that touches the DB.</td><td class="num">2,310</td><td class="num">91%</td></tr>
+          <tr><td><code>render/</code></td><td>Stored article → display HTML: sanitize, template, merge annotations.</td><td class="num">1,610</td><td class="num">76%</td></tr>
+          <tr><td><code>queue/</code></td><td>Job queue on a SQLite table. Broker, worker pool, retry policy. No Redis, no Celery.</td><td class="num">1,120</td><td class="num">88%</td></tr>
+          <tr><td><code>cli/</code></td><td>User-facing commands. Talks to the API over HTTP via <code>client.py</code>; imports no backend package.</td><td class="num">980</td><td class="num">41%</td></tr>
+          <tr><td>shared</td><td><code>config.py</code>, <code>client.py</code>, <code>__init__.py</code> — config loading and the HTTP client both ends share.</td><td class="num">570</td><td class="num">79%</td></tr>
+        </table>
+        <p>Backend Python total <strong>13,710 LOC</strong> at <strong>77%</strong> overall line coverage (pytest-cov). <code>web/</code> = 2,760 LOC JS + 380 CSS + 140 HTML = <strong>3,280 lines, no automated tests</strong>. Tooling: uv-managed, Python 3.12, 11 runtime deps; <code>meridian.toml.example</code> is the annotated config template (copy to <code>~/.config/meridian.toml</code>); <code>Makefile</code> gives <code>make run / make workers / make test</code>.</p>
+<pre class="tree">meridian/
+├── meridian/                  <b>backend package — 13,710 LOC</b>
+│   ├── config.py              TOML config load + validate (210)
+│   ├── client.py              thin HTTP client; used by cli/ + tests (330)
+│   ├── api/                   ASGI app, 31 REST endpoints (2,940)
+│   │   ├── app.py 240 · <b>routes.py 830 <span class="warnmark">← hotspot</span></b> · schemas.py 690
+│   │   └── auth.py 310 · pagination.py 280 · opml.py 470 · errors.py 120
+│   ├── pipeline/              ingest stages (4,180 — largest module)
+│   │   ├── scheduler.py 310 · fetcher.py 620 · dedup.py 380
+│   │   ├── <b>extractor.py 1,140 — PURE <span class="warnmark">← hotspot</span></b>
+│   │   └── sources/           adapters, registry pattern
+│   │       ├── __init__.py 140 (SOURCE_REGISTRY) · base.py 190 (SourceAdapter ABC)
+│   │       └── rss.py 410 · html_page.py 520 · mailbox.py 470
+│   ├── queue/                 SQLite-backed jobs — no external broker (1,120)
+│   │   └── broker.py 460 · worker.py 430 · retry.py 230
+│   ├── store/                 <b>the ONLY module that touches SQLite</b> (2,310)
+│   │   ├── db.py 340 (WAL, pragmas) · <b>writer.py 610 (ALL writes)</b> · reader.py 720
+│   │   └── schema.sql 280 (9 tables + articles_fts + triggers) · migrations/ 360 (7 scripts)
+│   ├── render/                stored article → display HTML (1,610)
+│   │   └── template.py 520 · sanitize.py 480 · annotations.py 610
+│   └── cli/                   HTTP client commands (980)
+│       ├── main.py 160 (auto-discovers commands/)
+│       └── commands/ add.py 180 · sync.py 200 · search.py 220 · export.py 220
+├── web/                       vanilla JS, no framework, no build step (3,280 lines)
+│   ├── js/ app.js 430 · api.js 310 · list.js 640 · <b>reader.js 920 <span class="warnmark">← hotspot</span></b> · settings.js 460
+│   └── css/style.css 380 (light/dark via media query) · index.html 140
+├── tests/                     pytest, 6,240 LOC
+│   ├── unit/ 348 tests (3,910) · integration/ 64 tests (1,880)
+│   └── fixtures/ 1,400 captured HTML pages + helpers (450 of helpers)
+└── docs/ architecture.md (layering rules) · adding-a-source-type.md (the 4-file recipe)</pre>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="write">
+    <h2><span class="ci">⇢</span> Write path — the fetch pipeline</h2>
+    <p class="lead"><strong>scheduler → jobs table → fetcher → extractor → dedup → store → FTS index.</strong> Articles flow one way into the store. About ≈7% of incoming items are flagged as near-duplicates and dropped; application code never writes the search index.</p>
+    <p class="kn"><b>2.1&nbsp;s</b> &nbsp;p50 from job dequeue to the article being searchable — dominated by the network fetch</p>
+    <details>
+      <summary>Full detail — the six stages, with numbers</summary>
+      <div class="body">
+        <ol>
+          <li><strong><code>pipeline/scheduler.py</code></strong> ticks every 60&nbsp;s, finds feeds whose poll interval (default 30&nbsp;min) has elapsed, and enqueues one fetch job per feed. Typical queue depth is 30–60 jobs; the health endpoint alerts at 500.</li>
+          <li><strong><code>queue/broker.py</code></strong> polls the <code>jobs</code> table every 500&nbsp;ms and leases jobs to 8 worker threads (<code>queue/worker.py</code>). Failures retry with backoff at 1&nbsp;min / 5&nbsp;min / 30&nbsp;min (<code>queue/retry.py</code>), then dead-letter.</li>
+          <li><strong><code>pipeline/fetcher.py</code></strong> does the HTTP work: conditional GET (ETag/Last-Modified), 20&nbsp;s timeout, per-host politeness delay.</li>
+          <li><strong><code>pipeline/extractor.py</code></strong> turns raw HTML into a structured Article (title, byline, body, word count). It is <strong>pure</strong> — p50 45&nbsp;ms, p95 320&nbsp;ms per article, no I/O of any kind.</li>
+          <li><strong><code>pipeline/dedup.py</code></strong> computes a 64-bit simhash of the body; Hamming distance ≤&nbsp;3 against stored hashes marks a duplicate. About 7% of incoming items are flagged and dropped.</li>
+          <li><strong><code>store/writer.py</code></strong> persists each surviving article in a single transaction. SQLite <strong>triggers</strong> defined in <code>schema.sql</code> update the <code>articles_fts</code> FTS5 index — application code never writes the index.</li>
+        </ol>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="read">
+    <h2><span class="ci">⇠</span> Read path — serving an article</h2>
+    <p class="lead"><strong>browser / CLI → api → store/reader → render → response.</strong> The web reader (<code>web/js/reader.js</code>) and the CLI consume the same endpoints — neither has a private backdoor into the database.</p>
+    <p class="kn"><b>28&nbsp;ms</b> &nbsp;p50 for <code>GET /articles/{id}</code>, end to end</p>
+    <details>
+      <summary>Full detail — the 28 ms budget</summary>
+      <div class="body">
+        <p><code>GET /articles/{id}</code> hits <code>api/routes.py</code>, which:</p>
+        <ol>
+          <li>reads the stored article via <code>store/reader.py</code> — <strong>6&nbsp;ms p50</strong> (reads return frozen dataclasses);</li>
+          <li>assembles display HTML in <code>render/template.py</code> — <strong>14&nbsp;ms</strong>;</li>
+          <li>merges the user's highlights in <code>render/annotations.py</code> — stored as character offsets into the rendered text — into <code>&lt;mark&gt;</code> spans — <strong>8&nbsp;ms</strong>.</li>
+        </ol>
+        <p>Total <strong>p50 28&nbsp;ms</strong>. The character-offset scheme is also the frontend's fragile coupling — see <a href="#hotspots">Hotspots</a>.</p>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="rules">
+    <h2><span class="ci">≣</span> Import layering — and its one violation</h2>
+    <p class="lead"><strong><code>store/</code> is the bottom layer and nothing imports <code>api/</code> or <code>cli/</code>.</strong> The layering is strict and documented in <code>docs/architecture.md</code> — with exactly one known violation, in the extractor.</p>
+    <div class="caveat"><b class="tag">⚠ The violation:</b> <strong><code>pipeline/extractor.py</code> (line 41) imports <code>clean_html()</code> from <code>render/sanitize.py</code></strong> — a sideways pipeline → render edge, present since v0.8.</div>
+    <details>
+      <summary>Full detail — the rules and why the violation matters</summary>
+      <div class="body">
+        <ul>
+          <li><code>store/</code> imports <strong>no other meridian package</strong> (stdlib + <code>sqlite3</code> only).</li>
+          <li><code>queue/</code> may import <code>store/</code>.</li>
+          <li><code>pipeline/</code> may import <code>store/</code> and <code>queue/</code>.</li>
+          <li><code>render/</code> may import <code>store/</code>.</li>
+          <li><code>api/</code> may import <code>store/</code>, <code>render/</code>, and <code>queue/</code>.</li>
+          <li><code>cli/</code> imports only <code>client.py</code> — it speaks HTTP and never imports backend packages.</li>
+          <li><strong>Nothing</strong> imports <code>api/</code> or <code>cli/</code>.</li>
+        </ul>
+        <p>The violation means a change to the <em>display</em> sanitizer can silently change what gets <em>stored</em>, and it is the reason two extractor purity tests are marked <code>xfail</code>. The fix — moving <code>clean_html()</code> down into a shared location — is tracked as issue #214 and is the top item in <code>docs/architecture.md</code>'s debt list.</p>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="invariants">
+    <h2><span class="ci">✓</span> The five load-bearing invariants</h2>
+    <p class="lead"><strong>Pure extractor · single writer · trigger-maintained FTS · idempotent jobs · no inline fetches in the API.</strong> These are what make the pipeline testable and replayable — break one and you break the codebase's core discipline.</p>
+    <details>
+      <summary>Full detail — each rule and what enforces it</summary>
+      <div class="body">
+        <ol>
+          <li><strong>The extractor is pure.</strong> Bytes in → Article out. No network, no disk, no DB, no clock. Deterministic: the same HTML always yields the same Article. A property test replays all 1,400 fixture pages on every CI run to enforce this.</li>
+          <li><strong>Only <code>store/writer.py</code> writes the database.</strong> Every INSERT, UPDATE, and DELETE in the codebase lives in that one 610-LOC file. Everything else reads through <code>store/reader.py</code>.</li>
+          <li><strong>The FTS index is trigger-maintained.</strong> <code>articles_fts</code> is updated only by SQLite triggers in <code>schema.sql</code>; no Python code ever touches it directly, so the index can never drift from the articles table.</li>
+          <li><strong>Queue jobs are idempotent.</strong> Replaying any job must not create duplicate articles — dedup plus the writer's upsert keys guarantee it, which is what makes the retry policy safe.</li>
+          <li><strong>The API never fetches inline.</strong> "Fetch this now" requests enqueue a job and return <code>202 Accepted</code>; only workers touch the network.</li>
+        </ol>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="hotspots">
+    <h2><span class="ci">⚑</span> Tech-debt hotspots — where to tread carefully</h2>
+    <p class="lead"><strong>Three files demand caution:</strong> <code>pipeline/extractor.py</code> (the scary one), <code>api/routes.py</code>, and <code>web/js/reader.js</code>.</p>
+    <div class="caveat"><b class="tag">⚠ The scary one:</b> <strong><code>extractor.py</code></strong> — 1,140 LOC, the largest file in the repo. Nearly every extraction bug fix lands here, and each one risks changing output for the other 13 heuristics.</div>
+    <details>
+      <summary>Full detail — all three hotspots</summary>
+      <div class="body">
+        <ol>
+          <li><strong><code>meridian/pipeline/extractor.py</code>.</strong> 1,140 LOC, the largest file in the repo. Contains <strong>14 site-specific extraction heuristics</strong> inlined as if/elif chains (max cyclomatic complexity 38), plus the layering violation (see <a href="#rules">Layering</a>). Nearly every extraction bug fix lands here, and each one risks changing output for the other 13 heuristics. The 1,400-page fixture corpus is the only safety net.</li>
+          <li><strong><code>meridian/api/routes.py</code>.</strong> All 31 endpoints in one 830-LOC file. <code>auth.py</code> exists, but <strong>11 routes inline their own copy-pasted auth check</strong> instead of using it. File-level coverage is 54% — below even the module's 62%.</li>
+          <li><strong><code>web/js/reader.js</code>.</strong> 920 LOC of vanilla JS with <strong>zero tests</strong>. Highlight anchoring uses character offsets into the rendered HTML, so any markup change in <code>render/template.py</code> silently corrupts existing highlight positions. This coupling has caused 3 of the last 10 user-reported bugs.</li>
+        </ol>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="tests">
+    <h2><span class="ci">▤</span> Tests & coverage</h2>
+    <p class="lead"><strong>412 tests — 348 unit + 64 integration — run in ~41&nbsp;s, for 77% backend line coverage.</strong> The frontend has no test harness at all (0%). <code>store/</code> and <code>queue/</code> are the best-covered layers; <code>cli/</code> and <code>api/</code> trail.</p>
+    <div class="bars" aria-label="Line coverage per module, percent">
+      <div class="brow"><span class="bl"><code>store/</code></span><span class="bt"><span class="bar" style="width:91%" title="store/: 91% line coverage"></span><span class="bv" style="left:calc(91% - 40px);color:#fff">91%</span></span></div>
+      <div class="brow"><span class="bl"><code>queue/</code></span><span class="bt"><span class="bar" style="width:88%" title="queue/: 88% line coverage"></span><span class="bv" style="left:calc(88% - 40px);color:#fff">88%</span></span></div>
+      <div class="brow"><span class="bl"><code>pipeline/</code></span><span class="bt"><span class="bar" style="width:84%" title="pipeline/: 84% line coverage"></span><span class="bv" style="left:calc(84% - 40px);color:#fff">84%</span></span></div>
+      <div class="brow"><span class="bl">shared</span><span class="bt"><span class="bar" style="width:79%" title="shared: 79% line coverage"></span><span class="bv" style="left:calc(79% - 40px);color:#fff">79%</span></span></div>
+      <div class="brow"><span class="bl"><code>render/</code></span><span class="bt"><span class="bar" style="width:76%" title="render/: 76% line coverage"></span><span class="bv" style="left:calc(76% - 40px);color:#fff">76%</span></span></div>
+      <div class="brow"><span class="bl"><code>api/</code></span><span class="bt"><span class="bar" style="width:62%" title="api/: 62% line coverage"></span><span class="bv" style="left:calc(62% + 6px)">62%</span></span></div>
+      <div class="brow"><span class="bl"><code>cli/</code></span><span class="bt"><span class="bar" style="width:41%" title="cli/: 41% line coverage"></span><span class="bv" style="left:calc(41% + 6px)">41%</span></span></div>
+      <div class="brow warnrow"><span class="bl"><code>web/</code></span><span class="bt"><span class="bv" style="left:6px">⚠ 0% — no JS test harness exists</span></span></div>
+    </div>
+    <details>
+      <summary>Full detail — what the suite covers</summary>
+      <div class="body">
+        <ul>
+          <li><code>tests/unit/</code> (348 tests, 3,910 LOC) mirrors the package layout one-to-one; the extractor's property test replays the <strong>1,400 captured HTML pages</strong> in <code>tests/fixtures/</code> (plus 450 LOC of helpers).</li>
+          <li><code>tests/integration/</code> (64 tests, 1,880 LOC) runs against a real temporary SQLite file and a live in-process ASGI app — <strong>no mocks at the store boundary</strong>.</li>
+          <li>Coverage by module (backend, line): store 91%, queue 88%, pipeline 84%, shared 79%, render 76%, api 62%, cli 41% — <strong>77% overall</strong> (pytest-cov). Within <code>api/</code>, <code>routes.py</code> itself sits at 54%.</li>
+          <li>The full suite runs in ~41&nbsp;s locally (<code>make test</code>).</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="start">
+    <h2><span class="ci">▶</span> Your first change — the two hot paths</h2>
+    <p class="lead"><strong>Adding a source type (the most common contribution) is a known 4-file recipe; adding an API endpoint centers on <code>api/routes.py</code>.</strong> A newcomer's first change almost never touches <code>store/</code> or <code>queue/</code> — those layers are stable (91% and 88% covered) and change only with schema migrations.</p>
+    <details>
+      <summary>Full detail — the recipes, file by file</summary>
+      <div class="body">
+        <p><strong>Adding a new source type</strong> touches exactly 4 files, per <code>docs/adding-a-source-type.md</code>:</p>
+        <ol>
+          <li><code>meridian/pipeline/sources/base.py</code> — subclass <code>SourceAdapter</code> (implement <code>discover()</code> and <code>fetch_items()</code>).</li>
+          <li><code>meridian/pipeline/sources/__init__.py</code> — register the class in <code>SOURCE_REGISTRY</code>.</li>
+          <li><code>meridian/store/migrations/</code> — one migration extending the <code>source_type</code> CHECK constraint.</li>
+          <li><code>meridian/cli/commands/add.py</code> — expose the new <code>--type</code> value.</li>
+        </ol>
+        <p>Plus a fixture-backed test under <code>tests/unit/pipeline/</code>. The three existing adapters (<code>rss.py</code>, <code>html_page.py</code>, <code>mailbox.py</code>) each followed this recipe.</p>
+        <p><strong>Adding an API endpoint</strong> touches <code>api/routes.py</code> + <code>api/schemas.py</code>, and <code>web/js/api.js</code> if the frontend consumes it.</p>
+        <p><strong>Adding a CLI command</strong> is one new module in <code>cli/commands/</code> — <code>main.py</code> auto-discovers it.</p>
+      </div>
+    </details>
+  </section>
+
+</main>
+
+<footer class="colophon">codebase-structure · layered-dashboard · v1 · 2026-07-01</footer>
+
+</div>
+
+<script>
+  // Progressive enhancement only: expand/collapse-all controls.
+  // With JS disabled the native <details> elements still work.
+  (function () {
+    var ctl = document.querySelector('.navctl');
+    if (!ctl) return;
+    function mk(label, open) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.addEventListener('click', function () {
+        document.querySelectorAll('details').forEach(function (d) { d.open = open; });
+      });
+      return b;
+    }
+    ctl.appendChild(mk('Expand all', true));
+    ctl.appendChild(mk('Collapse all', false));
+  })();
+</script>
+</body>
+</html>

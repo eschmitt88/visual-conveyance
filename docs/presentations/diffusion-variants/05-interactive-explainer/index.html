@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion models and their variants: how modern image generators work</title>
+<script>document.documentElement.classList.add('js');</script>
+<style>
+  :root{
+    --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7; --accent:#2a78d6; --accent-ink:#1c5cab;
+    --border:rgba(11,11,11,.10); --wash:rgba(42,120,214,.09); --warn:#ec835a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835; --accent:#3987e5; --accent-ink:#6da7ec;
+      --border:rgba(255,255,255,.10); --wash:rgba(57,135,229,.14);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--page); color:var(--ink);
+    font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-text-size-adjust:100%;
+  }
+  main{max-width:1080px; margin:0 auto; padding:28px 20px 40px}
+  h1{font-size:clamp(24px,3.2vw,34px); line-height:1.15; margin:0 0 10px; letter-spacing:-.01em}
+  h2{font-size:22px; margin:0 0 6px; letter-spacing:-.01em}
+  h3{font-size:16px; margin:0 0 6px}
+  p{margin:0 0 12px}
+  section > p{max-width:74ch}
+  section{margin:34px 0}
+  .dek{font-size:17px; color:var(--ink2); max-width:66ch; margin-bottom:14px}
+  .kicker{font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:var(--accent-ink); margin-bottom:4px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px}
+  .note{font-size:13.5px; color:var(--ink2)}
+  .small{font-size:13px; color:var(--muted)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.92em;
+       background:var(--wash); border-radius:4px; padding:1px 5px}
+
+  /* ---- hero / glance zone ---- */
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px}
+  .chip{font-size:13px; color:var(--ink2); background:var(--surface); border:1px solid var(--border);
+        border-radius:999px; padding:5px 12px}
+  .chip b{color:var(--ink); font-weight:600}
+  .hero-cols{display:grid; grid-template-columns:1.6fr 1fr; gap:16px; align-items:stretch}
+  .hero-cols > *{min-width:0}
+  @media (max-width:900px){ .hero-cols{grid-template-columns:1fr} }
+
+  /* trajectory explorer */
+  .arrowline{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink2); margin:2px 0}
+  .arrowline .rule{flex:1; height:1px; background:var(--baseline); position:relative}
+  .arrowline .rule::before{content:""; position:absolute; top:-3.5px; border:4px solid transparent}
+  .arrowline.fwd .rule::before{left:-1px; border-right-color:var(--baseline)}
+  .arrowline.rev .rule::before{right:-1px; border-left-color:var(--baseline)}
+  .stages{display:flex; gap:8px; margin:8px 0; min-width:0}
+  .stage{flex:1 1 0; min-width:0; border:1px solid var(--border); border-radius:8px; padding:5px 5px 3px;
+         background:var(--surface); text-align:center; cursor:default}
+  html.js .stage{cursor:pointer}
+  .stage svg{width:100%; height:auto; aspect-ratio:120/90; display:block; border-radius:4px}
+  .stage figcaption{font-size:11.5px; line-height:1.25; color:var(--muted); margin-top:3px}
+  html.js .stage.active{border-color:var(--accent); box-shadow:0 0 0 2px var(--wash)}
+  html.js .stage.active figcaption{color:var(--accent-ink); font-weight:600}
+  .sliderrow{display:flex; align-items:center; gap:12px; margin:10px 0 4px}
+  input[type=range]{flex:1; accent-color:var(--accent); cursor:pointer; min-height:24px}
+  .hint{font-size:12px; font-weight:600; color:var(--accent-ink); background:var(--wash);
+        border-radius:999px; padding:3px 10px; white-space:nowrap}
+  #stage-caption{min-height:5.2em; font-size:14px; color:var(--ink2); margin:4px 0 0}
+  #stage-caption b{color:var(--ink)}
+  .stage-notes{font-size:14px; color:var(--ink2); padding-left:20px; margin:8px 0 0}
+  .stage-notes li{margin-bottom:6px}
+  html.js .stage-notes{display:none}
+  html:not(.js) .js-only{display:none}
+
+  /* hero right: step chain */
+  .chain{display:flex; flex-direction:column; gap:0; margin-top:8px}
+  .chain-row{display:flex; align-items:baseline; gap:10px; padding:6px 0; border-bottom:1px solid var(--grid)}
+  .chain-row:last-child{border-bottom:0}
+  .chain-num{font-size:20px; font-weight:650; min-width:82px; text-align:right; letter-spacing:-.01em}
+  .chain-lab{font-size:13.5px; color:var(--ink2)}
+  .chain-lab b{color:var(--ink); font-weight:600}
+
+  /* terms with tooltips */
+  .term{position:relative; display:inline; font:inherit; color:inherit; background:none; border:0; padding:0;
+        border-bottom:1px dotted var(--accent-ink); cursor:help; text-align:left}
+  .term::after{content:"?"; font-size:.62em; vertical-align:super; color:var(--accent-ink); font-weight:700; margin-left:1px}
+  .term .tip{display:none; position:absolute; z-index:5; left:0; bottom:calc(100% + 6px); width:270px; max-width:74vw;
+             background:var(--surface); color:var(--ink2); border:1px solid var(--border); border-radius:8px;
+             box-shadow:0 4px 14px rgba(0,0,0,.14); padding:8px 10px; font-size:13px; line-height:1.45; font-weight:400}
+  .term:hover .tip, .term:focus-visible .tip, .term.open .tip{display:block}
+  html:not(.js) .term .tip{position:static; display:inline; width:auto; border:0; box-shadow:none; padding:0; background:none}
+  html:not(.js) .term .tip::before{content:" ("} html:not(.js) .term .tip::after{content:")"}
+
+  /* cards grid */
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  @media (max-width:820px){ .grid3{grid-template-columns:1fr} }
+  .grid3 .card h3{color:var(--accent-ink)}
+
+  /* step-count chart */
+  .chart{margin:14px 0 4px}
+  .chart-plot{position:relative}
+  .chart-gridlines{position:absolute; inset:0 96px 0 150px; pointer-events:none}
+  .chart-gridlines i{position:absolute; top:0; bottom:0; width:1px; background:var(--grid)}
+  .chart-row{display:grid; grid-template-columns:150px 1fr 96px; align-items:center; gap:0;
+             width:100%; border:0; background:none; padding:7px 0; font:inherit; color:inherit; text-align:left;
+             border-radius:6px; position:relative}
+  html.js .chart-row{cursor:pointer}
+  html.js .chart-row:hover{background:var(--wash)}
+  html.js .chart-row.active .rowlab{color:var(--accent-ink); font-weight:650}
+  .rowlab{font-size:13.5px; color:var(--ink2); padding-right:10px; font-weight:500}
+  .track{position:relative; height:14px}
+  .bar{position:absolute; top:1px; height:12px; background:var(--accent); border-radius:4px; min-width:6px}
+  .dot{position:absolute; top:2px; width:10px; height:10px; border-radius:50%; background:var(--accent);
+       box-shadow:0 0 0 2px var(--surface); margin-left:-10px}
+  .rowval{font-size:13px; color:var(--ink2); text-align:left; padding-left:12px; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .chart-axis{display:grid; grid-template-columns:150px 1fr 96px; font-size:11.5px; color:var(--muted)}
+  .chart-axis .ticks{position:relative; height:16px; border-top:1px solid var(--baseline)}
+  .chart-axis .ticks span{position:absolute; top:2px; transform:translateX(-50%)}
+  .axis-title{font-size:11.5px; color:var(--muted); text-align:right; grid-column:2}
+
+  /* tabs / segmented controls */
+  .seg{display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 0}
+  .seg [role=tab]{font:inherit; font-size:13.5px; font-weight:550; color:var(--ink2); background:var(--surface);
+        border:1px solid var(--border); border-radius:999px; padding:6px 14px; cursor:pointer;
+        box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .seg [role=tab]:hover{background:var(--wash)}
+  .seg [role=tab][aria-selected="true"]{background:var(--accent); border-color:var(--accent); color:#fff}
+  html:not(.js) .seg{display:none}
+  .panel{margin-top:12px}
+  .panel h3 .steps{font-size:13px; font-weight:600; color:var(--accent-ink); margin-left:8px}
+  html:not(.js) .panel{border-top:1px solid var(--grid); padding-top:12px}
+
+  /* variants table */
+  table{border-collapse:collapse; width:100%; font-size:13.5px; margin-top:8px}
+  th,td{text-align:left; padding:7px 10px; border-bottom:1px solid var(--grid); vertical-align:top}
+  th{font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600}
+  td:nth-child(2){white-space:nowrap; font-variant-numeric:tabular-nums}
+
+  /* pipelines (latent toggle) */
+  .pipe{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:14px 0 8px}
+  .pbox{border:1px solid var(--border); border-radius:8px; background:var(--surface); padding:8px 10px; text-align:center}
+  .pbox .t{font-size:13px; font-weight:600}
+  .pbox .s{font-size:11.5px; color:var(--muted)}
+  .pbox.loop{border-color:var(--accent); box-shadow:0 0 0 2px var(--wash)}
+  .parrow{color:var(--muted); font-size:15px}
+  .gridviz{margin:0 auto 6px; border-radius:3px; background-color:var(--wash);
+           background-image:linear-gradient(var(--baseline) 1px,transparent 1px),linear-gradient(90deg,var(--baseline) 1px,transparent 1px)}
+  .gv-big{width:84px; height:84px; background-size:6px 6px}
+  .gv-small{width:26px; height:26px; background-size:6px 6px}
+
+  /* CFG */
+  .cfg-readout{display:flex; align-items:baseline; gap:10px; margin:8px 0 2px}
+  .cfg-readout .val{font-size:30px; font-weight:650; letter-spacing:-.01em}
+  .gauge{position:relative; height:16px; border-radius:4px; overflow:hidden; margin:8px 0 2px}
+  .gauge .zone{position:absolute; top:0; bottom:0}
+  .z-none{left:0; width:6.667%; background:var(--grid)}
+  .z-work{left:6.667%; width:66.666%; background:var(--wash)}
+  .z-art{left:73.333%; width:26.667%; background:var(--warn); opacity:.38}
+  .gauge .defmark{position:absolute; top:0; bottom:0; left:43.33%; width:2px; background:var(--baseline)}
+  #cfg-marker{position:absolute; top:-2px; bottom:-2px; width:3px; background:var(--ink); border-radius:2px}
+  .gauge-labels{display:flex; font-size:11px; color:var(--muted); margin-bottom:10px}
+  .gauge-labels span:nth-child(1){width:6.667%; white-space:nowrap}
+  .gauge-labels span:nth-child(2){width:66.666%; text-align:center}
+  .gauge-labels span:nth-child(3){width:26.667%; text-align:right}
+  .cfg-cards{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px}
+  @media (max-width:820px){ .cfg-cards{grid-template-columns:1fr} }
+  .cfg-card{border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:13.5px; color:var(--ink2)}
+  .cfg-card h4{margin:0 0 4px; font-size:13px; color:var(--ink)}
+  html.js .cfg-card{opacity:.45}
+  html.js .cfg-card.active{opacity:1; border-color:var(--accent); box-shadow:0 0 0 2px var(--wash)}
+  .formula{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:14px;
+           background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 12px;
+           display:inline-block; margin:4px 0 10px}
+
+  /* misconceptions */
+  .myths{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:820px){ .myths{grid-template-columns:1fr} }
+  .myth h3{font-size:14.5px}
+  .verdict{display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+           border-radius:4px; padding:1px 7px; margin-right:6px; background:var(--wash); color:var(--accent-ink)}
+  .myth p{font-size:13.5px; color:var(--ink2); margin:0}
+
+  /* glossary */
+  dl{display:grid; grid-template-columns:max-content 1fr; gap:6px 16px; font-size:14px; margin:8px 0 0}
+  dt{font-weight:600} dd{margin:0; color:var(--ink2)}
+  @media (max-width:600px){ dl{grid-template-columns:1fr} dd{margin-bottom:6px} }
+
+  footer{max-width:1080px; margin:0 auto; padding:10px 20px 18px; font-size:11.5px; color:var(--muted);
+         border-top:1px solid var(--grid)}
+
+  @media (max-width:600px){
+    .chart-row,.chart-axis{grid-template-columns:86px 1fr 66px}
+    .chart-gridlines{inset:0 66px 0 86px}
+    .rowlab{font-size:12px} .rowval{font-size:11.5px; padding-left:8px}
+    .chain-num{min-width:78px; font-size:19px}
+    .stage figcaption{font-size:10px}
+    .pipe{flex-direction:column; align-items:stretch}
+    .parrow{transform:rotate(90deg); align-self:center}
+  }
+</style>
+</head>
+<body>
+
+<!-- shared SVG defs: stylized scene + grain, reused by the trajectory stages -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="vc-scene">
+      <rect x="-10" y="-10" width="140" height="110" fill="#b8d3e8"/>
+      <circle cx="90" cy="21" r="11" fill="#f0c04a"/>
+      <path d="M-10 64 L32 28 L74 64 Z" fill="#5b7c99"/>
+      <path d="M42 64 L82 22 L130 64 Z" fill="#41586e"/>
+      <rect x="-10" y="61" width="140" height="49" fill="#7ba05b"/>
+    </g>
+    <g id="vc-detail">
+      <path d="M76 27 L82 22 L88 28 L84 24 Z" fill="#e8eef2"/>
+      <path d="M20 16 q3 -3 6 0 M28 19 q3 -3 6 0" stroke="#3c4a56" stroke-width="1.1" fill="none"/>
+      <rect x="18" y="66" width="2.4" height="9" fill="#5a4632"/>
+      <circle cx="19.2" cy="63" r="5" fill="#4d7a3a"/>
+      <path d="M0 78 q30 -4 60 0 q30 4 60 0" stroke="#6b9050" stroke-width="1.4" fill="none"/>
+    </g>
+    <filter id="vc-b8" x="-15%" y="-15%" width="130%" height="130%"><feGaussianBlur stdDeviation="7"/></filter>
+    <filter id="vc-b4" x="-15%" y="-15%" width="130%" height="130%"><feGaussianBlur stdDeviation="3.4"/></filter>
+    <filter id="vc-b1" x="-15%" y="-15%" width="130%" height="130%"><feGaussianBlur stdDeviation="1"/></filter>
+    <filter id="vc-grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+</svg>
+
+<main>
+
+  <!-- ============ GLANCE ZONE ============ -->
+  <header>
+    <p class="kicker">Diffusion models &amp; their variants</p>
+    <h1>Destroy an image carefully, and you can learn to rebuild one from nothing</h1>
+    <p class="dek">Modern image generators — Stable Diffusion, Midjourney-class systems, DALL·E&nbsp;3, Flux —
+      run a fixed noising process <em>backwards</em>: a trained network removes noise a little at a time,
+      starting from pure randomness. Most of the variant zoo (DDIM, ODE solvers, latent diffusion, distillation,
+      flow matching) exists to make one thing cheaper — sampling; guidance (CFG) exists to make it follow your prompt.</p>
+    <div class="chips">
+      <span class="chip"><b>Starts from pure noise</b> — never from an existing photo</span>
+      <span class="chip"><b>No images are stored</b> — the weights encode statistics, not copies</span>
+      <span class="chip"><b>~1000 steps, naively</b> — the cost every variant attacks</span>
+    </div>
+  </header>
+
+  <div class="hero-cols">
+    <div class="card">
+      <h2 style="font-size:17px">Generation: 1000 small denoising steps</h2>
+      <div class="arrowline fwd"><span>forward process — <b>fixed</b> noising, no learning (makes training examples)</span><span class="rule"></span></div>
+      <div id="traj" class="stages">
+        <figure class="stage active" tabindex="0" style="margin:0">
+          <svg viewBox="0 0 120 90" role="img" aria-label="Pure noise, like TV static">
+            <rect width="120" height="90" fill="#808080"/>
+            <rect width="120" height="90" filter="url(#vc-grain)"/>
+          </svg>
+          <figcaption>t = 1000 · pure noise</figcaption>
+        </figure>
+        <figure class="stage" tabindex="0" style="margin:0">
+          <svg viewBox="0 0 120 90" role="img" aria-label="Very noisy image with faint blobs of tone">
+            <use href="#vc-scene" filter="url(#vc-b8)"/>
+            <rect width="120" height="90" filter="url(#vc-grain)" opacity="0.68"/>
+          </svg>
+          <figcaption>t ≈ 750 · blobs of tone</figcaption>
+        </figure>
+        <figure class="stage" tabindex="0" style="margin:0">
+          <svg viewBox="0 0 120 90" role="img" aria-label="Grainy image where only coarse layout survives">
+            <use href="#vc-scene" filter="url(#vc-b4)"/>
+            <rect width="120" height="90" filter="url(#vc-grain)" opacity="0.42"/>
+          </svg>
+          <figcaption>t ≈ 500 · coarse layout</figcaption>
+        </figure>
+        <figure class="stage" tabindex="0" style="margin:0">
+          <svg viewBox="0 0 120 90" role="img" aria-label="Slightly grainy image with clear object shapes">
+            <use href="#vc-scene" filter="url(#vc-b1)"/>
+            <rect width="120" height="90" filter="url(#vc-grain)" opacity="0.16"/>
+          </svg>
+          <figcaption>t ≈ 250 · object shapes</figcaption>
+        </figure>
+        <figure class="stage" tabindex="0" style="margin:0">
+          <svg viewBox="0 0 120 90" role="img" aria-label="Crisp finished image with fine detail">
+            <use href="#vc-scene"/>
+            <use href="#vc-detail"/>
+          </svg>
+          <figcaption>t = 0 · fine texture</figcaption>
+        </figure>
+      </div>
+      <div class="arrowline rev"><span class="rule"></span><span><b>reverse</b> process — learned denoising = generation</span></div>
+      <div class="sliderrow js-only">
+        <input type="range" id="traj-slider" min="0" max="4" step="1" value="0"
+               aria-label="Denoising trajectory stage" aria-describedby="stage-caption">
+        <span class="hint">drag to denoise →</span>
+      </div>
+      <p id="stage-caption" class="js-only"><b>t = 1000 — pure random noise.</b> Statistically indistinguishable from Gaussian noise (like analog TV static). Every text-to-image generation starts exactly here: the only inputs are random numbers and the network’s learned weights.</p>
+      <ol id="stage-notes" class="stage-notes" reversed start="1000">
+        <li value="1000"><b>t = 1000 — pure random noise.</b> Statistically indistinguishable from Gaussian noise (like analog TV static). Every text-to-image generation starts exactly here: the only inputs are random numbers and the network’s learned weights.</li>
+        <li value="750"><b>t ≈ 750 — blobs of tone.</b> Each learned step estimates a slightly less noisy image. Removing <em>all</em> the noise in one jump would be nearly impossible — countless clean images are consistent with a very noisy input — but removing a little is a tractable prediction, and chaining many small steps is what makes the whole thing work.</li>
+        <li value="500"><b>t ≈ 500 — coarse layout.</b> Global composition emerges. At high noise levels the network has learned exactly this kind of decision — “where could a horizon plausibly go?”</li>
+        <li value="250"><b>t ≈ 250 — object shapes.</b> Coarse shapes sharpen into recognizable objects; only light grain remains (in the fixed forward process, step 200 is just “slightly grainy”).</li>
+        <li value="0"><b>t = 0 — fine texture; done.</b> The output is a new image that never existed anywhere. The model is not cleaning up or editing any real photo (except in explicit image-to-image modes where the user supplies one).</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:17px">Why so many variants? Fewer steps.</h2>
+      <p class="note" style="margin-bottom:0">Naive sampling runs the full network once per step — ~1000 sequential passes per image. Nearly every major variant attacks that cost:</p>
+      <div class="chain">
+        <div class="chain-row"><span class="chain-num">~1000</span><span class="chain-lab"><b>DDPM</b> — the original; impractically slow</span></div>
+        <div class="chain-row"><span class="chain-num">20–50</span><span class="chain-lab"><b>DDIM</b> — same model, deterministic</span></div>
+        <div class="chain-row"><span class="chain-num">10–20</span><span class="chain-lab"><b>ODE solvers</b> — no retraining needed</span></div>
+        <div class="chain-row"><span class="chain-num">1–4</span><span class="chain-lab"><b>distilled / consistency</b> — mild quality cost</span></div>
+      </div>
+      <p class="small" style="margin:10px 0 0">Details, tradeoffs, and flow matching in <a href="#variants" style="color:var(--accent-ink)">the variant explorer</a> below ↓</p>
+    </div>
+  </div>
+
+  <!-- ============ CORE MECHANISM ============ -->
+  <section>
+    <p class="kicker">1 · The core idea</p>
+    <h2>Two processes, opposite directions</h2>
+    <p>A diffusion model is defined by two processes. The <b>forward (noising) process</b> is fixed and involves no
+      learning: take a real image, add a small amount of
+      <button class="term" type="button" aria-expanded="false">Gaussian noise<span class="tip">random static drawn from a bell-curve distribution — like analog TV static</span></button>,
+      and repeat — about <b>T&nbsp;=&nbsp;1000 steps</b> in the original DDPM formulation — following a predefined
+      <button class="term" type="button" aria-expanded="false">noise schedule<span class="tip">the predefined recipe for how much noise each forward step adds</span></button>.
+      Early steps barely change the image; at step 200 it is slightly grainy, at step 600 only coarse shapes survive,
+      and by step 1000 nothing survives — the result is statistically indistinguishable from pure noise.</p>
+    <p>The <b>reverse (denoising) process</b> is what gets learned. A neural network is trained to undo one small step:
+      given a noisy image and the step number <i>t</i> (the
+      <button class="term" type="button" aria-expanded="false">timestep<span class="tip">position along the noising process; high t = more noise</span></button>),
+      estimate a slightly less noisy version. <b>Generation</b> then means: sample fresh pure noise and apply the learned
+      step repeatedly — t = 1000, 999, 998, … down to 0 — exactly the trajectory in the explorer above.</p>
+  </section>
+
+  <!-- ============ WHAT THE NETWORK PREDICTS ============ -->
+  <section>
+    <p class="kicker">2 · Under the hood</p>
+    <h2>What does the network actually predict?</h2>
+    <p class="note" style="max-width:70ch">“The network denoises the image” hides a design choice. Three output
+      parameterizations are common — and they are <b>mathematically interchangeable</b> (simple algebra converts one to
+      another); they differ in training stability and convention.</p>
+    <div class="grid3">
+      <div class="card"><h3>ε — noise prediction</h3><p class="note" style="margin:0">Predict <em>the noise that was added</em>; subtracting a scaled version of it recovers an estimate of the clean image. The original DDPM choice and still the most common.</p></div>
+      <div class="card"><h3>Score prediction</h3><p class="note" style="margin:0">Predict the <b>score</b> — the gradient of the log-probability density of noisy images, i.e. the direction in pixel space that makes the image more probable. The predicted noise is just a negatively scaled score: two descriptions of the same quantity.</p></div>
+      <div class="card"><h3>v — velocity prediction</h3><p class="note" style="margin:0">Predict a defined mixture of the image and the noise (“velocity”). Introduced with progressive distillation; numerically better behaved at very high noise levels and used by several later models.</p></div>
+    </div>
+    <p class="note" style="margin-top:12px">Whichever target is used, the network sees the noisy image and the timestep
+      <i>t</i> — plus, in text-to-image models, a representation of the prompt (see guidance, below). Architecturally it is
+      typically a <button class="term" type="button" aria-expanded="false">U-Net<span class="tip">a convolutional encoder–decoder network with skip connections</span></button>
+      in the Stable-Diffusion-1/2 generation, or a
+      <button class="term" type="button" aria-expanded="false">diffusion transformer (DiT)<span class="tip">a transformer-based denoising network, used in newer systems like SD3 and Flux</span></button>
+      in newer systems.</p>
+  </section>
+
+  <!-- ============ TRAINING ============ -->
+  <section>
+    <p class="kicker">3 · Training</p>
+    <h2>A denoising exercise, repeated billions of times</h2>
+    <div class="card">
+      <ol style="margin:0; padding-left:22px; font-size:14.5px">
+        <li>Draw a real image from the training set.</li>
+        <li>Draw a random timestep <i>t</i> — anywhere from light to total noise.</li>
+        <li>Add the corresponding amount of noise <b>in one shot</b> — a closed-form formula gives the correctly noised image for any <i>t</i> directly, no step-by-step simulation.</li>
+        <li>Ask the network to predict the noise that was added; penalize with a simple
+          <button class="term" type="button" aria-expanded="false">mean-squared error<span class="tip">the average of the squared differences between predicted and actual values — a plain regression loss</span></button>
+          between predicted and actual noise.</li>
+      </ol>
+    </div>
+    <p class="note" style="margin-top:12px; max-width:72ch">That is the entire objective (formally a weighted variational
+      bound on the data likelihood, but the practical loss really is “guess the noise, MSE”). Each example exercises one
+      random noise level, so over billions of examples the network learns denoising at <em>every</em> level: global
+      composition at high noise, fine texture at low noise. No adversarial game as in GANs — no generator and
+      discriminator to keep in delicate balance — and that stability is a big reason diffusion displaced GANs for
+      large-scale image generation.</p>
+  </section>
+
+  <!-- ============ VARIANTS ============ -->
+  <section id="variants">
+    <p class="kicker">4 · The variant zoo</p>
+    <h2>One long answer to “how do we take fewer steps?”</h2>
+    <p class="note" style="max-width:72ch">Training looks at one noise level at a time, but sampling must walk the whole
+      chain — ~1000 sequential forward passes that cannot be parallelized (each depends on the previous one). Even on a
+      fast GPU, a single image took the better part of a minute in 2020. Click a bar (or a tab) for each family’s story.</p>
+
+    <div class="card">
+      <div class="chart" id="step-chart" aria-label="Typical sampling steps per variant family, log scale">
+        <div class="chart-plot">
+          <div class="chart-gridlines" aria-hidden="true"><i style="left:0"></i><i style="left:33.333%"></i><i style="left:66.667%"></i><i style="right:0"></i></div>
+          <button class="chart-row active" type="button"><span class="rowlab">DDPM (ancestral)</span><span class="track"><span class="dot" style="left:100%"></span></span><span class="rowval">~1000</span></button>
+          <button class="chart-row" type="button"><span class="rowlab">DDIM</span><span class="track"><span class="bar" style="left:43.4%; width:13.3%"></span></span><span class="rowval">20–50</span></button>
+          <button class="chart-row" type="button"><span class="rowlab">ODE solvers (DPM-Solver++ …)</span><span class="track"><span class="bar" style="left:33.3%; width:10.1%"></span></span><span class="rowval">10–20</span></button>
+          <button class="chart-row" type="button"><span class="rowlab">Rectified flow / flow matching</span><span class="track"><span class="bar" style="left:43.4%; width:5.9%"></span></span><span class="rowval">~20–30</span></button>
+          <button class="chart-row" type="button"><span class="rowlab">Distilled / consistency / LCM</span><span class="track"><span class="bar" style="left:0%; width:20.1%"></span></span><span class="rowval">1–4</span></button>
+        </div>
+        <div class="chart-axis"><span></span><span class="ticks"><span style="left:0">1</span><span style="left:33.333%">10</span><span style="left:66.667%">100</span><span style="left:100%">1000</span></span><span></span></div>
+        <div class="chart-axis" style="margin-top:2px"><span></span><span class="axis-title">typical sampling steps per image (log scale)</span><span></span></div>
+      </div>
+
+      <div class="seg" role="tablist" id="variant-tabs" aria-label="Variant families">
+        <button role="tab" id="tab-ddpm" aria-controls="panel-ddpm" aria-selected="true">DDPM</button>
+        <button role="tab" id="tab-ddim" aria-controls="panel-ddim" aria-selected="false">DDIM</button>
+        <button role="tab" id="tab-ode" aria-controls="panel-ode" aria-selected="false">ODE / score view</button>
+        <button role="tab" id="tab-flow" aria-controls="panel-flow" aria-selected="false">Flow matching</button>
+        <button role="tab" id="tab-distill" aria-controls="panel-distill" aria-selected="false">Distillation</button>
+      </div>
+
+      <div class="panel" id="panel-ddpm" role="tabpanel" aria-labelledby="tab-ddpm">
+        <h3>DDPM — the original<span class="steps">~1000 steps</span></h3>
+        <p class="note">The 2020 formulation the whole family descends from. The sampler injects fresh randomness at
+          every step and visits all ~1000 timesteps. Excellent quality, impractically slow — this is the “original sin”
+          the rest of the zoo exists to fix.</p>
+      </div>
+      <div class="panel" id="panel-ddim" role="tabpanel" aria-labelledby="tab-ddim">
+        <h3>DDIM — same model, fewer &amp; deterministic steps<span class="steps">20–50 steps</span></h3>
+        <p class="note">DDIM (2020) was the first big win, using the <em>same trained network, unchanged</em>. Its sampler is
+          <b>deterministic</b> — fix the initial noise and you get exactly the same image every time — and it tolerates much
+          larger jumps: visit a 20–50-step subsequence of the 1000 timesteps with only a modest quality loss. Determinism has
+          side benefits: you can <em>invert</em> a generated image back to its noise (useful for editing) and smoothly
+          interpolate between two images by interpolating their noise. When an image tool exposes a “steps” slider
+          defaulting to something like 30, it is exposing exactly this tradeoff.</p>
+      </div>
+      <div class="panel" id="panel-ode" role="tabpanel" aria-labelledby="tab-ode">
+        <h3>The score-based / SDE view — one lens that unifies everything<span class="steps">~10–20 steps</span></h3>
+        <p class="note">In 2021, score-based generative models were shown to be the <em>same thing</em> as diffusion in a
+          continuous-time limit — now the field’s standard mental model. The forward process is a
+          <button class="term" type="button" aria-expanded="false">stochastic differential equation (SDE)<span class="tip">an equation describing a continuous random drift — here, of images toward noise</span></button>;
+          reversing it needs exactly one learned quantity, the score. With it there are two ways back: a reverse-time SDE
+          (random, like DDPM) or a <b>probability flow ODE</b> — fully deterministic, same distribution of images. DDIM is
+          essentially a discretization of this ODE. Once sampling is “just solving an ODE,” the numerical-solver toolbox
+          applies: purpose-built higher-order solvers (DPM-Solver and successors) get good samples in <b>~10–20 steps with
+          no retraining</b>. This view also explains why so many variants coexist: different discretizations, paths, or
+          parameterizations of the same underlying object.</p>
+      </div>
+      <div class="panel" id="panel-flow" role="tabpanel" aria-labelledby="tab-flow">
+        <h3>Flow matching &amp; rectified flow — straighter paths<span class="steps">~20–30 steps (fewer viable)</span></h3>
+        <p class="note">Why follow the curved paths Gaussian noising dictates at all? <b>Flow matching</b> trains the network
+          to predict a velocity field that transports noise to data along prescribed paths; <b>rectified flow</b> picks the
+          simplest ones — straight lines. A training point is just a linear blend of an image and a noise sample; the
+          regression target is the constant velocity (their difference) along that line. Nearly straight paths need far
+          fewer ODE steps, and the recipe drops diffusion-specific scaffolding (noise schedules, timestep-dependent
+          scalings). It is a close sibling of diffusion, not a rival: with Gaussian paths it recovers diffusion’s
+          probability-flow ODE, and score / noise / velocity stay interconvertible. <b>Stable Diffusion 3 and Flux-class
+          models are trained this way</b>, with transformer backbones, in latent space.</p>
+      </div>
+      <div class="panel" id="panel-distill" role="tabpanel" aria-labelledby="tab-distill">
+        <h3>Distillation &amp; consistency models — 1–4 steps<span class="steps">1–4 steps</span></h3>
+        <p class="note">Fast samplers plateau around 10–20 steps; going lower means <em>training</em> for big jumps.
+          <b>Progressive distillation</b> trains a student to match in one step what a teacher does in two, then repeats —
+          halving each round (1000 → 500 → … → 4). <b>Consistency models</b> (2023) train the network so any noisy point on a
+          trajectory maps directly to the same clean endpoint, allowing 1-step generation with 2–4 steps as refinement;
+          latent consistency models (LCMs) bring this to Stable-Diffusion-class latents (~4 steps). <b>Adversarial
+          distillation</b> (SDXL-Turbo-style) adds a GAN-like critic to sharpen few-step outputs. The tradeoff is real:
+          distilled few-step models trade some quality and diversity for speed — outputs tend to be slightly softer or less
+          varied than the 20–50-step teacher — and the extra training stage adds pipeline complexity. This is the technology
+          behind “real-time” generation demos that redraw as you type.</p>
+      </div>
+
+      <p class="note" style="margin:14px 0 0"><b>Rules of thumb:</b> below ~10 steps, undistilled models degrade visibly;
+        above ~50, returns diminish rapidly. “More steps” refines the <em>same</em> trajectory — it is not a search over
+        more images. And guidance (next sections) doubles the per-step cost.</p>
+
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer; font-size:13.5px; color:var(--accent-ink)">The same, as a table</summary>
+        <table>
+          <thead><tr><th>Family</th><th>Typical steps</th><th>Character</th></tr></thead>
+          <tbody>
+            <tr><td>DDPM (ancestral)</td><td>~1000</td><td>Original formulation; excellent quality; impractically slow</td></tr>
+            <tr><td>DDIM</td><td>20–50</td><td>Same trained model; deterministic; the everyday workhorse range</td></tr>
+            <tr><td>ODE solvers (DPM-Solver++ etc.)</td><td>10–20</td><td>Better numerics, no retraining; near-DDIM quality</td></tr>
+            <tr><td>Rectified flow / flow matching</td><td>~20–30 (fewer viable)</td><td>Retrained objective; straight paths; SD3/Flux generation</td></tr>
+            <tr><td>Distilled / consistency / LCM</td><td>1–4</td><td>Retrained for big jumps; fastest; mild quality &amp; diversity cost</td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ LATENT DIFFUSION ============ -->
+  <section>
+    <p class="kicker">5 · Latent diffusion</p>
+    <h2>Do it in compressed space</h2>
+    <p class="note" style="max-width:72ch">Pixels are expensive: a 512×512 RGB image is 512 × 512 × 3 =
+      <b>786,432 numbers</b>, and the denoising network must process all of them at every one of dozens-to-hundreds of
+      steps. <b>Latent diffusion</b> (2022) adds a compression stage: a separately trained
+      <button class="term" type="button" aria-expanded="false">variational autoencoder (VAE)<span class="tip">an encoder–decoder pair trained so that a compressed representation reconstructs to a near-identical image</span></button>
+      maps each image into a much smaller <em>latent</em> representation and back. This is the change that made
+      Stable-Diffusion-class models run on consumer GPUs — and why the model is called “latent.”</p>
+
+    <div class="card">
+      <div class="seg" role="tablist" id="space-toggle" aria-label="Pixel space versus latent space">
+        <button role="tab" id="tab-pixel" aria-controls="panel-pixel" aria-selected="true">Pixel-space diffusion</button>
+        <button role="tab" id="tab-latent" aria-controls="panel-latent" aria-selected="false">Latent diffusion — toggle me</button>
+      </div>
+
+      <div class="panel" id="panel-pixel" role="tabpanel" aria-labelledby="tab-pixel">
+        <h3>Diffusion directly on pixels</h3>
+        <div class="pipe">
+          <span class="pbox"><span class="gridviz gv-big" aria-hidden="true"></span><span class="t">Pure noise, 512×512×3</span><br><span class="s">786,432 numbers</span></span>
+          <span class="parrow">→</span>
+          <span class="pbox loop"><span class="t">Denoising loop</span><br><span class="s">the network processes all 786,432 numbers, every step</span></span>
+          <span class="parrow">→</span>
+          <span class="pbox"><span class="t">Image, 512×512</span><br><span class="s">full resolution throughout</span></span>
+        </div>
+        <p class="note" style="margin:0">Everything in sections 1–4 as-is: forward noising, training, and sampling all
+          operate on the full pixel grid — the entire cost is paid at full resolution at every step.</p>
+      </div>
+
+      <div class="panel" id="panel-latent" role="tabpanel" aria-labelledby="tab-latent">
+        <h3>Diffusion in the VAE’s latent space</h3>
+        <div class="pipe">
+          <span class="pbox"><span class="gridviz gv-small" aria-hidden="true"></span><span class="t">Pure noise, 64×64×4</span><br><span class="s">16,384 numbers — ≈48× fewer</span></span>
+          <span class="parrow">→</span>
+          <span class="pbox loop"><span class="t">Denoising loop, in latent space</span><br><span class="s">every step ≈48× cheaper</span></span>
+          <span class="parrow">→</span>
+          <span class="pbox"><span class="t">VAE decoder</span><br><span class="s">one single pass</span></span>
+          <span class="parrow">→</span>
+          <span class="pbox"><span class="t">Image, 512×512</span><br><span class="s">full resolution restored</span></span>
+        </div>
+        <p class="note" style="margin:0">In Stable Diffusion the encoder downsamples 8× in each spatial dimension:
+          512×512×3 becomes a 64×64 latent with 4 channels. The compression is perceptual, not lossless — the VAE is
+          trained so the reconstruction looks essentially identical, discarding imperceptible detail. The costs are minor:
+          a slight quality ceiling from the compression bottleneck (historically visible in fine text and small faces, much
+          improved in newer VAEs) and one extra decode pass. Note the division of labor: <b>the VAE is only a
+          compressor/decompressor — the diffusion model in the middle is what generates.</b></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CFG ============ -->
+  <section>
+    <p class="kicker">6 · Guidance</p>
+    <h2>Classifier-free guidance: steering with the prompt</h2>
+    <p class="note" style="max-width:72ch">Text conditioning gets the prompt into the network (as embeddings from a text
+      encoder such as CLIP or T5, attended to at each denoising step), but conditioning alone tends to follow the prompt
+      only loosely. <b>CFG</b> is the fix used by essentially every modern text-to-image system. At training time the
+      prompt is randomly dropped for <b>~10–20%</b> of examples, so one network learns both prompt-conditioned and
+      unconditional denoising. At sampling time <b>every step runs the network twice</b> — with and without the prompt —
+      and blends the two predictions by <em>extrapolation</em>:</p>
+    <p class="formula">guided = unconditional + s × (conditional − unconditional)</p>
+    <p class="note" style="max-width:72ch">The difference between the two predictions is “the direction the prompt pulls,”
+      and the guidance scale <b>s</b> exaggerates it. Because of the two passes, CFG <b>doubles the network evaluations per
+      step</b> — it matters when counting sampling cost.</p>
+
+    <div class="card">
+      <div class="sliderrow js-only" style="margin-top:0">
+        <label for="cfg-slider" style="font-size:13.5px; color:var(--ink2); white-space:nowrap">Guidance scale s</label>
+        <input type="range" id="cfg-slider" min="1" max="16" step="0.5" value="7.5" aria-describedby="cfg-value">
+        <span class="hint">slide me</span>
+      </div>
+      <div class="cfg-readout js-only"><span class="val" id="cfg-value">7.5</span><span class="note">s ≈ 7.5 is a common default in Stable-Diffusion-class models</span></div>
+      <div class="gauge" aria-hidden="true">
+        <span class="zone z-none"></span><span class="zone z-work"></span><span class="zone z-art"></span>
+        <span class="defmark"></span>
+        <span id="cfg-marker" class="js-only" style="left:43.33%"></span>
+      </div>
+      <div class="gauge-labels" aria-hidden="true"><span>s=1</span><span>working range (default ≈7.5)</span><span>artifact regime</span></div>
+      <div class="cfg-cards">
+        <div class="cfg-card"><h4>s = 1 — no guidance</h4>The conditional prediction is used as-is; images tend to follow the prompt only loosely.</div>
+        <div class="cfg-card active"><h4>Working range</h4>Higher s gives stronger prompt adherence and cleaner-looking, more “typical” images — but reduces sample diversity. Adherence vs. diversity is the real tradeoff.</div>
+        <div class="cfg-card"><h4>Pushed too far (roughly s &gt; 12–15 in classic SD)</h4>Oversaturated colors and burned-in artifacts. The scale is not a “quality” knob.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MISCONCEPTIONS ============ -->
+  <section>
+    <p class="kicker">7 · Worth unlearning</p>
+    <h2>Common misconceptions</h2>
+    <div class="myths">
+      <div class="card myth"><h3><span class="verdict">False</span>“It searches a database and collages existing images.”</h3>
+        <p>No training images are stored or consulted at generation time; a few billion parameters trained on billions of images cannot and do not keep copies — the weights encode statistics, and sampling starts from random noise. Nuance: rare near-duplication of training images <em>has</em> been demonstrated, essentially for images repeated many times in the training set — a real but exceptional memorization failure mode, not the mechanism.</p></div>
+      <div class="card myth"><h3><span class="verdict">False</span>“It denoises a real photo.”</h3>
+        <p>Text-to-image generation starts from pure synthetic noise. Image-to-image and inpainting modes <em>do</em> start from a user-supplied image — by partially noising it and denoising back — but that is an explicit variant, not the default mechanism.</p></div>
+      <div class="card myth"><h3><span class="verdict">No</span>“The VAE is the generator.”</h3>
+        <p>The VAE only compresses and decompresses. The diffusion model operating in latent space does the generating.</p></div>
+      <div class="card myth"><h3><span class="verdict">Only up to a point</span>“More steps always means better images.”</h3>
+        <p>Past the workhorse range (~50 steps), extra steps refine imperceptibly — and for distilled models the intended step count is part of the design.</p></div>
+      <div class="card myth"><h3><span class="verdict">Wrong knob</span>“The guidance scale is a ‘quality’ knob.”</h3>
+        <p>It is an adherence-vs-diversity knob with an artifact regime at high values; “better” depends on what you want.</p></div>
+      <div class="card myth"><h3><span class="verdict">One framework</span>“Diffusion, DDIM, score-based models, and flow matching compete.”</h3>
+        <p>They are one framework: identical or interconvertible training targets, with different samplers, paths, and parameterizations.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ GLOSSARY ============ -->
+  <section>
+    <p class="kicker">8 · Reference</p>
+    <h2>Glossary</h2>
+    <div class="card">
+      <dl>
+        <dt>Timestep (t)</dt><dd>position along the noising process; high t = more noise.</dd>
+        <dt>Noise schedule</dt><dd>the predefined recipe for how much noise each forward step adds.</dd>
+        <dt>ε / score / velocity</dt><dd>three interconvertible choices of network output.</dd>
+        <dt>Sampler</dt><dd>the algorithm that turns many network predictions into an image (DDPM, DDIM, DPM-Solver, …).</dd>
+        <dt>Latent space</dt><dd>the VAE-compressed representation where latent diffusion operates (e.g. 64×64×4 for a 512×512 image).</dd>
+        <dt>CFG scale (s)</dt><dd>strength of classifier-free guidance extrapolation.</dd>
+        <dt>Distillation</dt><dd>training a fast student model to imitate a slow teacher.</dd>
+        <dt>NFE</dt><dd>number of function evaluations — how many times the network runs during sampling; the honest cost metric (CFG doubles it per step).</dd>
+      </dl>
+    </div>
+  </section>
+
+</main>
+
+<footer>diffusion-variants · interactive-explainer · v1 · 2026-07-01</footer>
+
+<script>
+(function () {
+  'use strict';
+  function $(s, c) { return (c || document).querySelector(s); }
+  function $$(s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); }
+
+  /* --- trajectory slider + clickable stages --- */
+  var stages = $$('#traj .stage');
+  var notes = $$('#stage-notes li');
+  var cap = $('#stage-caption');
+  var slider = $('#traj-slider');
+  function setStage(i) {
+    stages.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+    if (cap && notes[i]) cap.innerHTML = notes[i].innerHTML;
+  }
+  if (slider) {
+    slider.addEventListener('input', function () { setStage(+slider.value); });
+    stages.forEach(function (s, i) {
+      function go() { slider.value = i; setStage(i); }
+      s.addEventListener('click', go);
+      s.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+      });
+    });
+    setStage(+slider.value);
+  }
+
+  /* --- generic tabs / segmented controls --- */
+  function initTabs(listSel, onSelect) {
+    var list = $(listSel);
+    if (!list) return null;
+    var tabs = $$('[role=tab]', list);
+    var panels = tabs.map(function (t) { return document.getElementById(t.getAttribute('aria-controls')); });
+    function select(i, focus) {
+      tabs.forEach(function (t, j) {
+        var on = j === i;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        if (panels[j]) panels[j].hidden = !on;
+      });
+      if (focus) tabs[i].focus();
+      if (onSelect) onSelect(i);
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { select(i); });
+      t.addEventListener('keydown', function (e) {
+        var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (d) { e.preventDefault(); select((i + d + tabs.length) % tabs.length, true); }
+      });
+    });
+    select(0);
+    return select;
+  }
+
+  var chartRows = $$('#step-chart .chart-row');
+  var selectVariant = initTabs('#variant-tabs', function (i) {
+    chartRows.forEach(function (r, j) { r.classList.toggle('active', j === i); });
+  });
+  chartRows.forEach(function (r, i) {
+    r.addEventListener('click', function () { if (selectVariant) selectVariant(i); });
+  });
+
+  initTabs('#space-toggle');
+
+  /* --- CFG slider --- */
+  var cfg = $('#cfg-slider');
+  if (cfg) {
+    var out = $('#cfg-value');
+    var marker = $('#cfg-marker');
+    var cards = $$('.cfg-card');
+    function setCfg() {
+      var s = +cfg.value;
+      out.textContent = s.toFixed(1);
+      marker.style.left = ((s - 1) / 15 * 100) + '%';
+      var r = s <= 1.5 ? 0 : s <= 12 ? 1 : 2;
+      cards.forEach(function (c, i) { c.classList.toggle('active', i === r); });
+    }
+    cfg.addEventListener('input', setCfg);
+    setCfg();
+  }
+
+  /* --- term tooltips: click/tap toggle (hover + focus handled in CSS) --- */
+  $$('.term').forEach(function (t) {
+    t.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = t.classList.toggle('open');
+      t.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+  document.addEventListener('click', function () {
+    $$('.term.open').forEach(function (t) {
+      t.classList.remove('open');
+      t.setAttribute('aria-expanded', 'false');
+    });
+  });
+})();
+</script>
+</body>
+</html>

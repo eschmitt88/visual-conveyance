@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tessel — Pathways onboarding A/B test: final readout</title>
+<style>
+  :root {
+    --text: #1a1c1f;
+    --muted: #55606b;
+    --rule: #d7dce1;
+    --callout-bg: #fdf3e3;
+    --callout-edge: #d9a441;
+    --bg: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --text: #e6e8ea;
+      --muted: #a3adb8;
+      --rule: #3a4148;
+      --callout-bg: #3a3221;
+      --callout-edge: #d9a441;
+      --bg: #16181b;
+    }
+  }
+  html { background: var(--bg); }
+  body {
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 3rem;
+    max-width: 70ch;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+  }
+  h1 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 1.7rem;
+    line-height: 1.25;
+    margin: 0 0 0.35rem;
+  }
+  .subtitle {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 1.5rem;
+  }
+  h2 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 1.2rem;
+    line-height: 1.3;
+    margin: 2.2rem 0 0.7rem;
+  }
+  p { margin: 0 0 1rem; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin-bottom: 0.4rem; }
+  .lede { font-size: 1.125rem; }
+  blockquote {
+    margin: 1.25rem 0;
+    padding: 0.75rem 1rem;
+    background: var(--callout-bg);
+    border-left: 4px solid var(--callout-edge);
+    font-size: 0.97rem;
+  }
+  blockquote p { margin: 0; }
+  blockquote p + p { margin-top: 0.6rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 1.25rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+  caption {
+    text-align: left;
+    font-size: 0.82rem;
+    color: var(--muted);
+    padding-bottom: 0.35rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th { border-bottom: 2px solid var(--text); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 2.2rem 0; }
+  footer {
+    margin-top: 3rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  @media (max-width: 480px) {
+    body { font-size: 1rem; padding-top: 1.5rem; }
+    h1 { font-size: 1.4rem; }
+    table { font-size: 0.8rem; }
+    th, td { padding: 0.35rem 0.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Pathways onboarding A/B test: don&rsquo;t read the overall number as a win</h1>
+<p class="subtitle">tessel &middot; experiment ONB-2026-014 &middot; final readout, 6-week run (May 4 &ndash; Jun 14, 2026), readout 2026-06-30 &middot; pre-registered plan v1.2 followed</p>
+
+<p class="lede">We tested the redesigned onboarding flow &ldquo;Pathways&rdquo; (B) against the current flow (A) across all new signups for six weeks. Trial-to-paid conversion moved from 11.4% to 12.2% &mdash; +0.8 percentage points (pp), 95% confidence interval [-0.3, +1.9], p&nbsp;=&nbsp;0.16 &mdash; which is <em>not statistically significant</em>: the honest overall verdict is &ldquo;can&rsquo;t tell,&rdquo; not &ldquo;B won.&rdquo; <strong>The real result is a pre-registered platform split &mdash; mobile-web improved strongly (+4.2pp) while iOS significantly regressed (-1.9pp) &mdash; so the recommendation is to ship Pathways to mobile-web only, hold it off iOS pending a fix experiment on the step-3 notification prompt, and leave Android (a null result) unchanged.</strong> Early weeks overstated the effect (+2.9pp in week&nbsp;1, +0.1pp by week&nbsp;6, a novelty pattern), but the mobile-web gain persists after novelty washes out. The 7-day-retention guardrail was flat, so the split is not hiding a retention cost.</p>
+
+<h2>The overall number: inconclusive, and internally misleading</h2>
+
+<p><strong>The blended result cannot support a ship decision in either direction.</strong> The +0.8pp point estimate comes with a 95% CI of [-0.3, +1.9] and p&nbsp;=&nbsp;0.16 (two-proportion z-test, two-sided). A confidence interval is the range of true effects consistent with the data; this one straddles zero, so the data are compatible with B being slightly harmful, neutral, or helpful overall. It should not be quoted as a win &mdash; and, equally, not as &ldquo;no effect.&rdquo;</p>
+
+<p>Two things make the blended number worse than merely noisy. First, the experiment had 80% power to detect an overall lift of +1.55pp; it simply was not sized to confirm effects around +0.8pp. Second, the overall figure is an average of opposing subgroup effects &mdash; a strong win and a real loss partially cancelling &mdash; not &ldquo;a modest win everywhere.&rdquo; That is the next section.</p>
+
+<h2>The real story: the platform split</h2>
+
+<p><strong>Platform was the single pre-registered subgroup dimension</strong> (chosen before launch because the three platforms have different payment surfaces: web checkout vs App Store vs Play Store), and it is where the experiment&rsquo;s actionable signal lives.</p>
+
+<table>
+<caption>Trial-to-paid conversion by platform (B&nbsp;&minus;&nbsp;A, percentage points)</caption>
+<thead>
+<tr><th>Platform</th><th class="num">n (A / B)</th><th class="num">Conv. A</th><th class="num">Conv. B</th><th class="num">&Delta; (pp)</th><th class="num">95% CI</th><th class="num">p</th></tr>
+</thead>
+<tbody>
+<tr><td>Mobile-web</td><td class="num">2,341 / 2,367</td><td class="num">13.9%</td><td class="num">18.1%</td><td class="num"><strong>+4.2</strong></td><td class="num">[+2.1, +6.3]</td><td class="num">&lt;0.0001</td></tr>
+<tr><td>iOS</td><td class="num">2,528 / 2,541</td><td class="num">11.6%</td><td class="num">9.7%</td><td class="num"><strong>&minus;1.9</strong></td><td class="num">[&minus;3.6, &minus;0.2]</td><td class="num">0.027</td></tr>
+<tr><td>Android</td><td class="num">1,733 / 1,739</td><td class="num">7.8%</td><td class="num">7.9%</td><td class="num">+0.1</td><td class="num">[&minus;1.7, +1.9]</td><td class="num">0.92</td></tr>
+</tbody>
+</table>
+
+<ul>
+<li><strong>Mobile-web is a large, unambiguous improvement:</strong> +4.2pp on a 13.9% base, roughly a 30% relative lift, with a CI entirely above zero and significance that survives any reasonable correction.</li>
+<li><strong>iOS is a significant regression:</strong> &minus;1.9pp on an 11.6% base, roughly a 16% relative <em>loss</em>, with a CI entirely below zero.</li>
+<li><strong>Android is null:</strong> +0.1pp with a CI spanning [&minus;1.7, +1.9] &mdash; no evidence of an effect either way.</li>
+</ul>
+
+<p>These subgroup effects, weighted by trial-start counts, reconcile arithmetically with the blended +0.8pp. The overall number is a win and a loss averaging each other out.</p>
+
+<blockquote>
+<p><strong>How much to trust the split.</strong> Three platform tests were run, so a multiple-comparisons caution applies: under a Bonferroni-adjusted threshold (&alpha;&nbsp;=&nbsp;0.0167, a stricter bar used when several tests are run at once), mobile-web survives easily, but iOS (p&nbsp;=&nbsp;0.027) does <em>not</em> survive the strict correction. Cutting the other way: platform was pre-registered in advance for a stated mechanistic reason, not discovered by scanning many cuts, and the iOS regression has a coherent mechanism (below). Read the iOS result as a credible signal warranting a follow-up experiment &mdash; not as proof. The mobile-web result needs no such hedging.</p>
+</blockquote>
+
+<h2>Novelty decay: early snapshots overstated B</h2>
+
+<p>The overall weekly delta fell from <strong>+2.9pp in week&nbsp;1 to +0.1pp in week&nbsp;6</strong> (weeks 1&ndash;6: +2.9, +1.5, +0.6, 0.0, &minus;0.4, +0.1), a pattern consistent with a novelty effect: the redesigned flow did best with the earliest cohorts and converged toward control as the run matured. Weekly CIs are wide (&approx;&plusmn;2.7pp), so the signal is the decaying pattern, not any single week.</p>
+
+<blockquote>
+<p>A mid-flight readout at the end of week&nbsp;2 (blended +2.2pp, nominally significant at the time) circulated internally. It reflected novelty that later decayed; this final readout supersedes it, and the week-2 numbers should be retired from decks.</p>
+</blockquote>
+
+<p><strong>The platform split is not explained by novelty.</strong> In exploratory pooled checks over weeks 4&ndash;6 (after the novelty had washed out), mobile-web remains +3.8pp (CI&nbsp;&approx;&nbsp;[+0.8, +6.8]) while iOS remains negative at &minus;2.2pp (CI&nbsp;&approx;&nbsp;[&minus;4.6, +0.2] &mdash; no longer individually significant at this halved sample size). The mobile-web gain persists; the iOS deficit does not recover.</p>
+
+<h2>Guardrails and secondaries</h2>
+
+<p><strong>7-day retention was flat:</strong> 31.2% (A) vs 31.4% (B), +0.2pp, CI [&minus;0.2, +0.6], measured on all 184,204 randomized users. Pathways neither helps nor harms whether users come back in week one &mdash; the conversion story carries no retention cost, and equally the mobile-web gain brings no retention gain.</p>
+
+<p>Support tickets rose +12% in weeks 1&ndash;2 (4.1 &rarr; 4.6 per 1k signups, driven by confusion around the goal-quiz &ldquo;skip&rdquo; affordance); a copy fix shipped 2026-05-15 and volume normalized from week&nbsp;3 (4.0 vs 4.0) &mdash; a launch-quality blip, not a standing cost. Among secondaries, median time-to-first-lesson improved by 38 seconds (4m&nbsp;52s &rarr; 4m&nbsp;14s, CI [&minus;45, &minus;31]) &mdash; the flow mechanically does what it was designed to do &mdash; but this did not translate into a blended conversion or retention win. Trial-start rate was flat between arms (7.17% vs 7.22%, p&nbsp;=&nbsp;0.69), which matters because the primary metric conditions on starting a trial: a flat start rate (and near-identical platform mix among trialists) means the comparison is sound. Diagnostics were clean: no sample-ratio mismatch (p&nbsp;=&nbsp;0.96) and a 2% instrumentation audit found zero contamination.</p>
+
+<h2>Why iOS likely regressed: the step-3 permission prompt</h2>
+
+<p>Pathways moved the notification-permission ask from a soft in-product card on day&nbsp;2 to <strong>onboarding step&nbsp;3</strong>, where iOS fires the operating system&rsquo;s permission dialog. The funnel evidence (exploratory, but aimed directly at this mechanism) concentrates the damage at exactly that step, on exactly the platform with the highest-friction dialog:</p>
+
+<ul>
+<li><strong>iOS step-3 drop-off jumped from 8.1% (A) to 12.7% (B)</strong> &mdash; users abandoning onboarding at the permission step.</li>
+<li>No comparable shift on mobile-web, where step&nbsp;3 is a soft email opt-in (3.2% &rarr; 3.4%), or on Android, where the OS dialog is lower-friction (5.0% &rarr; 5.6%).</li>
+<li>iOS users in B who dismissed the dialog converted at 7.9% vs 10.4% for those who accepted &mdash; consistent with the prompt souring or filtering marginal users, though this comparison is confounded by user intent and is not causal evidence on its own.</li>
+</ul>
+
+<p>This is why the recommendation is &ldquo;fix and re-test on iOS,&rdquo; not &ldquo;abandon iOS.&rdquo;</p>
+
+<h2>Recommendation</h2>
+
+<ol>
+<li><strong>Ship Pathways to mobile-web only</strong>, target 2026-07-06, with a 5% holdback for 8 weeks to confirm the +4.2pp effect outside the experiment and watch for post-novelty drift.</li>
+<li><strong>Do not ship iOS.</strong> Run a follow-up experiment (ONB-2026-019, draft) testing Pathways-on-iOS with the permission prompt reverted to the day-2 soft ask, plus an arm with a pre-permission explainer screen; powered for a &plusmn;1.5pp iOS-only effect, estimated 8 weeks.</li>
+<li><strong>Do not ship Android.</strong> Null result; revisit after the iOS fix experiment settles the prompt question, since Android shares the flow.</li>
+<li><strong>Retire the week-2 interim readout</strong> from internal decks.</li>
+<li>Re-estimate revenue impact for the mobile-web ship using the late-window +3.8pp (conservative) to full-run +4.2pp range.</li>
+</ol>
+
+<p>In short: not a full rollout, and not a kill. The blended +0.8pp is neither a win nor the story &mdash; the split is, and it points to a narrow ship plus a targeted iOS fix.</p>
+
+<footer>experiment-results &middot; prose-baseline &middot; v1 &middot; 2026-07-01</footer>
+
+</body>
+</html>

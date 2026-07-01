@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tessel onboarding A/B (Pathways): not a win — a split</title>
+<style>
+  :root {
+    --ink: #1d2430;
+    --muted: #5a6577;
+    --rule: #e3e7ee;
+    --bg: #fbfcfe;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.45;
+  }
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 20px 20px 8px;
+  }
+  header { text-align: center; padding: 4px 0 2px; }
+  h1 {
+    font-size: clamp(1.15rem, 2.4vw, 1.55rem);
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .framing {
+    margin: 0 auto;
+    max-width: 78ch;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  section { margin: 26px 0 34px; }
+  section:first-of-type { margin-top: 12px; }
+  h2 {
+    font-size: 1.05rem;
+    margin: 0 0 4px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  pre.mermaid {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0 8px;
+    background: none;
+    border: none;
+    font-size: 0.7rem;
+    color: #b9c0cc;           /* pre-render source is unobtrusive */
+    overflow-x: auto;
+  }
+  pre.mermaid[data-processed="true"] { color: inherit; font-size: inherit; }
+  .mermaid svg { max-width: 100%; height: auto; }
+  #overview .mermaid svg { max-height: 600px; }
+  .caption {
+    max-width: 82ch;
+    margin: 0 auto;
+    color: var(--muted);
+    font-size: 0.88rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 8px;
+  }
+  footer {
+    text-align: center;
+    color: #9aa3b2;
+    font-size: 0.72rem;
+    padding: 18px 0 14px;
+  }
+  @media (max-width: 480px) {
+    main { padding: 14px 10px 4px; }
+    .caption { font-size: 0.84rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>tessel onboarding A/B (Pathways): not a win — a split</h1>
+  <p class="framing">Overall +0.8pp is not statistically significant; the pre-registered
+  platform split — a real mobile-web win, a real iOS loss — is the story, and it points
+  to a narrow ship, not a rollout and not a kill.</p>
+</header>
+
+<section id="overview">
+  <h2>The whole story</h2>
+  <pre class="mermaid">
+flowchart TD
+  O["Overall +0.8pp — can't tell"]:::mixed
+  MW["Mobile-web +4.2pp"]:::win
+  I["iOS −1.9pp"]:::loss
+  A["Android +0.1pp"]:::nosig
+  N["Novelty decay"]:::note
+  G["Guardrail held"]:::pass
+  O -->|"pre-registered split"| MW
+  O -->|"pre-registered split"| I
+  O -->|"pre-registered split"| A
+  O --- N
+  O --- G
+  MW -->|"persists late, +3.8pp"| D1["Ship mobile-web only"]:::win
+  I -->|"step-3 prompt suspect"| D2["Do not ship, fix + retest"]:::loss
+  A --> D3["Hold"]:::nosig
+  classDef win fill:#def7e5,stroke:#127a44,color:#0b4a2a
+  classDef loss fill:#fde3e0,stroke:#b3261e,color:#6e1712
+  classDef nosig fill:#eceff3,stroke:#8a94a6,color:#3c4658,stroke-dasharray:5 4
+  classDef mixed fill:#eceff3,stroke:#8a94a6,color:#3c4658,stroke-dasharray:5 4
+  classDef pass fill:#e7f0fd,stroke:#2b5fb8,color:#1b3a6b
+  classDef note fill:#fff4d6,stroke:#b58a1f,color:#6b4e0e
+  </pre>
+  <p class="caption">Overall trial-to-paid conversion moved 11.4% → 12.2% (+0.8pp, 95% CI
+  [−0.3, +1.9], p = 0.16) — not statistically significant, so the honest blended verdict is
+  “can’t tell,” not “B won.” The blend averages a strong mobile-web win against a real iOS
+  loss, and the guardrail (7-day retention, all 184,204 randomized users) was flat at +0.2pp
+  (CI [−0.2, +0.6]).</p>
+</section>
+
+<section id="split">
+  <h2>Which effects are real: read the confidence intervals</h2>
+  <pre class="mermaid">
+flowchart TD
+  subgraph REAL["CI excludes zero — real effects"]
+    MW2["Mobile-web +4.2pp"]:::win
+    I2["iOS −1.9pp"]:::loss
+  end
+  subgraph UNC["CI straddles zero — can't tell"]
+    O2["Overall +0.8pp"]:::nosig
+    A2["Android +0.1pp"]:::nosig
+  end
+  MW2 -->|"pulls up"| O2
+  I2 -->|"pulls down"| O2
+  A2 -->|"adds nothing"| O2
+  classDef win fill:#def7e5,stroke:#127a44,color:#0b4a2a
+  classDef loss fill:#fde3e0,stroke:#b3261e,color:#6e1712
+  classDef nosig fill:#eceff3,stroke:#8a94a6,color:#3c4658,stroke-dasharray:5 4
+  </pre>
+  <p class="caption">Platform was the single pre-registered subgroup: mobile-web +4.2pp
+  (13.9% → 18.1%, CI [+2.1, +6.3], p &lt; 0.0001), iOS −1.9pp (11.6% → 9.7%, CI [−3.6, −0.2],
+  p = 0.027), Android +0.1pp (7.8% → 7.9%, CI [−1.7, +1.9], p = 0.92) — solid boxes have CIs
+  excluding zero; dashed boxes straddle it. The iOS result does not survive a strict Bonferroni
+  correction (α = 0.0167), but pre-registration plus a coherent mechanism makes it a credible
+  signal that warrants action, short of proof; mobile-web needs no such hedging.</p>
+</section>
+
+<section id="decay">
+  <h2>Novelty decay: early snapshots overstated B</h2>
+  <pre class="mermaid">
+xychart-beta
+  title "Overall weekly delta, B minus A (pp)"
+  x-axis ["Wk 1", "Wk 2", "Wk 3", "Wk 4", "Wk 5", "Wk 6"]
+  y-axis "delta (pp)" -1 --> 3.5
+  bar [2.9, 1.5, 0.6, 0, -0.4, 0.1]
+  line [2.9, 1.5, 0.6, 0, -0.4, 0.1]
+  </pre>
+  <p class="caption">The overall delta decayed from +2.9pp (week 1) to +0.1pp (week 6) —
+  consistent with a novelty effect — so the week-2 interim readout (+2.2pp, nominally
+  significant at the time) is superseded and should not be cited; weekly CIs are wide
+  (≈ ±2.7pp), so the pattern, not any single cell, is the signal. The platform split is not
+  novelty: pooled weeks 4–6 (exploratory) still show mobile-web +3.8pp (CI ≈ [+0.8, +6.8])
+  while iOS stays negative at −2.2pp (CI ≈ [−4.6, +0.2], no longer individually significant
+  at the halved sample).</p>
+</section>
+
+<section id="mechanism">
+  <h2>Why iOS regressed: the step-3 permission prompt</h2>
+  <pre class="mermaid">
+flowchart TD
+  CH["Permission ask moved to step 3"]:::note
+  CH -->|"OS system dialog"| I4["iOS drop-off 8.1% → 12.7%"]:::loss
+  CH -->|"soft email opt-in"| M4["Mobile-web 3.2% → 3.4%"]:::nosig
+  CH -->|"lower-friction dialog"| A4["Android 5.0% → 5.6%"]:::nosig
+  I4 --> FX["Fix and retest on iOS"]:::loss
+  classDef loss fill:#fde3e0,stroke:#b3261e,color:#6e1712
+  classDef nosig fill:#eceff3,stroke:#8a94a6,color:#3c4658,stroke-dasharray:5 4
+  classDef note fill:#fff4d6,stroke:#b58a1f,color:#6b4e0e
+  </pre>
+  <p class="caption">Pathways moved the notification-permission ask from a day-2 soft card to
+  onboarding step 3, and iOS abandonment at that step jumped 8.1% → 12.7% while mobile-web and
+  Android barely moved — the regression concentrates exactly at the changed step, on the
+  platform with the highest-friction system dialog. This funnel evidence is exploratory, not
+  causal proof (B-arm iOS users who dismissed the dialog converted at 7.9% vs 10.4% for
+  accepters, a comparison confounded by user intent), hence “fix and re-test iOS,” not
+  “abandon iOS.”</p>
+</section>
+
+<section id="decision">
+  <h2>The decision</h2>
+  <pre class="mermaid">
+flowchart LR
+  R["Final readout ONB-2026-014"]:::note
+  R -->|"+4.2pp, durable"| S1["Ship mobile-web, 5% holdback"]:::win
+  R -->|"−1.9pp regression"| S2["iOS: do not ship"]:::loss
+  S2 --> S2b["Run fix test ONB-2026-019"]:::loss
+  R -->|"null result"| S3["Android: hold"]:::nosig
+  R -->|"novelty, superseded"| S4["Retire week-2 interim readout"]:::nosig
+  classDef win fill:#def7e5,stroke:#127a44,color:#0b4a2a
+  classDef loss fill:#fde3e0,stroke:#b3261e,color:#6e1712
+  classDef nosig fill:#eceff3,stroke:#8a94a6,color:#3c4658,stroke-dasharray:5 4
+  classDef note fill:#fff4d6,stroke:#b58a1f,color:#6b4e0e
+  </pre>
+  <p class="caption">Ship Pathways to mobile-web only (target 2026-07-06) with a 5% holdback
+  for 8 weeks; do not ship iOS — instead run ONB-2026-019 testing the permission prompt
+  reverted to the day-2 soft ask (plus a pre-permission explainer arm, powered for ±1.5pp,
+  est. 8 weeks) — and hold Android (null) until that settles, since it shares the flow.
+  Revenue estimates for the mobile-web ship should use the conservative late-window +3.8pp
+  to full-run +4.2pp range.</p>
+</section>
+
+</main>
+<footer>experiment-results · mermaid-diagrams · v1 · 2026-07-01</footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+</body>
+</html>

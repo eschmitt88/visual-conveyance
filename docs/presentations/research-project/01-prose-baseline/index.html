@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>murmur — state of the project</title>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --fg: #1c1c1e;
+    --muted: #5a5a5f;
+    --rule: #d9d6cf;
+    --accent: #7a5a10;
+    --good-bg: #eaf3ea;
+    --good-br: #5b8f5b;
+    --bad-bg: #f6 eae9;
+    --bad-bg: #f6eae9;
+    --bad-br: #b05a52;
+    --flat-bg: #eef1f5;
+    --flat-br: #6b7d95;
+    --code-bg: #f0ede7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17171a;
+      --fg: #e9e7e2;
+      --muted: #a5a29b;
+      --rule: #34343a;
+      --accent: #d8b46a;
+      --good-bg: #1c2a1c;
+      --good-br: #5b8f5b;
+      --bad-bg: #2c1e1c;
+      --bad-br: #b06a62;
+      --flat-bg: #1e242c;
+      --flat-br: #6b7d95;
+      --code-bg: #22222a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 18px;
+    line-height: 1.65;
+  }
+  main {
+    max-width: 70ch;
+    margin: 0 auto;
+    padding: 3.5rem 1.5rem 4rem;
+  }
+  header .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin: 0 0 0.6rem;
+  }
+  h1 {
+    font-size: 2.5rem;
+    line-height: 1.1;
+    margin: 0 0 0.4rem;
+    letter-spacing: -0.02em;
+  }
+  .subtitle {
+    font-size: 1.15rem;
+    color: var(--muted);
+    margin: 0 0 1.6rem;
+  }
+  .summary {
+    font-size: 1.08rem;
+    border-top: 3px solid var(--fg);
+    border-bottom: 1px solid var(--rule);
+    padding: 1.3rem 0 1.5rem;
+    margin: 0 0 2.2rem;
+  }
+  .summary p { margin: 0 0 0.9rem; }
+  .summary p:last-child { margin-bottom: 0; }
+  .lede { font-weight: 700; font-size: 1.18rem; line-height: 1.5; }
+  h2 {
+    font-size: 1.5rem;
+    margin: 2.8rem 0 0.4rem;
+    padding-top: 0.6rem;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 1.1rem;
+    margin: 1.8rem 0 0.3rem;
+    color: var(--accent);
+  }
+  .section-note {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin: 0 0 1rem;
+  }
+  p { margin: 0 0 1rem; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin-bottom: 0.45rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    margin: 0.6rem 0 1.4rem;
+  }
+  caption {
+    caption-side: top;
+    text-align: left;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  thead th {
+    border-bottom: 2px solid var(--fg);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.best td { font-weight: 700; }
+  .pos { color: var(--good-br); }
+  .neg { color: var(--bad-br); }
+  blockquote {
+    margin: 1.2rem 0;
+    padding: 0.9rem 1.1rem;
+    border-left: 4px solid var(--flat-br);
+    background: var(--flat-bg);
+    border-radius: 0 4px 4px 0;
+  }
+  blockquote p { margin: 0; }
+  blockquote.hyp {
+    border-left-color: var(--accent);
+    font-size: 1.05rem;
+  }
+  .callout {
+    padding: 0.9rem 1.1rem;
+    border-radius: 6px;
+    margin: 1.2rem 0;
+    font-size: 0.97rem;
+  }
+  .callout p { margin: 0 0 0.5rem; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .tag {
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+  .callout.good { background: var(--good-bg); border-left: 4px solid var(--good-br); }
+  .callout.good .tag { color: var(--good-br); }
+  .callout.bad { background: var(--bad-bg); border-left: 4px solid var(--bad-br); }
+  .callout.bad .tag { color: var(--bad-br); }
+  .callout.flat { background: var(--flat-bg); border-left: 4px solid var(--flat-br); }
+  .callout.flat .tag { color: var(--flat-br); }
+  pre {
+    background: var(--code-bg);
+    padding: 1rem 1.1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0.8rem 0 1.2rem;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  p code, li code, td code {
+    background: var(--code-bg);
+    padding: 0.08em 0.35em;
+    border-radius: 4px;
+    font-size: 0.86em;
+  }
+  ol.next { counter-reset: step; list-style: none; padding-left: 0; }
+  ol.next > li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 2.4rem;
+    margin-bottom: 0.9rem;
+  }
+  ol.next > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0; top: 0.05em;
+    width: 1.7rem; height: 1.7rem;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.9rem;
+  }
+  footer {
+    max-width: 70ch;
+    margin: 0 auto;
+    padding: 1.5rem 1.5rem 3rem;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+  @media (max-width: 480px) {
+    body { font-size: 16px; }
+    main { padding: 2.2rem 1.1rem 3rem; }
+    h1 { font-size: 1.9rem; }
+    table { font-size: 0.82rem; }
+    th, td { padding: 0.35rem 0.4rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Personal ML research · state as of 2026-06-28</p>
+    <h1>murmur</h1>
+    <p class="subtitle">Teaching a small classifier to hear one bird through cheap, physically-plausible noise.</p>
+  </header>
+
+  <section class="summary">
+    <p class="lede">murmur's bet is <strong>partially supported</strong>: cheap reverb-flavoured augmentation lifts validation macro-F1 from <strong>0.612 to 0.671 (+5.9 points)</strong> on a small bird-call CNN at negligible extra compute — but the gain is concentrated in the common classes and barely reaches the rare tail.</p>
+    <p>The hypothesis is that ultra-cheap augmentations inspired by natural reverberation beat reaching for a bigger model when <em>data</em>, not compute, is the binding constraint. Six experiments in, the win is real but uneven: not every augmentation helped (pitch/time-stretch actively regressed the model; noise-mixing alone was a null result), the best result is a <em>stack</em> rather than any single trick, and the efficiency half of the claim is still asserted rather than shown. The clear next move is <strong>class-conditional augmentation</strong> — apply each transform only where the ledger shows it helps.</p>
+  </section>
+
+  <h2>The bet</h2>
+  <blockquote class="hyp">
+    <p><strong>Ultra-cheap audio augmentations inspired by natural reverberation improve bird-call classification on small datasets — more per unit of compute than reaching for a bigger or pretrained architecture would.</strong></p>
+  </blockquote>
+  <p>It splits into two sub-claims, tested separately:</p>
+  <ul>
+    <li><strong>H1 (efficacy).</strong> Reverb-family augmentation lifts validation macro-F1 over a no-augmentation baseline on a fixed small CNN.</li>
+    <li><strong>H2 (efficiency).</strong> That lift is competitive with, and cheaper than, the lift from swapping in a larger backbone — augmentation is the better marginal spend when data is scarce.</li>
+  </ul>
+  <p>The bet is deliberately narrow. This is not "does augmentation help" (it usually does) — it is "do the <em>natural-reverberation-flavoured</em>, near-free ones help, and where do they help versus hurt?" So murmur holds the architecture fixed (a small CNN on log-mel spectrograms) and moves only the augmentation pipeline. <strong>Architecture is the control, not the variable.</strong></p>
+
+  <h2>Why augmentation over architecture</h2>
+  <p>The setting is small-data bioacoustics: a few thousand labelled clips, a long-tailed species list, and no realistic path to the tens of thousands of clips per class that make big-model finetuning comfortable. The data is scarce and expensive to gather; compute is merely finite (one desktop GPU, runs of tens of minutes to a few hours). That asymmetry drives the choice:</p>
+  <ul>
+    <li><strong>Augmentation is near-free and physically motivated.</strong> Field recordings already contain reverberation, wind, distance attenuation, and overlapping calls. Simulating those cheaply expands the dataset along axes the model will actually meet at inference — not arbitrary pixel-space directions.</li>
+    <li><strong>Architecture swaps buy capacity we can't feed.</strong> A larger or pretrained backbone helps but costs more per run, risks overfitting a 6k-clip set, and doesn't address the tail directly.</li>
+    <li><strong>Reverb is the cheapest slice of the augmentation space.</strong> Impulse-response convolution and SNR-controlled noise mixing are single fast ops that add negligible wall-clock.</li>
+  </ul>
+
+  <h2>The dataset</h2>
+  <p>Fictional but internally consistent: public-style field recordings trimmed to call-centred clips. <strong>6,200 clips across 34 species</strong>, 5 s mono at 32 kHz, featurised as 128-mel log-mel spectrograms (25 ms window / 10 ms hop). The split is 70/15/15 train/val/test, stratified by species and seeded — roughly 930 clips each for validation and the held-out test set.</p>
+  <p>The difficulty <em>is</em> the class imbalance. The 8 most common species account for ~52% of all clips; the top class (American Robin) has 480 clips while several tail species sit under 50. <strong>11 species have fewer than 80 clips ("rare tail") and 5 have fewer than 45 ("deep tail")</strong> — the deep tail is where every experiment lives or dies. Median clips per class ≈ 120.</p>
+  <blockquote>
+    <p>The primary metric is <strong>validation macro-F1</strong> precisely because it weights the tail equally with the head. A model that only learns the common eight looks great on accuracy and mediocre on macro-F1. That gap is the point.</p>
+  </blockquote>
+  <p>"Macro-F1" here means the per-species F1 scores averaged with equal weight, so a rare species counts as much as a common one. Representative classes:</p>
+  <table>
+    <caption>Per-species snapshot (representative classes)</caption>
+    <thead>
+      <tr><th>Species</th><th class="num">Clips</th><th>Tier</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>American Robin</td><td class="num">480</td><td>common</td></tr>
+      <tr><td>Northern Cardinal</td><td class="num">421</td><td>common</td></tr>
+      <tr><td>Song Sparrow</td><td class="num">308</td><td>mid</td></tr>
+      <tr><td>Wood Thrush</td><td class="num">92</td><td>rare</td></tr>
+      <tr><td>Kirtland's Warbler</td><td class="num">41</td><td>deep tail</td></tr>
+    </tbody>
+  </table>
+
+  <h2>The experiment ledger</h2>
+  <p class="section-note">Six experiments, 2026-03 through 2026-06. Same seed, split, and backbone unless a config delta says otherwise. Metric is validation macro-F1. Baseline is exp-01; current best is exp-05.</p>
+  <table>
+    <caption>Validation macro-F1 trajectory</caption>
+    <thead>
+      <tr>
+        <th>#</th><th>Slug</th><th>Date</th>
+        <th class="num">Macro-F1</th><th class="num">Δ vs baseline</th><th>Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>01</td><td>baseline-clean</td><td>2026-03-08</td><td class="num">0.612</td><td class="num">—</td><td>floor</td></tr>
+      <tr><td>02</td><td>reverb-light-ir</td><td>2026-03-24</td><td class="num">0.641</td><td class="num pos">+0.029</td><td>first win</td></tr>
+      <tr><td>03</td><td>pitchshift-timestretch</td><td>2026-04-11</td><td class="num">0.589</td><td class="num neg">−0.023</td><td>regression</td></tr>
+      <tr><td>04</td><td>noise-mix-snr</td><td>2026-04-29</td><td class="num">0.643</td><td class="num pos">+0.031</td><td>null vs exp-02</td></tr>
+      <tr class="best"><td>05</td><td>stack-reverb-noise-specaug</td><td>2026-05-20</td><td class="num">0.671</td><td class="num pos">+0.059</td><td>best</td></tr>
+      <tr><td>06</td><td>reverb-heavy-longrt60</td><td>2026-06-14</td><td class="num">0.663</td><td class="num pos">+0.051</td><td>common-only</td></tr>
+    </tbody>
+  </table>
+  <p class="section-note">Seed-to-seed variability on this setup is ≈ ±0.006 macro-F1 — which is why exp-04's +0.002 over exp-02 reads as null.</p>
+
+  <h3>exp-01 — baseline-clean</h3>
+  <p>Small CNN on log-mel spectrograms, no augmentation at all: the floor. <strong>0.612</strong>, 41 min. Trains cleanly, overfits by ~epoch 35; tail classes carry almost all the error while the head is near-saturated. Confirms the problem is generalization on scarce classes, not capacity.</p>
+
+  <h3>exp-02 — reverb-light-ir</h3>
+  <p>Add light impulse-response reverb (convolve the waveform with short measured room IRs, RT60 ≈ 0.3–0.6 s), applied with probability 0.5. <strong>0.641 (+0.029)</strong>, 47 min. First clear win; the gain is broad but skews to mid/common tiers and the deep tail moves only slightly. Encouraging enough to make reverb the spine of the pipeline.</p>
+
+  <h3>exp-03 — pitchshift-timestretch</h3>
+  <div class="callout bad">
+    <span class="tag">Regression</span>
+    <p>Adding ±2-semitone pitch-shift and 0.9–1.1× time-stretch on top of exp-02 dropped macro-F1 to <strong>0.589 (−0.052 vs exp-02, −0.023 vs baseline)</strong> at 58 min — <em>below the no-augmentation baseline.</em></p>
+    <p>Warping pitch and tempo smears the exact spectral-envelope cues the rare classes depend on; several deep-tail species collapse toward zero recall. Common classes are unbothered, so the aggregate hides an asymmetric harm.</p>
+  </div>
+
+  <h3>exp-04 — noise-mix-snr</h3>
+  <div class="callout flat">
+    <span class="tag">Null result</span>
+    <p>Drop pitch/stretch; add SNR-controlled background-noise mixing (wind, rain, distant chorus at 5–20 dB SNR) on top of exp-02. <strong>0.643 (+0.002 vs exp-02)</strong>, 52 min.</p>
+    <p>+0.002 sits inside run-to-run noise (±~0.006 across seeds). Noise mixing neither helps nor hurts on its own at this scale. It was kept in the stack anyway, on the hypothesis that it composes with SpecAugment — see exp-05.</p>
+  </div>
+
+  <h3>exp-05 — stack-reverb-noise-specaug</h3>
+  <div class="callout good">
+    <span class="tag">Current best</span>
+    <p>The full stack — light reverb + noise mixing + SpecAugment (2 frequency masks, 2 time masks) + a mildly class-balanced sampler. <strong>0.671 (+0.059 vs baseline)</strong>, 1 h 12 min.</p>
+    <p>The components compose: noise mixing that was null alone becomes useful once SpecAugment is present, and the partial balanced sampler recovers a little tail recall. Even so, a decomposition shows ~4.5 of the 5.9 points come from common/mid tiers. The deep tail improved but remains the ceiling.</p>
+  </div>
+
+  <h3>exp-06 — reverb-heavy-longrt60</h3>
+  <p>Push reverb hard — long RT60 (0.8–1.5 s), p=0.7 — on the exp-05 stack, to test whether "more reverb" keeps paying. <strong>0.663 (−0.008 vs exp-05)</strong>, 1 h 18 min. Below best: heavy reverb <em>helps the common classes further</em> (they have the data to absorb the extra variation) but blurs short, quiet rare-class calls into the tail, netting a small loss. Confirms the effect is class-dependent, not monotone in reverb strength.</p>
+
+  <h2>Where the gain actually lands</h2>
+  <p>The shape of this table <em>is</em> the result. Comparing the baseline (exp-01) against the best recipe (exp-05) per species:</p>
+  <table>
+    <caption>Per-species F1: baseline (exp-01) vs best (exp-05)</caption>
+    <thead>
+      <tr>
+        <th>Species</th><th>Tier</th><th class="num">Clips</th>
+        <th class="num">exp-01</th><th class="num">exp-05</th><th class="num">Δ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>American Robin</td><td>common</td><td class="num">480</td><td class="num">0.79</td><td class="num">0.85</td><td class="num pos">+0.06</td></tr>
+      <tr><td>Northern Cardinal</td><td>common</td><td class="num">421</td><td class="num">0.76</td><td class="num">0.83</td><td class="num pos">+0.07</td></tr>
+      <tr><td>Song Sparrow</td><td>mid</td><td class="num">308</td><td class="num">0.68</td><td class="num">0.74</td><td class="num pos">+0.06</td></tr>
+      <tr><td>Wood Thrush</td><td>rare</td><td class="num">92</td><td class="num">0.51</td><td class="num">0.54</td><td class="num pos">+0.03</td></tr>
+      <tr><td>Kirtland's Warbler</td><td>deep tail</td><td class="num">41</td><td class="num">0.34</td><td class="num">0.33</td><td class="num neg">−0.01</td></tr>
+    </tbody>
+  </table>
+  <p>The best recipe adds 6–7 points to the head, a few to the mid, almost nothing to the rare tail, and slightly <em>regresses</em> the single deepest-tail class. Global augmentation has run out of road on exactly the classes that most need help.</p>
+
+  <h2>Post-mortems on the failures</h2>
+  <p class="section-note">Both negative results carry honest caveats — the mechanisms are inferred from validation-tier decompositions, not proven by controlled per-class ablations.</p>
+
+  <h3>Pitch-shift / time-stretch hurt the rare classes (exp-03)</h3>
+  <p>Many deep-tail species are separated by fine formant/harmonic structure and call <em>timing</em>. Warping pitch and tempo moves synthetic examples across the very decision boundaries the model needs to keep sharp, and with fewer than 50 real clips there aren't enough true examples to anchor against the corrupted ones.</p>
+  <p><strong>Honest caveat:</strong> only one strength was tested (±2 semitones). A gentler setting (±0.5 st) might be neutral rather than harmful — untested. The claim is "at the strength we tried, it hurt the tail," not "pitch aug is useless." <strong>Disposition:</strong> dropped, a candidate only as a <em>class-conditional</em> transform never applied to deep-tail classes.</p>
+
+  <h3>Heavy reverb helped common classes only (exp-06)</h3>
+  <p>Long reverb tails wash out short, low-energy rare-class calls into the spectrogram's noise floor, while long, loud common-class songs stay legible and even benefit from the added room variation. Net: common up, rare down, small aggregate loss.</p>
+  <p><strong>Honest caveat:</strong> this is a per-tier decomposition on validation, not a controlled per-class ablation — the mechanism is inferred. <strong>Disposition:</strong> keep reverb light; augmentation strength should be conditioned on class, not global.</p>
+
+  <h2>The current best recipe</h2>
+  <p>Reproduces exp-05 (val macro-F1 0.671):</p>
+  <pre><code>backbone: small_cnn            # unchanged control across all experiments
+input: logmel_128              # 128 mels, 25ms/10ms
+train: {lr: 3e-4, batch: 32, epochs: 60, schedule: cosine}
+sampler:
+  class_balanced: 0.5          # partial reweight toward the tail
+aug:
+  reverb_ir:  {p: 0.5, rt60_range: [0.3, 0.6]}   # light, measured IRs
+  noise_mix:  {snr_db: [5, 20], beds: [wind, rain, chorus]}
+  specaugment: {freq_masks: 2, time_masks: 2}
+  # pitch_shift / time_stretch: OFF (regressed, see post-mortem)
+  # heavy reverb: OFF (common-only, see post-mortem)</code></pre>
+  <p>Nothing here is expensive: the augmentations add well under a minute to the per-run wall-clock over the clean baseline. That is the H2 (efficiency) story holding up in spirit — the win came from data-space moves, not compute.</p>
+
+  <h2>What we still don't know</h2>
+  <ul>
+    <li><strong>Is the tail even learnable from 41 clips?</strong> The ceiling is unknown. A small oracle study (vary clips-per-class) would separate "augmentation can't help the tail" from "nothing can, at this n."</li>
+    <li><strong>Does noise-mix only help <em>through</em> SpecAugment?</strong> exp-04 vs exp-05 suggests composition, but it is one comparison — wants a proper 2×2 ablation.</li>
+    <li><strong>How much of exp-05's gain is the balanced sampler vs the augmentations?</strong> Currently confounded; the sampler was introduced in the same run.</li>
+    <li><strong>Does H2 survive a fair backbone baseline?</strong> The "bigger/pretrained backbone" arm has never actually been run. Until it is, H2 is asserted, not shown.</li>
+    <li><strong>Do measured IRs generalize to unseen environments?</strong> All IRs come from a small room library; field conditions may differ.</li>
+  </ul>
+  <blockquote>
+    <p>Discipline note: the held-out test split (~930 clips) has <strong>not</strong> been touched during search. Every number here is validation macro-F1; a single test-set scoring pass runs only after the best recipe is frozen.</p>
+  </blockquote>
+
+  <h2>Next three planned experiments</h2>
+  <ol class="next">
+    <li><strong>class-conditional-aug</strong> — apply each augmentation only to the tiers where the ledger shows it helps: light reverb everywhere, but pitch/stretch and heavy reverb <em>excluded</em> from rare/deep-tail classes. A direct test of the "condition on class" thesis. Est. ~1 h.</li>
+    <li><strong>sampler-vs-aug-ablation</strong> — a clean 2×2 of (balanced sampler on/off) × (aug stack on/off) to de-confound exp-05. Cheap: ~4 runs × ~50 min.</li>
+    <li><strong>backbone-fairness-arm</strong> — finally run the architecture control: a larger / AudioSet-pretrained backbone with <em>no</em> augmentation at matched compute budget, to see whether murmur's +5.9 augmentation points beat what a bigger model buys. Settles H2. Est. up to ~6 h — the heaviest run on the docket, to run overnight in a worktree.</li>
+  </ol>
+
+  <h2>Verdict</h2>
+  <p>murmur's core bet is <strong>partially supported</strong>. Cheap reverb-flavoured augmentation does lift a small bird-call classifier — +5.9 validation macro-F1 points, 0.612 to 0.671, at negligible extra compute — but the gain is <strong>concentrated in the common and mid classes and barely reaches the rare tail</strong>, and not every member of the family helps: pitch/stretch regressed, heavy reverb helped only the head. The efficiency half of the hypothesis (H2) is still <em>asserted, not shown</em>, because the fair bigger-backbone comparison hasn't been run. The clear next step is to stop augmenting globally and start augmenting <strong>per class</strong> — protect the tail from the transforms that smear it while keeping the head's gains.</p>
+</main>
+<footer>
+  research-project · prose-baseline · v1 · generated 2026-07-01
+</footer>
+</body>
+</html>

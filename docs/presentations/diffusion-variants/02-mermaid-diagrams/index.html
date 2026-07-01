@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diffusion models and their variants: how modern image generators work</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #555;
+    --card: #ffffff;
+    --border: #dddddd;
+    --accent: #1e88e5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d;
+      --fg: #e8e8e8;
+      --muted: #a5a5a5;
+      --card: #f4f6f8; /* diagrams stay on a light card so the neutral theme stays readable */
+      --border: #33363d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.45;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 20px 16px 8px; }
+  header h1 {
+    font-size: clamp(1.35rem, 3vw, 1.9rem);
+    margin: 0 0 6px;
+  }
+  header p.framing {
+    margin: 0 0 14px;
+    font-size: clamp(0.95rem, 1.6vw, 1.08rem);
+    color: var(--muted);
+    max-width: 62em;
+  }
+  section { margin: 0 0 30px; }
+  h2 {
+    font-size: clamp(1.05rem, 2vw, 1.3rem);
+    margin: 0 0 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+  .diagram {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 8px;
+    overflow-x: auto;
+  }
+  .mermaid { display: flex; justify-content: center; }
+  .mermaid svg { max-width: 100%; height: auto; }
+  p.caption {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin: 8px 2px 0;
+    max-width: 72em;
+  }
+  footer {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 6px 16px 14px;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Diffusion models: destroy carefully, learn to rebuild</h1>
+    <p class="framing">Stable Diffusion, Midjourney-class systems, DALL·E&nbsp;3, Flux — all generate images by learning to reverse a gradual noising process, and nearly every variant exists to make one thing cheaper: sampling.</p>
+  </header>
+
+  <section>
+    <h2>The core mechanism</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  A["Real image"] -->|"forward process: add tiny noise, ~1000 fixed steps, no learning"| B["Pure noise"]
+  B -.->|"training: a network learns to undo one small step"| C["Fresh random noise"]
+  C -->|"generation: apply the learned step N times"| D["New image"]
+  V["Speed variants"] -.->|"shrink N from ~1000 to as few as 1-4"| C
+  classDef fixed fill:#eceff1,stroke:#607d8b,color:#263238
+  classDef learned fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1
+  classDef outp fill:#e8f5e9,stroke:#43a047,color:#1b5e20
+  class A,B fixed
+  class C,V learned
+  class D outp
+      </pre>
+    </div>
+    <p class="caption">A fixed process destroys real images into noise; a network learns to undo it one small step at a time (undoing all noise in one jump would be nearly impossible, a little is tractable); generation runs that learned step repeatedly from fresh random noise, so the output never existed anywhere — no photo is edited, no database consulted. Everything below answers one question: how do we take fewer steps?</p>
+  </section>
+
+  <section>
+    <h2>Training: guess the noise</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  A["Real image"] -->|"noised in one shot, at a random level t"| B["Noisy image"]
+  B --> N["Network"]
+  T["Timestep t"] --> N
+  P["Prompt embedding"] -->|"text-to-image models only"| N
+  N -->|"guess the noise that was added"| E["Predicted noise"]
+  E -->|"mean-squared error vs the actual noise"| L["Weight update"]
+  L -.->|"repeat billions of times, one random noise level each"| A
+  classDef fixed fill:#eceff1,stroke:#607d8b,color:#263238
+  classDef learned fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1
+  classDef outp fill:#e8f5e9,stroke:#43a047,color:#1b5e20
+  class A,B,T,P fixed
+  class N,E learned
+  class L outp
+      </pre>
+    </div>
+    <p class="caption">The prediction target can equivalently be the added noise (ε), the score (the direction that makes the image more probable), or a velocity (a defined image-noise mixture) — three interconvertible conventions — and the network itself is a U-Net in Stable-Diffusion-1/2-era models or a diffusion transformer (DiT) in newer ones like SD3 and Flux. High-noise examples teach global composition, low-noise ones fine texture, and there is no GAN-style adversarial balance to maintain — that stability is a big reason diffusion displaced GANs.</p>
+  </section>
+
+  <section>
+    <h2>The variant zoo: fewer steps</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  DDPM["DDPM · ~1000 steps"] -->|"same trained model, deterministic sampler, bigger jumps"| DDIM["DDIM · 20-50 steps"]
+  DDIM -->|"sampling is just solving an ODE: better solvers, no retraining"| ODE["DPM-Solver · 10-20 steps"]
+  DDPM -->|"retrain on straight noise-to-image paths (SD3, Flux)"| RF["Rectified flow · ~20-30 steps"]
+  ODE -->|"retrain a student to take big jumps"| DIST["Distilled · 1-4 steps"]
+  classDef orig fill:#eceff1,stroke:#607d8b,color:#263238
+  classDef sampler fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1
+  classDef retrain fill:#e8f5e9,stroke:#43a047,color:#1b5e20
+  class DDPM orig
+  class DDIM,ODE sampler
+  class RF,DIST retrain
+      </pre>
+    </div>
+    <p class="caption">Blue = the same trained network with a smarter sampler (DDIM is deterministic — same starting noise, same image — which also makes generated images invertible and interpolatable, and is what a tool's "steps" slider defaulting to ~30 exposes); green = a retrained objective (flow matching / rectified flow straightens the paths; progressive, consistency, and adversarial distillation train big jumps, with latent consistency models giving ~4-step generation). Below ~10 steps undistilled models degrade visibly, above ~50 returns diminish rapidly, and 1-4-step distilled models pay a mild quality-and-diversity cost — the technology behind "real-time" generation demos.</p>
+  </section>
+
+  <section>
+    <h2>Latent diffusion: run it compressed</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  subgraph LSP["Latent space · 64×64×4 = 16,384 numbers"]
+    NZ["Random latent noise"] -->|"the whole denoising loop, each step ≈48× cheaper"| CL["Clean latent"]
+  end
+  CL -->|"VAE decoder, one single pass"| IMG["512×512 image"]
+  classDef learned fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1
+  classDef outp fill:#e8f5e9,stroke:#43a047,color:#1b5e20
+  class NZ,CL learned
+  class IMG outp
+      </pre>
+    </div>
+    <p class="caption">A 512×512×3 image is 786,432 numbers; a separately trained VAE (variational autoencoder — an encoder-decoder compressor, downsampling 8× per spatial dimension) maps it to 16,384 — roughly 48× fewer — and running diffusion there (2022) is what put Stable-Diffusion-class models on consumer GPUs. Costs are minor — a slight quality ceiling from the compression bottleneck (historically fine text and small faces, much improved in newer VAEs) plus one decode pass — and note the division of labor: the VAE only compresses and decompresses, the diffusion loop generates.</p>
+  </section>
+
+  <section>
+    <h2>Classifier-free guidance: steering with the prompt</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  X["Noisy latent, step t"] -->|"prompt enters as text-encoder embeddings (CLIP / T5)"| N1["Network + prompt"]
+  X -->|"works because the prompt was dropped for ~10-20% of training"| N2["Network, empty prompt"]
+  N1 --> P1["Conditional prediction"]
+  N2 --> P2["Unconditional prediction"]
+  P1 -->|"guided = unconditional + s × (conditional − unconditional)"| G["Extrapolated blend"]
+  P2 --> G
+  G --> S["One guided step"]
+  classDef fixed fill:#eceff1,stroke:#607d8b,color:#263238
+  classDef learned fill:#e3f2fd,stroke:#1e88e5,color:#0d47a1
+  classDef outp fill:#e8f5e9,stroke:#43a047,color:#1b5e20
+  class X fixed
+  class N1,N2,P1,P2 learned
+  class G,S outp
+      </pre>
+    </div>
+    <p class="caption">The gap between the two predictions is "the direction the prompt pulls," and the guidance scale s exaggerates it: s = 1 means no guidance, s ≈ 7.5 is a common Stable-Diffusion default, and pushed too far (roughly s &gt; 12-15 in classic SD) it produces oversaturated colors and burned-in artifacts. Higher s buys prompt adherence and more "typical"-looking images at the cost of diversity — and the two runs double the network evaluations per step, the honest cost metric (NFE).</p>
+  </section>
+
+  <section>
+    <h2>Misconceptions, corrected</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  M1["✗ Collages database images"] -->|"nothing is stored or consulted at generation time"| F1["✓ Statistics, not copies"]
+  M2["✗ Cleans a photo"] -->|"text-to-image starts from synthetic noise"| F2["✓ Starts from noise"]
+  M3["✗ VAE is generator"] -->|"the diffusion loop in latent space generates"| F3["✓ VAE only compresses"]
+  M4["✗ More steps, better"] -->|"extra steps refine the same trajectory"| F4["✓ Only to a point"]
+  M5["✗ CFG = quality knob"] -->|"artifact regime at high s"| F5["✓ Adherence vs diversity"]
+  M6["✗ Rival technologies"] -->|"same targets: different samplers, paths, parameterizations"| F6["✓ One framework"]
+  classDef myth fill:#fdecea,stroke:#c0392b,color:#7b241c
+  classDef fact fill:#e8f5e9,stroke:#43a047,color:#1b5e20
+  class M1,M2,M3,M4,M5,M6 myth
+  class F1,F2,F3,F4,F5,F6 fact
+      </pre>
+    </div>
+    <p class="caption">Two honest caveats: rare near-duplication of training images <em>has</em> been demonstrated, essentially for images repeated many times in the training set — a real but exceptional memorization failure, not the mechanism — and image-to-image or inpainting modes <em>do</em> start from a user-supplied photo (partially noised, then denoised back), but only as an explicit variant. For distilled models, the intended 1-4 step count is part of the design, not a corner cut.</p>
+  </section>
+</main>
+
+<footer>diffusion-variants · mermaid-diagrams · v1 · 2026-07-01</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+</body>
+</html>

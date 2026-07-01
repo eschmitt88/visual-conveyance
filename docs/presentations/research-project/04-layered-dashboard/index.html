@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>murmur — project state at a glance</title>
+<style>
+  :root {
+    --page:           #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --surface-2:      #f2f1ec;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --muted:          #898781;
+    --grid:           #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    /* data hues (documented palette) */
+    --accent:         #2a78d6;   /* blue — the trajectory / "best" */
+    --accent-soft:    #86b6ef;   /* light blue — "baseline" shade  */
+    --good:           #0ca30c;
+    --good-text:      #006300;
+    --warning:        #fab219;
+    --critical:       #d03b3b;
+    --shadow:         0 1px 2px rgba(11,11,11,0.05), 0 1px 1px rgba(11,11,11,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page:           #0d0d0d;
+      --surface-1:      #1a1a19;
+      --surface-2:      #232320;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted:          #898781;
+      --grid:           #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --accent:         #3987e5;
+      --accent-soft:    #86b6ef;
+      --good:           #0ca30c;
+      --good-text:      #0ca30c;
+      --warning:        #fab219;
+      --critical:       #e66767;
+      --shadow:         none;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); }
+
+  /* ---- sticky nav ---- */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px;
+    padding: 8px 20px;
+    background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav .brand { font-weight: 700; letter-spacing: .2px; margin-right: 6px; }
+  .nav .brand small { font-weight: 500; color: var(--muted); }
+  .nav a {
+    text-decoration: none; color: var(--text-secondary);
+    font-size: .82rem; padding: 2px 2px; white-space: nowrap;
+  }
+  .nav a:hover { color: var(--text-primary); }
+  .nav .spacer { flex: 1 1 auto; }
+  .nav button {
+    font: inherit; font-size: .78rem; cursor: pointer;
+    background: var(--surface-2); color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 3px 9px;
+  }
+  .nav button:hover { color: var(--text-primary); }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 0 20px 64px; }
+
+  /* ---- Layer 1: glance ---- */
+  .glance { padding: 22px 0 10px; }
+  .eyebrow {
+    text-transform: uppercase; letter-spacing: .14em;
+    font-size: .70rem; font-weight: 700; color: var(--muted); margin: 0 0 8px;
+  }
+  .headline {
+    font-size: 1.65rem; line-height: 1.28; font-weight: 700;
+    margin: 0 0 4px; max-width: 62ch;
+  }
+  .headline .hi-up   { color: var(--good-text); white-space: nowrap; }
+  .headline .hi-down { color: var(--critical); white-space: nowrap; }
+  .subhead { color: var(--text-secondary); margin: 8px 0 18px; max-width: 74ch; }
+
+  .glance-grid {
+    display: grid; gap: 14px;
+    grid-template-columns: minmax(280px, 340px) 1fr;
+    align-items: stretch;
+  }
+
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tile {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .tile .t-label { font-size: .74rem; color: var(--text-secondary); }
+  .tile .t-value {
+    font-size: 1.9rem; font-weight: 700; line-height: 1.05; margin-top: 6px;
+    letter-spacing: -.01em;
+  }
+  .tile .t-delta { font-size: .80rem; font-weight: 600; margin-top: 4px; }
+  .d-up   { color: var(--good-text); }
+  .d-down { color: var(--critical); }
+  .d-flat { color: var(--muted); }
+  .tile.verdict { grid-column: span 2; background: var(--surface-2); }
+  .verdict .t-value { font-size: 1.25rem; }
+  .verdict .chip {
+    display: inline-block; margin-top: 6px; font-size: .74rem; font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .hero {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px 6px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column;
+  }
+  .hero h2 { font-size: .92rem; margin: 2px 2px 2px; }
+  .hero .cap { font-size: .74rem; color: var(--text-secondary); margin: 0 2px 6px; }
+  .hero svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .74rem;
+            color: var(--text-secondary); margin: 4px 2px 4px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .lk-line { width: 16px; height: 2px; border-radius: 2px; background: var(--accent); }
+  .lk-dot  { width: 9px; height: 9px; border-radius: 50%; }
+
+  /* ---- Layer 2/3: cards ---- */
+  .section-head { margin: 34px 0 4px; }
+  .section-head h2 { margin: 0; font-size: 1.15rem; }
+  .section-head p { margin: 4px 0 0; color: var(--text-secondary); font-size: .9rem; }
+
+  .cards {
+    display: grid; gap: 16px; margin-top: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: var(--shadow); overflow: hidden;
+  }
+  .card > .card-body { padding: 16px 18px 6px; }
+  .card .c-icon { font-size: 1.05rem; margin-right: 8px; }
+  .card h3 { margin: 0 0 6px; font-size: 1.02rem; display: flex; align-items: baseline; }
+  .card .lead { margin: 0 0 6px; }
+  .card .lead b { color: var(--text-primary); }
+  .card p { color: var(--text-secondary); }
+  .card .keynum {
+    font-size: 1.35rem; font-weight: 700; color: var(--text-primary);
+    display: inline-block; margin: 2px 0;
+  }
+  .card .keynum small { font-size: .8rem; font-weight: 600; color: var(--text-secondary); }
+
+  details { border-top: 1px solid var(--border); margin-top: 8px; }
+  details > summary {
+    cursor: pointer; list-style: none; padding: 10px 18px;
+    font-size: .82rem; font-weight: 600; color: var(--accent);
+    display: flex; align-items: center; gap: 6px; user-select: none;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary .tw { transition: transform .15s ease; display: inline-block; }
+  details[open] > summary .tw { transform: rotate(90deg); }
+  details > summary::after { content: "Details"; }
+  details[open] > summary::after { content: "Hide details"; }
+  .detail-body { padding: 2px 18px 16px; font-size: .9rem; color: var(--text-secondary); }
+  .detail-body h4 { color: var(--text-primary); font-size: .86rem; margin: 14px 0 4px; }
+  .detail-body p { margin: 6px 0; }
+  .detail-body ul { margin: 6px 0; padding-left: 20px; }
+  .detail-body li { margin: 3px 0; }
+
+  table { border-collapse: collapse; width: 100%; font-size: .82rem; margin: 8px 0; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-secondary); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.best td { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+  .tag { font-size: .70rem; font-weight: 600; padding: 1px 6px; border-radius: 999px;
+         border: 1px solid var(--border); color: var(--text-secondary); white-space: nowrap; }
+
+  /* caveat / warning style — one consistent look everywhere */
+  .caveat {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: color-mix(in srgb, var(--warning) 14%, var(--surface-1));
+    border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+    border-left: 3px solid var(--warning);
+    border-radius: 8px; padding: 8px 11px; margin: 10px 0;
+    font-size: .84rem; color: var(--text-secondary);
+  }
+  .caveat b { color: var(--text-primary); }
+  .caveat .ic { flex: 0 0 auto; }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: .76rem;
+          font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .pill.win  { color: var(--good-text);  background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .pill.reg  { color: var(--critical);   background: color-mix(in srgb, var(--critical) 14%, transparent); }
+  .pill.null { color: var(--text-secondary); background: var(--surface-2); }
+
+  pre {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; overflow-x: auto; font-size: .78rem; line-height: 1.45;
+    color: var(--text-primary);
+  }
+  code { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+
+  .dumbbell svg { width: 100%; height: auto; }
+
+  footer {
+    max-width: 1200px; margin: 0 auto; padding: 20px; font-size: .72rem;
+    color: var(--muted); border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 860px) {
+    .glance-grid { grid-template-columns: 1fr; }
+    .headline { font-size: 1.35rem; }
+    .nav a { display: none; }
+    .nav .brand, .nav .spacer, .nav button { display: inline-block; }
+  }
+</style>
+</head>
+<body data-palette="#2a78d6,#86b6ef">
+
+<nav class="nav" aria-label="Sections">
+  <span class="brand">murmur <small>project state · 2026-06-28</small></span>
+  <a href="#bet">The bet</a>
+  <a href="#data">Dataset</a>
+  <a href="#ledger">Ledger</a>
+  <a href="#worked">What worked</a>
+  <a href="#failed">What didn't</a>
+  <a href="#tail">Head vs tail</a>
+  <a href="#verdict">Verdict</a>
+  <a href="#next">What's next</a>
+  <span class="spacer"></span>
+  <button type="button" id="expandAll">Expand all</button>
+  <button type="button" id="collapseAll">Collapse all</button>
+</nav>
+
+<main>
+
+  <!-- ============ LAYER 1 — GLANCE ============ -->
+  <section class="glance" aria-label="At a glance">
+    <p class="eyebrow">Cheap augmentation vs. a bigger model · small-data bird-call classifier</p>
+    <h1 class="headline">
+      The bet is <span class="hi-up">partially supported</span>: cheap
+      reverb-flavoured augmentation lifts validation macro-F1 from 0.612 to
+      <span class="hi-up">0.671&nbsp;(+5.9&nbsp;pts)</span> — but the gain sits in
+      the common classes and <span class="hi-down">barely reaches the rare tail</span>.
+    </h1>
+    <p class="subhead">
+      <b>macro-F1</b> weights every species equally, so it exposes the long tail a
+      plain accuracy score would hide. Everything below is <b>validation</b> macro-F1;
+      the ~930-clip test split is held out, untouched during the search.
+    </p>
+
+    <div class="glance-grid">
+      <div class="tiles">
+        <div class="tile verdict">
+          <div class="t-label">Honest verdict</div>
+          <div class="t-value">Partially works</div>
+          <span class="chip">Reverb helps · not every aug does · tail still stuck</span>
+        </div>
+        <div class="tile">
+          <div class="t-label">Best recipe (exp-05)</div>
+          <div class="t-value">0.671</div>
+          <div class="t-delta d-up">▲ +0.059 vs baseline</div>
+        </div>
+        <div class="tile">
+          <div class="t-label">No-aug baseline (exp-01)</div>
+          <div class="t-value">0.612</div>
+          <div class="t-delta d-flat">the floor</div>
+        </div>
+        <div class="tile">
+          <div class="t-label">Worst arm — pitch/stretch (exp-03)</div>
+          <div class="t-value">0.589</div>
+          <div class="t-delta d-down">▼ −0.023 below baseline</div>
+        </div>
+        <div class="tile">
+          <div class="t-label">Deepest-tail class (Kirtland's Warbler)</div>
+          <div class="t-value">−0.01</div>
+          <div class="t-delta d-down">best recipe slightly regressed it</div>
+        </div>
+      </div>
+
+      <figure class="hero">
+        <h2>Validation macro-F1 across six experiments</h2>
+        <p class="cap">One win, one regression, one null, a best stack, then a small
+          fall-back. Seed-to-seed noise is ≈ ±0.006.</p>
+        <!-- trajectory: single series, emphasis on best & regression -->
+        <svg viewBox="0 0 720 300" role="img"
+             aria-label="Line chart of validation macro-F1 from exp-01 (0.612) rising to exp-02 (0.641), dropping to exp-03 (0.589), recovering at exp-04 (0.643), peaking at exp-05 (0.671, best), then easing to exp-06 (0.663).">
+          <!-- gridlines + y ticks -->
+          <g font-size="11" fill="var(--muted)" font-family="system-ui, sans-serif">
+            <!-- y = 260-(v-0.58)*2400 ; ticks 0.58..0.68 -->
+            <line x1="56" y1="260" x2="696" y2="260" stroke="var(--grid)"/>
+            <text x="50" y="264" text-anchor="end">0.58</text>
+            <line x1="56" y1="212" x2="696" y2="212" stroke="var(--grid)"/>
+            <text x="50" y="216" text-anchor="end">0.60</text>
+            <line x1="56" y1="164" x2="696" y2="164" stroke="var(--grid)"/>
+            <text x="50" y="168" text-anchor="end">0.62</text>
+            <line x1="56" y1="116" x2="696" y2="116" stroke="var(--grid)"/>
+            <text x="50" y="120" text-anchor="end">0.64</text>
+            <line x1="56" y1="68"  x2="696" y2="68"  stroke="var(--grid)"/>
+            <text x="50" y="72"  text-anchor="end">0.66</text>
+            <line x1="56" y1="20"  x2="696" y2="20"  stroke="var(--grid)"/>
+            <text x="50" y="24"  text-anchor="end">0.68</text>
+          </g>
+          <!-- baseline reference line at 0.612 (y=183.2) -->
+          <line x1="56" y1="183.2" x2="696" y2="183.2" stroke="var(--baseline)" stroke-width="1"/>
+          <text x="696" y="197" text-anchor="end" font-size="10.5" fill="var(--muted)"
+                font-family="system-ui, sans-serif">baseline 0.612</text>
+
+          <!-- trajectory line -->
+          <polyline fill="none" stroke="var(--accent)" stroke-width="2"
+            stroke-linejoin="round" stroke-linecap="round"
+            points="90,183.2 202,113.6 314,238.4 426,108.8 538,41.6 650,60.8"/>
+
+          <!-- markers (2px surface ring via stroke) -->
+          <g stroke="var(--surface-1)" stroke-width="2">
+            <circle cx="90"  cy="183.2" r="4.5" fill="var(--accent)"/>
+            <circle cx="202" cy="113.6" r="4.5" fill="var(--accent)"/>
+            <circle cx="314" cy="238.4" r="5"   fill="var(--critical)"/>
+            <circle cx="426" cy="108.8" r="4.5" fill="var(--accent)"/>
+            <circle cx="538" cy="41.6"  r="6"   fill="var(--accent)"/>
+            <circle cx="650" cy="60.8"  r="4.5" fill="var(--accent)"/>
+          </g>
+
+          <!-- selective direct labels: baseline, regression, best -->
+          <g font-size="11.5" font-family="system-ui, sans-serif" font-weight="600">
+            <text x="90"  y="173" text-anchor="middle" fill="var(--text-secondary)">0.612</text>
+            <text x="314" y="256" text-anchor="middle" fill="var(--critical)">0.589 ▼</text>
+            <text x="538" y="32"  text-anchor="middle" fill="var(--text-primary)">0.671 · best</text>
+          </g>
+
+          <!-- x-axis labels -->
+          <g font-size="10.5" fill="var(--text-secondary)" font-family="system-ui, sans-serif" text-anchor="middle">
+            <text x="90"  y="282">exp-01</text><text x="90"  y="294" fill="var(--muted)">clean</text>
+            <text x="202" y="282">exp-02</text><text x="202" y="294" fill="var(--muted)">reverb</text>
+            <text x="314" y="282">exp-03</text><text x="314" y="294" fill="var(--muted)">pitch/str.</text>
+            <text x="426" y="282">exp-04</text><text x="426" y="294" fill="var(--muted)">noise</text>
+            <text x="538" y="282">exp-05</text><text x="538" y="294" fill="var(--muted)">stack</text>
+            <text x="650" y="282">exp-06</text><text x="650" y="294" fill="var(--muted)">heavy rev.</text>
+          </g>
+        </svg>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ LAYER 2 / 3 — CARDS ============ -->
+  <div class="section-head">
+    <h2>The story in eight cards</h2>
+    <p>Read the titles and bold lead-ins for the whole picture; open any card for
+      the full prose, tables, and caveats.</p>
+  </div>
+
+  <div class="cards">
+
+    <!-- CARD: the bet -->
+    <article class="card" id="bet">
+      <div class="card-body">
+        <h3><span class="c-icon">🎯</span>The bet</h3>
+        <p class="lead"><b>Cheap, natural-reverb-inspired audio augmentations beat
+          reaching for a bigger model</b> when the binding constraint is data, not compute.</p>
+        <p>Architecture is held fixed — a small CNN on log-mel spectrograms — so the
+          only thing that moves is the augmentation pipeline.</p>
+      </div>
+      <details>
+        <summary><span class="tw">▶</span></summary>
+        <div class="detail-body">
+          <p>The hypothesis, in the project's own words:</p>
+          <p><i>"Ultra-cheap audio augmentations inspired by natural reverberation
+            improve bird-call classification on small datasets — more per unit of
+            compute than reaching for a bigger or pretrained architecture would."</i></p>
+          <h4>Two sub-claims, tested separately</h4>
+          <ul>
+            <li><b>H1 — efficacy.</b> Reverb-family augmentation lifts validation
+              macro-F1 over a no-augmentation baseline on a fixed small CNN.</li>
+            <li><b>H2 — efficiency.</b> That lift is competitive with, and cheaper
+              than, the lift from swapping in a larger backbone — augmentation is the
+              better marginal spend when data, not compute, is scarce.</li>
+          </ul>
+          <p>The bet is deliberately narrow: not "does augmentation help" (it usually
+            does) but "do the <i>natural-reverberation-flavoured</i>, near-free ones
+            help, and where do they help versus hurt?" Field recordings already contain
+            reverb, wind, distance and overlap, so simulating those cheaply expands the
+            data along axes the model actually meets at inference.</p>
+          <div class="caveat"><span class="ic">⚠</span><span><b>H2 is asserted, not
+            shown.</b> The fair "bigger / pretrained backbone" comparison has never been
+            run. Until it is, the efficiency half of the bet is a claim, not a result.</span></div>
+        </div>
+      </details>
+    </article>
+
+    <!-- CARD: dataset -->
+    <article class="card" id="data">
+      <div class="card-body">
+        <h3><span class="c-icon">🐦</span>The dataset — long-tailed by design</h3>
+        <p class="lead"><b>6,200 clips, 34 species, heavily long-tailed.</b> The tail is
+          the whole difficulty: 11 species have &lt;80 clips, 5 have &lt;45.</p>
+        <p>The 8 most common species are ~52% of all clips (top class,
+          American Robin, has 480). Median is ≈120 clips per class.</p>
+      </div>
+      <details>
+        <summary><span class="tw">▶</span></summary>
+        <div class="detail-body">
+          <table>
+            <tbody>
+              <tr><th>Clips (total)</th><td class="num">6,200</td></tr>
+              <tr><th>Species (classes)</th><td class="num">34</td></tr>
+              <tr><th>Clip length</th><td class="num">5 s, mono</td></tr>
+              <tr><th>Sample rate</th><td class="num">32 kHz</td></tr>
+              <tr><th>Features</th><td class="num">log-mel, 128 mels, 25 ms / 10 ms</td></tr>
+              <tr><th>Split (strat., seeded)</th><td class="num">70 / 15 / 15</td></tr>
+              <tr><th>Val / test clips</th><td class="num">~930 / ~930 (held out)</td></tr>
+            </tbody>
+          </table>
+          <h4>Where every experiment lives or dies</h4>
+          <table>
+            <thead><tr><th>Species</th><th class="num">Clips</th><th>Tier</th></tr></thead>
+            <tbody>
+              <tr><td>American Robin</td><td class="num">480</td><td>common</td></tr>
+              <tr><td>Northern Cardinal</td><td class="num">421</td><td>common</td></tr>
+              <tr><td>Song Sparrow</td><td class="num">308</td><td>mid</td></tr>
+              <tr><td>Wood Thrush</td><td class="num">92</td><td>rare</td></tr>
+              <tr><td>Kirtland's Warbler</td><td class="num">41</td><td>deep tail</td></tr>
+            </tbody>
+          </table>
+          <p>The primary metric is <b>validation macro-F1</b> precisely because it
+            weights the tail equally with the head. A model that only learns the common
+            eight looks great on accuracy and mediocre on macro-F1 — that gap is the point.</p>
+        </div>
+      </details>
+    </article>
+
+    <!-- CARD: ledger -->
+    <article class="card" id="ledger">
+      <div class="card-body">
+        <h3><span class="c-icon">📒</span>The experiment ledger</h3>
+        <p class="lead"><b>Six runs, 2026-03 → 2026-06, same seed / split / backbone.</b>
+          Baseline is exp-01; current best is exp-05. The trajectory chart above plots
+          this column.</p>
+        <p><span class="pill win">1 clear win</span>
+           <span class="pill reg">1 regression</span>
+           <span class="pill null">1 null</span> — plus the best stack and a fall-back.</p>
+      </div>
+      <details>
+        <summary><span class="tw">▶</span></summary>
+        <div class="detail-body">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Slug</th><th>Date</th>
+              <th class="num">Macro-F1</th><th class="num">Δ base</th><th>Note</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>01</td><td>baseline-clean</td><td>03-08</td><td class="num">0.612</td><td class="num">—</td><td>floor</td></tr>
+              <tr><td>02</td><td>reverb-light-ir</td><td>03-24</td><td class="num">0.641</td><td class="num">+0.029</td><td>first win</td></tr>
+              <tr><td>03</td><td>pitchshift-timestretch</td><td>04-11</td><td class="num">0.589</td><td class="num">−0.023</td><td>regression</td></tr>
+              <tr><td>04</td><td>noise-mix-snr</td><td>04-29</td><td class="num">0.643</td><td class="num">+0.031</td><td>null vs exp-02</td></tr>
+              <tr class="best"><td>05</td><td>stack-reverb-noise-specaug</td><td>05-20</td><td class="num">0.671</td><td class="num">+0.059</td><td>best</td></tr>
+              <tr><td>06</td><td>reverb-heavy-longrt60</td><td>06-14</td><td class="num">0.663</td><td class="num">+0.051</td><td>common-only</td></tr>
+            </tbody>
+          </table>
+          <p><b>exp-02</b> — light impulse-response reverb (RT60 ≈ 0.3–0.6 s, p=0.5).
+            First clear win, broad but skewed to mid/common tiers. Made reverb the spine.</p>
+          <p><b>exp-04</b> — SNR-controlled background-noise mixing (5–20 dB; wind, rain,
+            chorus) on top of reverb. +0.002 over exp-02 — inside noise, a null on its
+            own; kept only on the bet it would compose with SpecAugment.</p>
+          <p><b>exp-06</b> — pushed reverb hard (long RT60 0.8–1.5 s, p=0.7). Landed at
+            0.663, below the light stack: heavy reverb helps common classes but blurs
+            short, quiet rare-class calls.</p>
+          <p>Seed-to-seed variability is ≈ ±0.006 macro-F1 — which is why exp-04's
+            +0.002 over exp-02 is read as null, not a win.</p>
+        </div>
+      </details>
+    </article>
+
+    <!-- CARD: what worked -->
+    <article class="card" id="worked">
+      <div class="card-body">
+        <h3><span class="c-icon">✅</span>What worked — a stack, not a hero augmentation</h3>
+        <p class="lead"><b>The best recipe is a stack:</b> light reverb + noise mixing +
+          SpecAugment + a partial class-balanced sampler. The components <i>compose</i>.</p>
+        <span class="keynum">0.671 <small>val macro-F1 · exp-05</small></span>
+      </div>
+      <details>
+        <summary><span class="tw">▶</span></summary>
+        <div class="detail-body">
+          <p>Noise mixing that was <i>null on its own</i> (exp-04) becomes useful once
+            SpecAugment is present, and the partial balanced sampler recovers a little
+            tail recall. No single augmentation gets you here.</p>
+          <pre><code>backbone: small_cnn            # control across all runs
+input: logmel_128              # 128 mels, 25ms/10ms
+train: {lr: 3e-4, batch: 32, epochs: 60, schedule: cosine}
+sampler:
+  class_balanced: 0.5          # partial reweight toward the tail
+aug:
+  reverb_ir:  {p: 0.5, rt60_range: [0.3, 0.6]}   # light, measured IRs
+  noise_mix:  {snr_db: [5, 20], beds: [wind, rain, chorus]}
+  specaugment: {freq_masks: 2, time_masks: 2}
+  # pitch_shift / time_stretch: OFF (regressed)
+  # heavy reverb: OFF (common-only)</code></pre>
+          <p>Nothing here is expensive — the augmentations add well under a minute of
+            per-run wall-clock over the clean baseline. That is the efficiency story
+            holding up: the win came from data-space moves, not compute.</p>
+          <div class="caveat"><span class="ic">⚠</span><span><b>The gain is uneven.</b>
+            Of the 5.9 points, ≈4.5 come from the common/mid tiers. And the balanced
+            sampler was introduced in the same run as the augmentations, so its share of
+            the gain versus the augmentations is currently <b>confounded</b>.</span></div>
+        </div>
+      </details>
+    </article>
+
+    <!-- CARD: what didn't -->
+    <article class="card" id="failed">
+      <div class="card-body">
+        <h3><span class="c-icon">🧪</span>What didn't — the honest failures</h3>
+        <p class="lead"><b>Not every "reverb-inspired" transform helped.</b>
+          Pitch/time-stretch actively <span class="d-down">regressed</span> the model to
+          0.589; noise-mix alone was a <span class="d-flat">null</span> (+0.002).</p>
+        <p><span class="pill reg">pitch/stretch −0.052 vs exp-02</span>
+           <span class="pill null">noise-mix +0.002 (inside noise)</span></p>
+      </div>
+      <details>
+        <summary><span class="tw">▶</span></summary>
+        <div class="detail-body">
+          <h4>Pitch-shift / time-stretch hurt the rare classes (exp-03)</h4>
+          <p>Adding ±2-semitone pitch-shift and 0.9–1.1× time-stretch dropped macro-F1
+            to <b>0.589 — below the no-aug baseline</b>. Many deep-tail species are
+            separated by fine formant/harmonic structure and call timing; warping pitch
+            and tempo moves synthetic examples across the exact decision boundaries the
+            model needs kept sharp, and with &lt;50 real clips there aren't enough true
+            examples to anchor against the corrupted ones. Common classes shrug it off,
+            so the aggregate hides an asymmetric harm.</p>
+          <div class="caveat"><span class="ic">⚠</span><span>Only <b>one strength</b> was
+            tested (±2 st). A gentler ±0.5 st might be neutral rather than harmful —
+            untested. The claim is "at the strength we tried, it hurt the tail," not
+            "pitch aug is useless."</span></div>
+          <h4>Noise mixing alone was a null (exp-04)</h4>
+          <p>+0.002 over reverb-only sits inside the ±0.006 seed spread — it neither
+            helps nor hurts on its own at this scale. Kept in the stack only on the
+            (later vindicated) bet that it composes with SpecAugment.</p>
+          <h4>Heavy reverb helped common classes only (exp-06)</h4>
+          <p>Long-RT60, high-probability reverb landed at 0.663, below the light stack's
+            0.671. Long reverb tails wash out short, low-energy rare-class calls while
+            long, loud common-class songs stay legible and even benefit — common up,
+            rare down, small aggregate loss.</p>
+          <div class="caveat"><span class="ic">⚠</span><span>The per-tier split is a
+            decomposition on validation, <b>not a controlled per-class ablation</b> —
+            the mechanism is inferred, not proven.</span></div>
+        </div>
+      </details>
+    </article>
+
+    <!-- CARD: head vs tail (dumbbell) -->
+    <article class="card" id="tail">
+      <div class="card-body">
+        <h3><span class="c-icon">📊</span>Head vs tail — where the gain lands</h3>
+        <p class="lead"><b>The best recipe adds 6–7 points to the head, a few to the
+          mid, almost nothing to the rare tail</b> — and slightly regresses the single
+          deepest-tail class. The shape of this chart <i>is</i> the result.</p>
+        <div class="legend">
+          <span><span class="lk-dot" style="background:var(--accent-soft)"></span>Baseline F1 (exp-01)</span>
+          <span><span class="lk-dot" style="background:var(--accent)"></span>Best F1 (exp-05)</span>
+        </div>
+        <div class="dumbbell">
+          <svg viewBox="0 0 720 250" role="img"
+               aria-label="Dumbbell chart of per-species F1, baseline vs best: American Robin 0.79 to 0.85, Northern Cardinal 0.76 to 0.83, Song Sparrow 0.68 to 0.74, Wood Thrush 0.51 to 0.54, Kirtland's Warbler 0.34 to 0.33.">
+            <!-- x gridlines: 0.3 0.5 0.7 0.9 -->
+            <g font-size="10.5" fill="var(--muted)" font-family="system-ui, sans-serif" text-anchor="middle">
+              <line x1="170" y1="24" x2="170" y2="228" stroke="var(--grid)"/><text x="170" y="243">0.30</text>
+              <line x1="343" y1="24" x2="343" y2="228" stroke="var(--grid)"/><text x="343" y="243">0.50</text>
+              <line x1="517" y1="24" x2="517" y2="228" stroke="var(--grid)"/><text x="517" y="243">0.70</text>
+              <line x1="690" y1="24" x2="690" y2="228" stroke="var(--grid)"/><text x="690" y="243">0.90</text>
+            </g>
+            <g font-size="12" font-family="system-ui, sans-serif">
+              <!-- Robin y40 : 0.79->594.7 , 0.85->646.7 -->
+              <text x="10" y="44" fill="var(--text-secondary)">American Robin <tspan fill="var(--muted)">· common</tspan></text>
+              <line x1="594.7" y1="40" x2="646.7" y2="40" stroke="var(--baseline)" stroke-width="2"/>
+              <circle cx="594.7" cy="40" r="5" fill="var(--accent-soft)" stroke="var(--surface-1)" stroke-width="2"/>
+              <circle cx="646.7" cy="40" r="5.5" fill="var(--accent)" stroke="var(--surface-1)" stroke-width="2"/>
+              <text x="662" y="44" fill="var(--good-text)" font-weight="600">+0.06</text>
+              <!-- Cardinal y82 : 0.76->568.7 , 0.83->629.3 -->
+              <text x="10" y="86" fill="var(--text-secondary)">Northern Cardinal <tspan fill="var(--muted)">· common</tspan></text>
+              <line x1="568.7" y1="82" x2="629.3" y2="82" stroke="var(--baseline)" stroke-width="2"/>
+              <circle cx="568.7" cy="82" r="5" fill="var(--accent-soft)" stroke="var(--surface-1)" stroke-width="2"/>
+              <circle cx="629.3" cy="82" r="5.5" fill="var(--accent)" stroke="var(--surface-1)" stroke-width="2"/>
+              <text x="644" y="86" fill="var(--good-text)" font-weight="600">+0.07</text>
+              <!-- Song Sparrow y124 : 0.68->499.3 , 0.74->551.3 -->
+              <text x="10" y="128" fill="var(--text-secondary)">Song Sparrow <tspan fill="var(--muted)">· mid</tspan></text>
+              <line x1="499.3" y1="124" x2="551.3" y2="124" stroke="var(--baseline)" stroke-width="2"/>
+              <circle cx="499.3" cy="124" r="5" fill="var(--accent-soft)" stroke="var(--surface-1)" stroke-width="2"/>
+              <circle cx="551.3" cy="124" r="5.5" fill="var(--accent)" stroke="var(--surface-1)" stroke-width="2"/>
+              <text x="566" y="128" fill="var(--good-text)" font-weight="600">+0.06</text>
+              <!-- Wood Thrush y166 : 0.51->352.0 , 0.54->378.0 -->
+              <text x="10" y="170" fill="var(--text-secondary)">Wood Thrush <tspan fill="var(--muted)">· rare</tspan></text>
+              <line x1="352.0" y1="166" x2="378.0" y2="166" stroke="var(--baseline)" stroke-width="2"/>
+              <circle cx="352.0" cy="166" r="5" fill="var(--accent-soft)" stroke="var(--surface-1)" stroke-width="2"/>
+              <circle cx="378.0" cy="166" r="5.5" fill="var(--accent)" stroke="var(--surface-1)" stroke-width="2"/>
+              <text x="393" y="170" fill="var(--good-text)" font-weight="600">+0.03</text>
+              <!-- Kirtland's y208 : 0.34->204.7 , 0.33->196.0 (best is LEFT) -->
+              <text x="10" y="212" fill="var(--text-secondary)">Kirtland's Warbler <tspan fill="var(--muted)">· deep tail</tspan></text>
+              <line x1="196.0" y1="208" x2="204.7" y2="208" stroke="var(--baseline)" stroke-width="2"/>
+              <circle cx="204.7" cy="208" r="5" fill="var(--accent-soft)" stroke="var(--surface-1)" stroke-width="2"/>
+              <circle cx="196.0" cy="208" r="5.5" fill="var(--accent)" stroke="var(--surface-1)" stroke-width="2"/>
+              <text x="220" y="212" fill="var(--critical)" font-weight="600">−0.01</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+      <details>
+        <summary><span class="tw">▶</span></summary>
+        <div class="detail-body">
+          <table>
+            <thead><tr>
+              <th>Species</th><th>Tier</th><th class="num">Clips</th>
+              <th class="num">exp-01 F1</th><th class="num">exp-05 F1</th><th class="num">Δ</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>American Robin</td><td>common</td><td class="num">480</td><td class="num">0.79</td><td class="num">0.85</td><td class="num">+0.06</td></tr>
+              <tr><td>Northern Cardinal</td><td>common</td><td class="num">421</td><td class="num">0.76</td><td class="num">0.83</td><td class="num">+0.07</td></tr>
+              <tr><td>Song Sparrow</td><td>mid</td><td class="num">308</td><td class="num">0.68</td><td class="num">0.74</td><td class="num">+0.06</td></tr>
+              <tr><td>Wood Thrush</td><td>rare</td><td class="num">92</td><td class="num">0.51</td><td class="num">0.54</td><td class="num">+0.03</td></tr>
+              <tr><td>Kirtland's Warbler</td><td>deep tail</td><td class="num">41</td><td class="num">0.34</td><td class="num">0.33</td><td class="num">−0.01</td></tr>
+            </tbody>
+          </table>
+          <p>Global augmentation has run out of road on the classes that most need help.
+            The head has the data to absorb extra variation; the deep tail, at 41 clips,
+            does not — and the same transforms that enrich the head can smear the tail.</p>
+        </div>
+      </details>
+    </article>
+
+    <!-- CARD: verdict -->
+    <article class="card" id="verdict">
+      <div class="card-body">
+        <h3><span class="c-icon">⚖️</span>The honest verdict</h3>
+        <p class="lead"><b>Core bet: partially supported.</b> Cheap reverb-flavoured
+          augmentation does lift the classifier (+5.9 pts at negligible compute) — but
+          the gain is concentrated in common/mid classes and <b>barely reaches the rare
+          tail</b>, and not every family member helps.</p>
+      </div>
+      <details>
+        <summary><span class="tw">▶</span></summary>
+        <div class="detail-body">
+          <p>Baseline 0.612 → best 0.671, +5.9 validation macro-F1 points, at well under
+            a minute of added per-run wall-clock. Pitch/stretch regressed; heavy reverb
+            helped only the head. The efficiency half of the hypothesis (H2) is still
+            <b>asserted, not shown</b>, because the fair bigger-backbone comparison hasn't
+            been run.</p>
+          <div class="caveat"><span class="ic">⚠</span><span>All numbers here are
+            <b>validation</b> macro-F1. The ~930-clip test split has not been touched
+            during the search — a single held-out scoring pass runs only after the best
+            recipe is frozen.</span></div>
+          <p>The clear next step is to stop augmenting globally and start augmenting
+            <b>per class</b>: protect the tail from the transforms that smear it while
+            keeping the head's gains.</p>
+        </div>
+      </details>
+    </article>
+
+    <!-- CARD: next -->
+    <article class="card" id="next">
+      <div class="card-body">
+        <h3><span class="c-icon">🧭</span>What's next</h3>
+        <p class="lead"><b>The clear next move is class-conditional augmentation:</b>
+          apply each transform only where the ledger shows it helps, and protect the rare
+          tail — global augmentation has plateaued on the common classes.</p>
+      </div>
+      <details>
+        <summary><span class="tw">▶</span></summary>
+        <div class="detail-body">
+          <h4>Next three planned experiments</h4>
+          <ul>
+            <li><b>class-conditional-aug</b> — light reverb everywhere, but pitch/stretch
+              and heavy reverb excluded from rare/deep-tail classes. Direct test of the
+              "condition on class" thesis. Est. ~1 h.</li>
+            <li><b>sampler-vs-aug-ablation</b> — a clean 2×2 (balanced sampler on/off) ×
+              (aug stack on/off) to de-confound exp-05's gain. ~4 runs × ~50 min.</li>
+            <li><b>backbone-fairness-arm</b> — finally run the architecture control: a
+              larger / AudioSet-pretrained backbone with <i>no</i> augmentation, matched
+              compute, to settle H2. Est. up to ~6 h (heaviest run, overnight in a worktree).</li>
+          </ul>
+          <h4>Open questions the plan has to face</h4>
+          <ul>
+            <li>Is the tail even learnable from 41 clips? The ceiling is unknown — wants
+              a small oracle study varying clips-per-class.</li>
+            <li>Does noise-mix only help <i>through</i> SpecAugment? One comparison
+              suggests composition; wants a proper 2×2.</li>
+            <li>How much of exp-05's gain is the balanced sampler vs the augmentations?
+              Currently confounded.</li>
+            <li>Do measured IRs generalize to unseen recording environments? All IRs come
+              from a small room library.</li>
+          </ul>
+          <h4>Compute envelope</h4>
+          <p>Single RTX-class desktop GPU (16 GB), 64 GB RAM — no cluster. Runs so far
+            span 41 min → 1 h 18 min; the pretrained-backbone arm is the outlier at an
+            estimated up to ~6 h. Data footprint (~6,200 clips) is small.</p>
+        </div>
+      </details>
+    </article>
+
+  </div><!-- /cards -->
+</main>
+
+<footer>
+  research-project · layered-dashboard · approach v1 · generated 2026-07-01
+</footer>
+
+<script>
+  // Progressive enhancement only — <details> work natively with JS disabled.
+  (function () {
+    var all = function () { return document.querySelectorAll('main details'); };
+    var ea = document.getElementById('expandAll');
+    var ca = document.getElementById('collapseAll');
+    if (ea) ea.addEventListener('click', function () {
+      all().forEach(function (d) { d.open = true; });
+    });
+    if (ca) ca.addEventListener('click', function () {
+      all().forEach(function (d) { d.open = false; });
+    });
+  })();
+</script>
+</body>
+</html>
