@@ -1,0 +1,46 @@
+{
+  "testcase": "research-project",
+  "approach": "05-interactive-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "A non-expert would see a status report on a personal ML research project called 'murmur' testing the bet that ultra-cheap reverb-inspired audio augmentations improve bird-call classification on a small dataset (6,200 clips, 34 species, small CNN, one GPU). The main message is a nuanced 'partially supported' verdict: the best augmentation recipe (a stack of light reverb + noise mixing + SpecAugment) raised validation macro-F1 from 0.612 to 0.671 (+5.9 points) but the gain is concentrated in common species and barely helps the rare tail; pitch/time stretch actually hurt, noise mixing alone did nothing, and the next step is class-conditional augmentation because global augmentation has plateaued.",
+  "scores": {
+    "glance_comprehension": 9,
+    "accuracy": 9.3,
+    "depth_comprehension": 8,
+    "structure_nav": 8,
+    "visual_craft": 7,
+    "density_fit": 8,
+    "overall": 8.7
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Hypothesis stated verbatim in the 'The bet:' lede, including the compute-efficiency-vs-bigger-architecture clause."},
+    "F2": {"status": "conveyed", "note": "'6,200 clips, 34 heavily long-tailed species' + recipe 'logmel_128 / 128 mels'. Minor omission: 5-second, mono, 32 kHz not stated."},
+    "F3": {"status": "absent", "note": "Only fragments appear ('same seed, split'; 'test split (~930 clips) also remains untouched'). The 70/15/15 stratified design and ~930 val count are not conveyed."},
+    "F4": {"status": "conveyed", "note": "Per-species panel: '8 most common species are ~52% of clips; top class (American Robin) has 480 clips while 11 species have fewer than 80, and 5 fewer than 45.' Median ~120 not stated."},
+    "F5": {"status": "conveyed", "note": "'Macro-F1 is the primary metric precisely because it weights the tail equally with the head'; 'Seed-to-seed variability ~= +/-0.006.'"},
+    "F6": {"status": "conveyed", "note": "Ledger row 01 baseline-clean 0.612 'floor'; stat card and chart bar confirm."},
+    "F7": {"status": "conveyed", "note": "Ledger + bar detail: exp-02 reverb-light-ir 0.641 (+0.029), RT60 0.3-0.6 s, p=0.5, 'first win'."},
+    "F8": {"status": "conveyed", "note": "Ledger 03 0.589 (-0.023); detail: 'pitch-shift (+/-2 st) and time-stretch (0.9-1.1x) on top of reverb ... below the no-aug baseline.'"},
+    "F9": {"status": "conveyed", "note": "Detail: 'SNR-controlled background-noise mixing ... 5-20 dB SNR ... +0.002 over exp-02 ... a null result.'"},
+    "F10": {"status": "conveyed", "note": "Ledger 05 0.671 (+0.059) best; recipe = light reverb + noise mix + SpecAugment + class-balanced sampler 0.5."},
+    "F11": {"status": "conveyed", "note": "Bar detail exp-06: long RT60 0.8-1.5 s, p=0.7, 0.663 (-0.008); helps common, blurs rare-class calls."},
+    "F12": {"status": "conveyed", "note": "Ledger callout + detail: pitch/time warping smears fine spectral cues rare classes depend on; deep-tail species collapse toward zero recall. (<50-real-clips framing implied, not stated verbatim.)"},
+    "F13": {"status": "conveyed", "note": "Ledger callout: exp-04 null (+0.002 inside +/-~0.006), kept because it composes with SpecAugment 'which exp-05 bore out.'"},
+    "F14": {"status": "conveyed", "note": "Recipe panel shows small_cnn + logmel_128 + reverb p=0.5 RT60 0.3-0.6 + noise_mix 5-20dB + SpecAugment 2/2 + class_balanced 0.5; pitch/stretch and heavy reverb marked OFF."},
+    "F15": {"status": "conveyed", "note": "Per-species tab (behind tab + toggle, reachable): Robin 0.79->0.85, Cardinal 0.76->0.83, Song Sparrow 0.68->0.74, Wood Thrush 0.51->0.54, Kirtland's 0.34->0.33 (-0.01); '~4.5 of the 5.9 points come from common/mid tiers.'"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Glance zone surfaces all four required takeaways in fully-legible callouts above the fold, so the core verdict lands without any interaction.",
+    "Exceptionally faithful to the source: 14 of 15 facts conveyed, including the exact ledger numbers, per-species deltas, and the recipe config.",
+    "Strong caveat fidelity - explicitly flags the regression, the null-inside-noise, that H2 (efficiency vs bigger backbone) is 'asserted, not shown', and that the test split remains untouched.",
+    "Progressive disclosure (glance -> chart -> tabbed detail) fits the technical-collaborator audience; degrades gracefully with JS off (no-js fallback shows all panels)."
+  ],
+  "weaknesses": [
+    "Bar chart uses a truncated y-axis (bar bottoms sit around ~0.55, not 0), which visually exaggerates the 0.589-to-0.671 spread ~3x relative to the true ~14% difference; mitigated but not eliminated by value labels and baseline/best reference lines.",
+    "The split design (70/15/15 stratified, ~930 val) is essentially absent; only the test-split size appears, and only as a passing caveat.",
+    "Some depth (per-species baseline values, per-experiment narrative) is gated behind tabs/toggles/click-to-inspect a reader may not discover; audio-format details (5 s, mono, 32 kHz) are dropped."
+  ],
+  "evaluator_notes": "Accuracy is mechanically high (9.3 = 10 x 14/15, no contradictions) because the content is genuinely complete and correct - the only real gap is the split spec (F3). Glance is the standout: the four takeaway boxes are the whole above-the-fold payload and each lands. Held visual_craft to 7 for the truncated-axis exaggeration, which is a mild honesty issue in an otherwise disciplined, non-decorative encoding. Overall 8.7 is earned by a faithful, honest, well-structured page rather than by lenient grading."
+}

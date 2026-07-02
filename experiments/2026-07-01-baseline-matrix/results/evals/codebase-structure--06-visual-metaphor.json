@@ -1,0 +1,49 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "06-visual-metaphor",
+  "rubric_version": 1,
+  "glance_takeaway": "This page depicts 'meridian', a self-hosted read-later/RSS service, as a literal transit map of its codebase. A blue 'ingest line' (the one-way write path: scheduler -> jobs table -> worker -> fetcher -> extractor -> dedup) and a green 'reader loop' (the read path through api/routes, annotations, template, cli/web) both converge on a single hub -- one SQLite database (meridian.db, ~1.8 GB, ~120,000 articles from ~200 feeds, no external broker/cache/DB server). Zones are import layers (deeper = fewer imports allowed), and a red dashed 'unofficial track' marks the one layering violation, where extractor.py imports clean_html from render (issue #214).",
+  "scores": {
+    "glance_comprehension": 6.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.0,
+    "visual_craft": 8.5,
+    "density_fit": 8.5,
+    "overall": 8.4
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "All six packages enumerated in 'Zone regulations' allowlist and the by-zone stats table; 'web/ frontend 2,760 JS' + '920 LOC of vanilla JS'. 'No build step' is not stated explicitly, but no framework/vanilla-JS is."},
+    "F2": {"status": "conveyed", "note": "Ingest Line station list runs scheduler -> queue/worker -> fetcher -> extractor -> dedup -> store/writer -> FTS triggers, matching the required order on both the map and the numbered list."},
+    "F3": {"status": "conveyed", "note": "Invariant #2: 'Only store/writer.py writes the database. Every INSERT, UPDATE, and DELETE ... lives in that one 610-LOC file; everything else reads through store/reader.py.'"},
+    "F4": {"status": "conveyed", "note": "Stated twice: Ingest Line step 4 ('pure: no network, no disk, no DB, no clock; the same HTML always yields the same Article') and invariant #1."},
+    "F5": {"status": "conveyed", "note": "'The one unofficial track' box: extractor.py line 41 imports clean_html() from render/sanitize.py, since v0.8, issue #214; also drawn as the red dashed track on the map."},
+    "F6": {"status": "conveyed", "note": "Zone regulations: 'store/ imports no other meridian package (stdlib + sqlite3 only)' and 'Nothing imports api/ or cli/'; ZONE 1 band labeled 'imports nothing, owns the DB'."},
+    "F7": {"status": "conveyed", "note": "Hotspot 1 card: '1,140 LOC, the largest file in the repo. 14 site-specific extraction heuristics'; also annotated on the map station."},
+    "F8": {"status": "conveyed", "note": "Lede says 13,710 LOC; stats table shows pipeline/ 4,180 (largest row) and Backend total 13,710."},
+    "F9": {"status": "conveyed", "note": "Stats table: backend total 77%, store/ 91% (highest), cli/ 41% (lowest), web/ 0% with 'no automated tests; no JS test harness at all'; coverage-cliff sentence repeats it."},
+    "F10": {"status": "conveyed", "note": "'412 tests total, full suite ~41 s locally'; tests/ row: '348 unit ... + 64 integration'."},
+    "F11": {"status": "conveyed", "note": "Ingest Line step 5: 64-bit simhash, Hamming distance <= 3 marks duplicate, 'About 7% of incoming items are flagged and dropped'; also on map at dedup.py."},
+    "F12": {"status": "conveyed", "note": "'The 4-file recipe' card lists exactly base.py, __init__.py, a store/migrations/ migration, and cli/commands/add.py."},
+    "F13": {"status": "conveyed", "note": "'the queue is a SQLite table, so there is no Redis, no Celery'; broker polls jobs table, worker.py 8 threads; map shows 'depth 30-60, alert @ 500' and list gives 'typical queue depth is 30-60 jobs; alerts at 500'."},
+    "F14": {"status": "conveyed", "note": "Reader Loop: api/routes.py -> store/reader.py -> render/template.py -> render/annotations.py with 'p50 28 ms' end to end (map badge and section header)."},
+    "F15": {"status": "conveyed", "note": "Invariant #3 and Ingest Line step 6: articles_fts updated only by SQLite triggers in schema.sql, 'application code never writes the index'; map marks it 'updated by SQLite triggers only' on a no-service siding."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "None functional. Minor label crowding on the SVG above the fold: the 'UNOFFICIAL TRACK' annotation crosses other labels near api/routes.py, and the sources-junction area (rss/html_page/mailbox) is tight at glance size.",
+  "strengths": [
+    "Perfect fact fidelity: all 15 ground-truth facts are present and numerically exact (LOC, coverage, timings, queue depths, retry backoff).",
+    "The metaphor is load-bearing, not decorative: lines = the two real data paths, zones = import layers, hub = the single SQLite file, red dashed track = the one violation, stars = the two first-change entry points.",
+    "An explicit 'Honesty check' section states where the metaphor misleads (zones oversell 'downhill', stations transform cargo, FTS has no train service) -- rare and genuinely useful epistemic hygiene.",
+    "Negative facts are kept front and center per the brief: the layering violation gets a red callout box, the untested frontend appears in a hotspot card and the stats table, xfail purity tests are mentioned.",
+    "Jargon is glossed inline for the non-expert (WAL, conditional GET, simhash, idempotent, cyclomatic complexity, ASGI, xfail)."
+  ],
+  "weaknesses": [
+    "The glance underdelivers on T2: the two star 'first-change stations' exist on the map but are visually faint (a small green star and a legend line) -- a 10-second reader absorbs the shape and the violation, not where their first change goes.",
+    "T3's 'scary' framing is weak at glance: extractor.py's 1,140 LOC / 14 heuristics are small annotation text; the hotspot triangle is easy to miss among three identical triangles.",
+    "The above-the-fold map is dense; several annotations (sources junction, unofficial-track label, reader.js label) crowd each other at typical viewport width.",
+    "No anchor links or table of contents; section wayfinding relies on scrolling past metaphorical tags ('Track regulations') that must be decoded to plain meaning, slightly slowing re-finding.",
+    "The map legend must be read before the star/triangle/hub symbols mean anything, which taxes the glance pass."
+  ],
+  "evaluator_notes": "Fact audit is 15/15 conveyed with zero distortions or contradictions, so accuracy is 10.0 by the rubric formula (10 x 15/15). Glance pass (recorded before any other file): T1 fully landed, T3 partially (violation located at extractor.py but not its size/heuristics), T4 partially (import layering and one-way write path, but not single-writer/pure-extractor/trigger-FTS), T2 missed entirely -- roughly 2.3 of 4 takeaways -> 6.5. Overall = 0.35*10.0 + 0.30*6.5 + 0.15*8.5 + 0.10*8.0 + 0.10*8.5 = 8.4. Caveat fidelity is true: the page preserves every negative fact and adds its own metaphor-limits disclosure. The main gap between this page and a perfect score is entirely in the glance: the deep read is excellent, but the above-the-fold region prioritizes the network shape over the contributor-facing takeaways (T2 especially)."
+}

@@ -1,0 +1,48 @@
+{
+  "testcase": "diffusion-variants",
+  "approach": "02-mermaid-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "The page explains how diffusion image generators (Stable Diffusion, DALL-E 3, Flux) work: a fixed process gradually destroys images into noise over ~1000 steps, and a network learns to reverse it one small step at a time; generation applies that learned step repeatedly starting from fresh random noise, so no photo is edited and no database is consulted. Training means guessing the noise that was added to an image at a random level, repeated billions of times, with mean-squared error driving weight updates. Nearly every variant exists to make sampling cheaper, shrinking ~1000 steps down to as few as 1-4, which a 'variant zoo' section below apparently catalogs.",
+  "scores": {
+    "glance_comprehension": 6.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.5,
+    "visual_craft": 6.0,
+    "density_fit": 7.0,
+    "overall": 7.8
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Core-mechanism diagram: 'forward process: add tiny noise, ~1000 fixed steps, no learning' vs 'generation: apply the learned step N times' from 'Fresh random noise'."},
+    "F2": {"status": "conveyed", "note": "'~1000 fixed steps' ending at a 'Pure noise' node; the phrase 'noise schedule' itself never appears, but the fixed ~1000-step forward process into pure noise lands."},
+    "F3": {"status": "conveyed", "note": "Training diagram inputs Noisy image + Timestep t + Prompt embedding ('text-to-image models only'); caption names noise (eps), score ('direction that makes the image more probable'), velocity as 'three interconvertible conventions'."},
+    "F4": {"status": "conveyed", "note": "'noised in one shot, at a random level t', 'mean-squared error vs the actual noise'; caption: 'no GAN-style adversarial balance to maintain... diffusion displaced GANs'."},
+    "F5": {"status": "conveyed", "note": "'DDPM · ~1000 steps' + header framing 'nearly every variant exists to make one thing cheaper: sampling' + 'how do we take fewer steps?'. The explicit 'sequential / cannot be parallelized' clause is not stated, only implied by 'apply the learned step N times'."},
+    "F6": {"status": "conveyed", "note": "Variant zoo edge 'same trained model, deterministic sampler, bigger jumps' -> 'DDIM · 20-50 steps'; quality tradeoff in caption ('below ~10 steps undistilled models degrade visibly')."},
+    "F7": {"status": "conveyed", "note": "Zoo caption: 'DDIM is deterministic - same starting noise, same image - which also makes generated images invertible and interpolatable'."},
+    "F8": {"status": "conveyed", "note": "'sampling is just solving an ODE: better solvers, no retraining' -> 'DPM-Solver · 10-20 steps'. The SDE dual view and the name 'probability flow ODE' are omitted; the practical core (ODE view, 10-20 steps, no retraining, DDIM relation) lands."},
+    "F9": {"status": "conveyed", "note": "Latent-diffusion diagram: whole denoising loop inside 'Latent space' subgraph, 'VAE decoder, one single pass' -> '512x512 image'; caption: 'separately trained VAE'."},
+    "F10": {"status": "conveyed", "note": "Caption has all numbers exactly: 512x512x3 = 786,432 -> 64x64x4 = 16,384, 'roughly 48x fewer', 8x per spatial dimension, 'what put Stable-Diffusion-class models on consumer GPUs'."},
+    "F11": {"status": "conveyed", "note": "CFG diagram: 'prompt was dropped for ~10-20% of training', two network runs, 'guided = unconditional + s x (conditional - unconditional)'; caption: 'two runs double the network evaluations per step'."},
+    "F12": {"status": "conveyed", "note": "Caption: 's = 1 means no guidance, s = 7.5 is a common Stable-Diffusion default, pushed too far (roughly s > 12-15 in classic SD) it produces oversaturated colors and burned-in artifacts'."},
+    "F13": {"status": "conveyed", "note": "'retrain a student to take big jumps' -> 'Distilled · 1-4 steps'; caption names progressive/consistency/adversarial distillation and 'mild quality-and-diversity cost'. The specific consistency-model mapping (any noisy point -> clean endpoint) is not spelled out."},
+    "F14": {"status": "conveyed", "note": "'retrain on straight noise-to-image paths (SD3, Flux)' -> 'Rectified flow'; misconceptions row 'Rival technologies -> One framework: same targets, different samplers, paths, parameterizations'; velocity target named in training caption."},
+    "F15": {"status": "conveyed", "note": "Misconceptions section ('Collages database images -> Statistics, not copies', 'Cleans a photo -> Starts from noise') plus caveat caption covering rare memorization of repeated training images and explicit image-to-image/inpainting modes."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none — all six Mermaid flowcharts rendered correctly in the screenshot; note the page depends on a CDN-loaded mermaid.js at view time, so offline it would degrade to raw diagram source.",
+  "strengths": [
+    "Exceptional factual coverage and precision: all 15 ground-truth facts land, most with the exact representative numbers (786,432 -> 16,384, ~48x, s = 7.5, s > 12-15, 10-20% prompt dropout, NFE).",
+    "The variant zoo diagram directly encodes the step-count ladder (~1000 -> 20-50 -> 10-20 -> 1-4) with a sampler-vs-retrain color distinction, which is the single most important comparative structure in the material.",
+    "Honest caveats throughout: memorization exception, img2img exception, compression-bottleneck quality ceiling, high-guidance artifact regime, diminishing returns above ~50 steps.",
+    "Clear six-section structure in a sensible pedagogical order (mechanism -> training -> variants -> latent -> guidance -> misconceptions), easy to relocate any topic."
+  ],
+  "weaknesses": [
+    "The diagrams are thin as visual encodings — most of the actual content lives in long, parenthetical-dense caption paragraphs in small muted text; the flowcharts are essentially sentences with arrows, so the visual channel carries less than it appears to.",
+    "Color semantics are inconsistent across diagrams (blue = 'learned' in some, 'same network + smarter sampler' in the zoo; green = 'output' in some, 'retrained objective' in the zoo) and the legend is buried in one caption, which can quietly mislead.",
+    "The core-mechanism diagram's dotted edge from 'Pure noise' to 'Fresh random noise' labeled 'training: a network learns to undo one small step' is topologically confusing on first read.",
+    "Above the fold, latent diffusion and guidance (T3, T4) are entirely invisible; the glance conveys only the core mechanism and the fewer-steps motive.",
+    "The sequential-evaluation bottleneck (why 1000 steps cannot be parallelized) and the SDE / probability-flow-ODE framing are omitted rather than simplified."
+  ],
+  "evaluator_notes": "Accuracy is mechanically 10.0 (15/15 conveyed, 0 distorted, 0 contradicted) — this page is unusually faithful to the ground truth, with nearly every representative number present verbatim; the notes on F5/F8/F13 record partial omissions within otherwise-conveyed facts. The overall is held below the accuracy by the glance pass (only T1 and the headline of T2 land above the fold) and by visual craft: the Mermaid format pushes the real explanatory load into dense captions, and reused colors mean different things in different diagrams. Overall = 0.35*10.0 + 0.30*6.0 + 0.15*7.5 + 0.10*7.5 + 0.10*6.0 = 7.775 -> 7.8."
+}

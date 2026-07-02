@@ -1,0 +1,48 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "04-layered-dashboard",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is a first-contribution orientation dashboard for 'meridian,' a self-hosted read-later/RSS service. Its main message: a one-way ingest pipeline writes into a single 1.8 GB SQLite file, and the store is the hub everything layers on top of — only store/writer.py writes the DB, while a small HTTP API, a vanilla-JS reader, and a CLI read it back out. At a glance I'd also absorb: backend is ~13,710 LOC Python at 77% coverage, first changes usually land in pipeline/sources/ or api/routes.py, pipeline/extractor.py is the big risky file with the codebase's one layering violation, and the frontend is untested (0 tests).",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.0,
+    "structure_nav": 8.5,
+    "visual_craft": 8.0,
+    "density_fit": 8.5,
+    "overall": 8.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "'The seven parts' card: 'Six Python packages plus one frontend'; tree lists api/pipeline/queue/store/render/cli; web/ 'vanilla JS, no framework, no build step'."},
+    "F2": {"status": "conveyed", "note": "Write-path card lead: 'scheduler -> jobs table -> fetcher -> extractor -> dedup -> store -> FTS index'; hero diagram shows the same order."},
+    "F3": {"status": "conveyed", "note": "Glance tile 'Only store/writer.py writes the DB'; invariants detail #2: 'Every INSERT, UPDATE, and DELETE in the codebase lives in that one 610-LOC file. Everything else reads through store/reader.py.'"},
+    "F4": {"status": "conveyed", "note": "Invariants detail #1: 'No network, no disk, no DB, no clock... the same HTML always yields the same Article'; extractor box labeled 'pure' in hero."},
+    "F5": {"status": "conveyed", "note": "Hero annotation and layering caveat: 'extractor.py (line 41) imports clean_html() from render/sanitize.py — a sideways pipeline -> render edge, present since v0.8' with issue #214."},
+    "F6": {"status": "conveyed", "note": "Hero caption: 'store/ sits at the bottom and imports no other meridian package... nothing imports api/ or cli/'; repeated in Layering card."},
+    "F7": {"status": "conveyed", "note": "'Handle with care' tile: '1,140 LOC — largest file · 14 site-specific heuristics'; hotspots detail repeats both numbers."},
+    "F8": {"status": "conveyed", "note": "Tile '13,710 LOC'; module bar chart shows pipeline/ 4,180 LOC as largest."},
+    "F9": {"status": "conveyed", "note": "Tests card: 77% overall, coverage bars store/ 91% top through cli/ 41% bottom, web/ row '0% — no JS test harness exists'; '0 tests' glance tile."},
+    "F10": {"status": "conveyed", "note": "Tests card lead: '412 tests — 348 unit + 64 integration — run in ~41 s'."},
+    "F11": {"status": "conveyed", "note": "Hero dedup box '64-bit simhash'; write-path detail #5: 'Hamming distance <= 3 against stored hashes marks a duplicate. About 7% of incoming items are flagged and dropped.'"},
+    "F12": {"status": "conveyed", "note": "First-change detail lists exactly the 4 files: sources/base.py, sources/__init__.py, a migration in store/migrations/, cli/commands/add.py."},
+    "F13": {"status": "conveyed", "note": "Hero 'queue/ jobs table · 8 worker threads'; module table 'No Redis, no Celery'; write-path detail #1: 'Typical queue depth is 30-60 jobs; the health endpoint alerts at 500.'"},
+    "F14": {"status": "conveyed", "note": "Read-path card: 'browser / CLI -> api -> store/reader -> render -> response', '28 ms p50 for GET /articles/{id}, end to end', with the 6/14/8 ms breakdown."},
+    "F15": {"status": "conveyed", "note": "Invariants detail #3: 'articles_fts is updated only by SQLite triggers in schema.sql; no Python code ever touches it'; also on the hub cylinder and glance tile."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none — both screenshots render cleanly; hero SVG text is small (10.5-12.5px) but legible, and the diagram requires horizontal scrolling below ~960px viewports",
+  "strengths": [
+    "Perfect fact fidelity: all 15 ground-truth facts appear, most with exact numbers, and none are distorted or contradicted.",
+    "Above-the-fold region is unusually complete — headline states the system shape, five tiles carry T2/T3/T4 material, and the hero diagram encodes both data paths plus the layering violation.",
+    "Honest, purposeful visual encoding: LOC and coverage bars are proportionally correct and direct-labeled; warning color is reserved for genuine negatives (violation, extractor, untested web/).",
+    "Strong wayfinding: sticky anchor nav mirrors the eight cards, expand/collapse-all controls, cross-links between Layering and Hotspots, works without JS.",
+    "Negative facts are foregrounded, not sanded off — the violation, 0-test frontend, xfail purity tests, and copy-pasted auth checks are all explicit."
+  ],
+  "weaknesses": [
+    "Much of the depth (4-file recipe, invariant enforcement, hotspot specifics) sits inside collapsed <details>; a 2-3 minute reader who never expands them gets leads only.",
+    "The glance region is dense — five tiles plus a 12-node diagram compete for the first 10 seconds, and the invariant set (T4) is split across two tiles and the hub label rather than stated as one discipline.",
+    "Hero diagram type sizes (10-11px) and the mid-diagram violation annotation are at the edge of comfortable legibility; the diagram needs horizontal scroll on narrow screens.",
+    "Some derived numbers (e.g. ~23,230 total repo lines, 31 endpoints, routes.py 54% coverage) are presented with the same confidence as sourced figures, with no visible sourcing distinction."
+  ],
+  "evaluator_notes": "Fact audit is a clean sweep: 15/15 conveyed, accuracy 10.0 by the rubric formula. Glance takeaway captured T1-T3 fully and T4 partially (single-writer landed; pure extractor / trigger-FTS / layering did not register as a unified 'discipline'), hence 8.5. Overall = 0.35*10.0 + 0.30*8.5 + 0.15*8.0 + 0.10*8.5 + 0.10*8.0 = 8.9. This is a rare high score, earned almost entirely by the formulaic accuracy term and a genuinely strong above-the-fold layer; the judgment dimensions were graded harshly (density and collapsed-detail reliance kept depth and craft at 8.0)."
+}

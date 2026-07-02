@@ -1,0 +1,50 @@
+{
+  "testcase": "tradeoff-decision",
+  "approach": "04-layered-dashboard",
+  "rubric_version": 1,
+  "glance_takeaway": "A company (Fernwick) search-platform team is choosing a vector-search engine. Four engines were bench-tested; pgnearest and Braid fail hard must-have requirements (a gate M1-M5 — Braid despite being fastest at 12 ms/0.98 recall, because its filtered recall collapses to 0.71), leaving Quiver (managed SaaS) and Hearth (self-hosted) as survivors with no dominant winner. The recommendation is conditional: Hearth if the approved infra hire and a >=4-engineer on-call rotation are committed by 2026-10-01; otherwise Quiver with a mandatory budgeted exit plan — with cost the deciding factor at scale (Quiver cheapest at 1M vectors but far pricier at 10M-100M; labor-adjusted crossover ~30M/~2029) rather than raw speed.",
+  "scores": {
+    "glance_comprehension": 9.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 9.0,
+    "visual_craft": 8.5,
+    "density_fit": 9.0,
+    "overall": 9.2
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Card 1 'Full detail' lists M1-M5 with exact thresholds: p95 <=100 ms incl. filtered, recall@10 >=0.92, filtered recall >=0.90 down to 5% selectivity, EU residency, <=$2,500/mo at ~10M."},
+    "F2": {"status": "conveyed", "note": "Card 1 keyfig: '4.1M vectors today -> ~8M mid-2027 -> ~16M mid-2028 (2x/yr)'; detail adds '100M-vector mark is a 4-5 year horizon' and '30% of queries carry metadata filters... grown every quarter'."},
+    "F3": {"status": "conveyed", "note": "Card 2: dates 2026-06-08 to 06-19, one frozen 10M snapshot, identical hardware for self-hosted (Quiver measured via VPC peering, ~2 ms hop included), 48-h log replayed at 120 QPS, recall vs exact brute-force on 10,000 queries."},
+    "F4": {"status": "conveyed", "note": "Criteria matrix row 'p95 latency, unfiltered': Quiver 18 ms, Hearth 41 ms, pgnearest 95 ms, Braid 12 ms (bolded fastest)."},
+    "F5": {"status": "conveyed", "note": "Matrix row 'Recall@10, unfiltered (M2)': 0.97 / 0.94 / 0.89 (only pgnearest marked X) / 0.98 (bold best)."},
+    "F6": {"status": "conveyed", "note": "Hero fail box 'OUT — fails M1 + M2: p95 filtered 110 ms (limit 100) - recall@10 0.89 (floor 0.92)'; card 3 deep dive repeats both numbers."},
+    "F7": {"status": "conveyed", "note": "Hero fail box 'fails M3: filtered recall 0.71 @5% selectivity — structural; fastest raw engine (12 ms p95 - 0.98 recall) — still out'; card 3 detail: 'no native filtered search... post-hoc... 0.71 at 5%... structural, not tunable'."},
+    "F8": {"status": "conveyed", "note": "Card 4: both pass all five; Hearth '0.90 at 5% selectivity — exactly at the M3 floor... 0.86 at 1%'; Quiver 'held 0.95 even at 1% selectivity'; hero tradeoff panel repeats it."},
+    "F9": {"status": "conveyed", "note": "Matrix row 'Cost @1M': Quiver $180 (bold cheapest), Hearth $520, pgnearest $240, Braid $210."},
+    "F10": {"status": "conveyed", "note": "Matrix + cost card: $1,900 vs $1,400 at 10M, $23,000 vs $6,800 (detail says '3.4x') at 100M; pgnearest ~$13,500 (est.) and Braid ~$4,200 (est.+DIY) flagged as estimates for eliminated options."},
+    "F11": {"status": "conveyed", "note": "Cost card skim + chart: infra crossover ~3M 'already behind us at today's 4.1M ($740 vs $520)'; labor detail '~0.2 FTE = $2,800/mo loaded... cheaper in total until roughly 30M vectors — around 2029'."},
+    "F12": {"status": "conveyed", "note": "Card 4 detail: Quiver 'effectively zero FTE. Vendor on-call, 99.9% SLA'; Hearth '~0.5 FTE for the first quarter... ~0.2 FTE steady-state, plus a >=4-engineer on-call rotation... req PLAT-7... approved but not yet filled'."},
+    "F13": {"status": "conveyed", "note": "Card 4: Quiver lock-in 'highest of the four... exit... ~3 engineer-weeks today, growing'; 'In-VPC deployment is not offered — N1 unsatisfiable, ever'; Hearth 'Lock-in: low... in our VPC, EU region'; card 7 ties N1 to 2027 enterprise contracts."},
+    "F14": {"status": "conveyed", "note": "Card 7 detail: Hearth IF PLAT-7 signed & started by 2026-10-01 AND >=4-eng on-call in writing; else Quiver with mandatory exit plan — SearchIndex adapter, quarterly export drill into scratch Hearth cluster, standing ~3 eng-week budget, re-evaluate at 30M or first renewal."},
+    "F15": {"status": "conveyed", "note": "Hero 'Standing override (S1)' box + card 6 S1 + card 7 caveat: filters >60% of traffic or selectivity commonly <2% -> Quiver regardless of the hire; 'checkpoint 2026-10-01 - full review 2027-01-15' appears in byline, hero, and card 7."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "All 15 ground-truth facts conveyed with correct numbers and directionality; nothing distorted or oversold.",
+    "The glance layer genuinely carries all four critical takeaways: the headline states elimination + conditionality, and the five stat tiles are literally the takeaways ('Cost ranking inverts with scale', 'Benchmarks did not decide this').",
+    "The hero SVG makes the decision STRUCTURE visible — must-have gate, eliminations distinct from tradeoffs, and an IF/THEN box with the standing override — exactly what the brief says flat feature lists fail at.",
+    "Cost chart is honest and precisely plotted (verified log-log coordinates), with the already-passed corpus band, today marker, and both crossovers labeled; estimates for eliminated options are flagged as unvalidated.",
+    "Caveats survive: Hearth's M3 zero-margin, PLAT-7 approved-but-unfilled, figures-exclude-labor, Quiver 12-month price lock, pgnearest 'not dead forever' — each in a visible caveat block.",
+    "Layered progressive disclosure (headline -> tiles -> skim+keyfig -> collapsible full detail) with sticky anchor nav and expand/collapse-all fits the time-poor tech-lead audience."
+  ],
+  "weaknesses": [
+    "Very dense glance layer: the headline is four lines and the fifth tile's big value '12 ms · 0.98' can momentarily read as a positive stat before the label/subtext reframes it as the rejected option.",
+    "Key evidence (full criteria matrix, labor math, sensitivity details) lives behind collapsed <details>; a reader who never expands sees only skim summaries, and collapsed state also defeats in-page text search unless 'Expand all' is pressed.",
+    "Hero SVG fail-box annotations are ~10.5px — legible on desktop, strained on smaller screens; the SVG relies on horizontal scroll below ~1000px.",
+    "Cost curves interpolate straight lines between only three sampled points per series in log-log space; the implied crossover position between samples is a modeling choice presented visually as data.",
+    "Some jargon (FTE, selectivity) is defined only inside collapsed detail sections, not at first use in the skim layer."
+  ],
+  "evaluator_notes": "Fact audit: 15/15 conveyed, 0 distorted, 0 contradicted -> accuracy = 10 x 15/15 = 10.0. Glance judged solely from the recorded takeaway: T1, T2, T3 (incl. ~30M/~2029 crossover) and T4 all landed before any other file was opened; scored 9.0 rather than 10 because a genuine 10-second non-expert would fully absorb T1/T2 from the headline but only the labels of T3/T4 from the tiles. Overall = 0.35*10.0 + 0.30*9.0 + 0.15*8.5 + 0.10*9.0 + 0.10*8.5 = 9.225 -> 9.2. This cell is an outlier-strong page under a harsh rubric: the score is driven by the deterministic accuracy formula and a glance layer that states the structural conclusions verbatim. Rendering verified against glance.png and full.png: no broken layout, dark-mode variables present, decision-flow and chart SVGs render correctly."
+}

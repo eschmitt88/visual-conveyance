@@ -1,1 +1,191 @@
-{}
+{
+  "n_cells": 42,
+  "rubric_version": 1,
+  "approach_ranking_by_overall": [
+    "04-layered-dashboard",
+    "05-interactive-explainer",
+    "06-visual-metaphor",
+    "07-scrolly-slides",
+    "01-prose-baseline",
+    "03-svg-infographic",
+    "02-mermaid-diagrams"
+  ],
+  "by_approach": {
+    "01-prose-baseline": {
+      "overall": 7.95,
+      "glance_comprehension": 6.92,
+      "accuracy": 9.88,
+      "depth_comprehension": 7.67,
+      "structure_nav": 6.83,
+      "visual_craft": 5.67,
+      "density_fit": 6.92,
+      "n": 6
+    },
+    "02-mermaid-diagrams": {
+      "overall": 7.3,
+      "glance_comprehension": 6.58,
+      "accuracy": 8.33,
+      "depth_comprehension": 7.25,
+      "structure_nav": 7.25,
+      "visual_craft": 5.75,
+      "density_fit": 7.25,
+      "n": 6
+    },
+    "03-svg-infographic": {
+      "overall": 7.38,
+      "glance_comprehension": 6.58,
+      "accuracy": 8.02,
+      "depth_comprehension": 7.08,
+      "structure_nav": 7.5,
+      "visual_craft": 7.67,
+      "density_fit": 7.33,
+      "n": 6
+    },
+    "04-layered-dashboard": {
+      "overall": 9.02,
+      "glance_comprehension": 8.67,
+      "accuracy": 10.0,
+      "depth_comprehension": 8.25,
+      "structure_nav": 8.5,
+      "visual_craft": 8.33,
+      "density_fit": 8.67,
+      "n": 6
+    },
+    "05-interactive-explainer": {
+      "overall": 8.73,
+      "glance_comprehension": 8.05,
+      "accuracy": 9.88,
+      "depth_comprehension": 8.42,
+      "structure_nav": 7.92,
+      "visual_craft": 7.92,
+      "density_fit": 8.25,
+      "n": 6
+    },
+    "06-visual-metaphor": {
+      "overall": 8.43,
+      "glance_comprehension": 7.67,
+      "accuracy": 9.77,
+      "depth_comprehension": 8.17,
+      "structure_nav": 7.58,
+      "visual_craft": 7.42,
+      "density_fit": 8.0,
+      "n": 6
+    },
+    "07-scrolly-slides": {
+      "overall": 8.23,
+      "glance_comprehension": 7.0,
+      "accuracy": 9.55,
+      "depth_comprehension": 8.08,
+      "structure_nav": 7.67,
+      "visual_craft": 7.92,
+      "density_fit": 8.0,
+      "n": 6
+    }
+  },
+  "by_testcase": {
+    "codebase-structure": {
+      "overall": 7.89,
+      "glance_comprehension": 6.79,
+      "accuracy": 9.23,
+      "depth_comprehension": 7.79,
+      "structure_nav": 7.5,
+      "visual_craft": 6.86,
+      "density_fit": 7.79,
+      "n": 7
+    },
+    "diffusion-variants": {
+      "overall": 8.03,
+      "glance_comprehension": 6.86,
+      "accuracy": 9.61,
+      "depth_comprehension": 7.71,
+      "structure_nav": 7.5,
+      "visual_craft": 6.93,
+      "density_fit": 7.43,
+      "n": 7
+    },
+    "experiment-results": {
+      "overall": 8.6,
+      "glance_comprehension": 8.26,
+      "accuracy": 9.53,
+      "depth_comprehension": 8.07,
+      "structure_nav": 7.86,
+      "visual_craft": 7.86,
+      "density_fit": 7.93,
+      "n": 7
+    },
+    "incident-analysis": {
+      "overall": 8.24,
+      "glance_comprehension": 7.36,
+      "accuracy": 9.56,
+      "depth_comprehension": 7.86,
+      "structure_nav": 7.5,
+      "visual_craft": 7.43,
+      "density_fit": 7.93,
+      "n": 7
+    },
+    "research-project": {
+      "overall": 8.11,
+      "glance_comprehension": 7.21,
+      "accuracy": 9.31,
+      "depth_comprehension": 7.86,
+      "structure_nav": 7.71,
+      "visual_craft": 7.21,
+      "density_fit": 7.86,
+      "n": 7
+    },
+    "tradeoff-decision": {
+      "overall": 8.03,
+      "glance_comprehension": 7.64,
+      "accuracy": 8.84,
+      "depth_comprehension": 7.79,
+      "structure_nav": 7.57,
+      "visual_craft": 7.14,
+      "density_fit": 7.71,
+      "n": 7
+    }
+  },
+  "cells": {
+    "codebase-structure--01-prose-baseline": 7.9,
+    "codebase-structure--02-mermaid-diagrams": 6.4,
+    "codebase-structure--03-svg-infographic": 7.1,
+    "codebase-structure--04-layered-dashboard": 8.9,
+    "codebase-structure--05-interactive-explainer": 8.3,
+    "codebase-structure--06-visual-metaphor": 8.4,
+    "codebase-structure--07-scrolly-slides": 8.2,
+    "diffusion-variants--01-prose-baseline": 7.5,
+    "diffusion-variants--02-mermaid-diagrams": 7.8,
+    "diffusion-variants--03-svg-infographic": 7.1,
+    "diffusion-variants--04-layered-dashboard": 8.9,
+    "diffusion-variants--05-interactive-explainer": 8.6,
+    "diffusion-variants--06-visual-metaphor": 8.6,
+    "diffusion-variants--07-scrolly-slides": 7.7,
+    "experiment-results--01-prose-baseline": 8.1,
+    "experiment-results--02-mermaid-diagrams": 7.9,
+    "experiment-results--03-svg-infographic": 7.7,
+    "experiment-results--04-layered-dashboard": 9.4,
+    "experiment-results--05-interactive-explainer": 9.0,
+    "experiment-results--06-visual-metaphor": 9.2,
+    "experiment-results--07-scrolly-slides": 8.9,
+    "incident-analysis--01-prose-baseline": 8.6,
+    "incident-analysis--02-mermaid-diagrams": 7.6,
+    "incident-analysis--03-svg-infographic": 7.0,
+    "incident-analysis--04-layered-dashboard": 9.1,
+    "incident-analysis--05-interactive-explainer": 8.9,
+    "incident-analysis--06-visual-metaphor": 8.3,
+    "incident-analysis--07-scrolly-slides": 8.2,
+    "research-project--01-prose-baseline": 8.0,
+    "research-project--02-mermaid-diagrams": 7.3,
+    "research-project--03-svg-infographic": 8.1,
+    "research-project--04-layered-dashboard": 8.6,
+    "research-project--05-interactive-explainer": 8.7,
+    "research-project--06-visual-metaphor": 8.2,
+    "research-project--07-scrolly-slides": 7.9,
+    "tradeoff-decision--01-prose-baseline": 7.6,
+    "tradeoff-decision--02-mermaid-diagrams": 6.8,
+    "tradeoff-decision--03-svg-infographic": 7.3,
+    "tradeoff-decision--04-layered-dashboard": 9.2,
+    "tradeoff-decision--05-interactive-explainer": 8.9,
+    "tradeoff-decision--06-visual-metaphor": 7.9,
+    "tradeoff-decision--07-scrolly-slides": 8.5
+  }
+}

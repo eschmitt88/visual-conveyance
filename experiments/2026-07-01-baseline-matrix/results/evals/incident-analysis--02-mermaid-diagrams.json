@@ -1,0 +1,48 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "02-mermaid-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "This is an engineering post-mortem of INC-1194, a June 24 partial outage of ledgerline's invoicing API lasting 4h17m with peak 31.2% of requests erroring, 2,312 customer orgs affected and ~$41,300 in SLA credits. The main message is that there was no single root cause: a 14:02 deploy introducing a leading-wildcard LIKE search (full scan of 274.2M rows) acted as trigger, amplified by pre-existing vacuum debt (38.1M dead tuples below the autovacuum threshold) and a no-jitter retry storm that saturated the shared pgbouncer pool (80/80), producing a platform-wide partial outage; removing any one leg would have made June 24 a minor degradation. It was resolved by a feature flag off at 17:05 (rollback impossible), closed 18:19, with zero data loss.",
+  "scores": {
+    "glance_comprehension": 6.0,
+    "accuracy": 9.4,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.0,
+    "visual_craft": 6.5,
+    "density_fit": 7.5,
+    "overall": 7.6
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Lede: '2026-06-24, 14:02–18:19 UTC ... 4 h 17 m'. SEV-1 designation and the 257-minute restatement are omitted."},
+    "F2": {"status": "conveyed", "note": "Peak conveyed exactly — 'peak 31.2% errors at 15:47' (overview node, timeline node k, lede). The 19.1% window average and ≈362,000-of-1.9M failed-request counts are absent."},
+    "F3": {"status": "absent", "note": "Endpoint-group p50 85 ms→2.9 s and p99 420 ms→28.4 s never appear; the page shows only 'search p99 jumps 2.1 ms → over 20 s' (a different metric). The 504-at-30s-timeout mechanism is conveyed in the sequence diagram, but F3's figures are not on the page."},
+    "F4": {"status": "conveyed", "note": "'2,312 orgs · ≈$41,300 credits, zero data loss' (overview node O) and '37,400 delayed webhooks replayed by 19:05' (timeline node p). 24.4%-of-9,480 and 216 enterprise contracts omitted."},
+    "F5": {"status": "conveyed", "note": "Trigger node: 'leading-wildcard LIKE search: full scan of 274.2 M rows, 0.4 ms → 24–31 s'; caption adds the B-tree gloss and 'the rewrite also moved org scoping out of the SQL'. PR #8841, EXPLAIN cost, and 312.3 M tuples/scan omitted."},
+    "F6": {"status": "conveyed", "note": "'14:02 release live — canary was green' (timeline) plus remediation leg 'The canary blind spot' fixed by 'production-scale canary replay' — implies the scale mismatch; the 2 M-row / ~180 ms mechanism itself is not stated."},
+    "F7": {"status": "conveyed", "note": "Amplifier-1 node and timeline prologue: 'Jun 22 backfill left 38.1 M dead tuples; autovacuum threshold (≈54.9 M) never crossed'; '≈23 GB extra heap' edge label matches the 190→213 GB delta."},
+    "F8": {"status": "conveyed", "note": "Node K: 'Bloat pushes scans past the 30 s statement timeout, ~57% of searches killed — slow became failing'; sequence diagram: 'connection held up to 30 s per query' and 'query_canceled at the 30 s statement timeout'; caption gives the bloat-free counterfactual (≈34/80)."},
+    "F9": {"status": "conveyed", "note": "'pgbouncer pool 80/80 saturated at 15:12 — every endpoint sharing the pool queues'; sequence notes '80/80 busy from 15:12 — client wait queue peaks at 1,437 (15:58)' and 'invoice creation, PDF rendering, webhook dispatch all queue behind 30 s scans'; caption glosses pooling. The 160+ concurrent-demand figure is omitted."},
+    "F10": {"status": "conveyed", "note": "Retry-storm node: 'fixed 1 s retries, 3 attempts, no jitter, no budget: traffic 3,200 → 15,020 rpm (4.7×)'; retry caption: 'extra load, zero extra successes, for nearly two hours (15:12–17:18). The 16:20 pool bump to 200 backfired (worse write p99), reverted 16:31'."},
+    "F11": {"status": "conveyed", "note": "Diagnosis flowchart: 'Network hypothesis held 14:20–15:10' fed by cloud advisory 14:05 and broken deploy marker; timeline: '14:11 first alert' → '15:19 database identified — 68 min after first alert'; 'Wrong track — 50 minutes' subgraph title."},
+    "F12": {"status": "conveyed", "note": "'migration 0412 had dropped the old covering index' → 'Dead end: old query would seq-scan too, index rebuild ≈6 h'; caption glosses covering index; remediation caption 'index rebuild finished at 21:48 that evening'. Index name and 16:05 start omitted."},
+    "F13": {"status": "conveyed", "note": "'16:35 exact-match fallback verified in staging, 17:05 flag to 0% — the flip took 90 seconds'; overview: 'errors under 3% by 17:15'; remediation caption: exact-match-only mode, 'full contains search returned June 26 with the fixed, org-scoped query'. Flag name and the untouched-unique-index detail omitted."},
+    "F14": {"status": "conveyed", "note": "Timeline: '17:12–17:50 manual VACUUM removes 38.1 M dead tuples' → '17:53 all SLOs met' → '18:19 closed after 26 min stable'. Statistics refresh / cache re-warm detail omitted."},
+    "F15": {"status": "conveyed", "note": "Diagnosis gaps g1–g3: error-rate-only alerting, 'latency dashboards sampled 1 in 100 — the cliff looked like sparse noise', deploy marker broken since Jun 10; timeline: '14:07 search p99 jumps ... no alert existed on this signal', '14:11 first alert: gateway 5xx over 2%'."},
+    "F16": {"status": "conveyed", "note": "Remediation section: 3 P0s (Q3 2026) mapped one-per-leg with team names (Observability/Infrastructure/Platform), '3 × P1' incl. autovacuum tuning >50 M rows, migration reversibility, CI query-plan checks, and '3 × P2'. Individual owner names (Priya N., Marcus T., Dana K.) omitted in favor of teams."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none in the capture — all five Mermaid diagrams rendered correctly in full.png. Note the page depends on CDN-loaded mermaid@11 at view time; offline or no-JS viewing would show raw diagram source.",
+  "strengths": [
+    "Near-complete factual coverage: 15/16 facts land, with exact figures (57% killed, 4.7x/15,020 rpm, cl_waiting 1,437, 38.1M dead tuples vs 54.9M threshold) preserved in diagram nodes.",
+    "The causal structure the brief demands is the literal shape of the first diagram — trigger + two amplifiers converging on the pool — with a counterfactual caption ('remove any one leg...') that nails T1 above the fold.",
+    "Every DB mechanism gets the one-line gloss the audience needs (dead tuples, covering index, pgbouncer pooling, B-tree anchoring), placed in captions right under the diagram that uses it.",
+    "Diagram type matches content: flowchart for causality, phased TD chain for the timeline, sequence diagram for the retry feedback loop, mapping for fixes-to-legs; blameless tone explicitly preserved ('Four systemic gaps — not responder error')."
+  ],
+  "weaknesses": [
+    "T2 (68-minute detection lag) and T4 (layered scheduled fixes) are invisible at a glance — they live below the fold, so the 10-second read only delivers T1 and half of T3.",
+    "Endpoint-group latency impact (F3: p50 85ms→2.9s, p99 420ms→28.4s), the 19.1% average error rate, and 362k failed requests are missing — the 'how bad was it' quantification leans entirely on the peak number.",
+    "Mermaid default rendering costs legibility: small node text, awkward long edge sweeps in the overview, a space-wasting single-column timeline, and node fill colors whose semantics shift between diagrams with no legend.",
+    "The remediation flowchart is a table dressed as a diagram (five parallel arrows all labeled 'targets'), and owner names were dropped for team names."
+  ],
+  "evaluator_notes": "Accuracy is formulaic: 15 conveyed, 1 absent (F3), 0 distorted, 0 contradicted → 10*15/16 = 9.4. Several 'conveyed' marks are partial (F1 no SEV-1, F2 peak only, F4 no percentages/contract count, F16 teams not owners); none rise to distortion. Glance score reflects that the recorded glance takeaway captured T1 fully and T3 partially but nothing of T2/T4. Depth is strong for the brief's EM audience thanks to the glosses, but the page is at the upper edge of node-text density; sequence-diagram notation may slow a non-expert. structure_nav has clear sections but no TOC/anchors. visual_craft is honest and purposeful but generic-Mermaid in polish."
+}

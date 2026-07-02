@@ -1,0 +1,51 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "07-scrolly-slides",
+  "rubric_version": 1,
+  "glance_takeaway": "This is an orientation page for 'Meridian', a self-hosted read-later/RSS service. Its main message is that the architecture is a single linear pipeline (scheduler -> fetcher -> extractor -> dedup -> SQLite store -> API -> web + CLI) with one SQLite file at the center that everything layers on. A newcomer learns where their first change would go (pipeline/sources/ or api/routes.py) and that pipeline/extractor.py is the largest, riskiest file to touch.",
+  "scores": {
+    "glance_comprehension": 7.5,
+    "accuracy": 9.3,
+    "depth_comprehension": 8.0,
+    "structure_nav": 7.0,
+    "visual_craft": 7.5,
+    "density_fit": 8.0,
+    "overall": 8.2
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Slide 4 chart lists pipeline/, api/, store/, render/, queue/, cli/ (+shared, web/); slide 3 chip 'web reader — vanilla JS'; no-framework/no-build-step detail only in a hover title attribute on the web/ row"},
+    "F2": {"status": "conveyed", "note": "Slide 3 flow scheduler->fetcher->extractor->dedup->store (SQLite + FTS); slide 5 extends writer->FTS index"},
+    "F3": {"status": "conveyed", "note": "Slide 8 rule 1: 'Only store/writer.py writes the database — every INSERT/UPDATE/DELETE lives in that one 610-LOC file'; reader path via store/reader.py on slide 6"},
+    "F4": {"status": "conveyed", "note": "Slide 8 rule 2: 'The extractor is pure — bytes in, Article out; no network, disk, DB, or clock. Deterministic.'"},
+    "F5": {"status": "conveyed", "note": "Slide 9: extractor.py imports clean_html() from render/sanitize.py, 'there since v0.8', 'The fix is issue #214'; heading 'with one known crack' preserves uniqueness"},
+    "F6": {"status": "conveyed", "note": "Slide 9 layer diagram: 'store/ bottom layer — imports nothing but stdlib + sqlite3'; downnote 'nothing imports api/ or cli/'"},
+    "F7": {"status": "conveyed", "note": "Slide 10 hero number '1,140 LOC — largest file in the repo' + stat '14 site-specific heuristics, inlined as if/elif chains'"},
+    "F8": {"status": "conveyed", "note": "Slide 4 body '13,710 LOC of backend Python'; pipeline/ bar = 4,180 LOC, longest bar"},
+    "F9": {"status": "conveyed", "note": "Slide 4: 77% overall, store/ 91%, cli/ 41%, web/ '0%' with caption 'web/ has no test harness at all'; reiterated in recap"},
+    "F10": {"status": "absent", "note": "No test count (412 / 348+64) or ~41 s suite runtime anywhere; only 'Tests add another 6,240 LOC' and the 1,400-fixture property test"},
+    "F11": {"status": "conveyed", "note": "Slide 5 chip 'dedup — 64-bit simhash · ~7% dropped'; Hamming distance <= 3 threshold omitted but nothing misstated"},
+    "F12": {"status": "conveyed", "note": "Slide 7 card 'New source type — a 4-file recipe' lists exactly sources/base.py, sources/__init__.py, store/migrations/, cli/commands/add.py"},
+    "F13": {"status": "conveyed", "note": "Slide 5 'jobs table — broker polls 500 ms · 8 threads', body 'Queue depth is normally 30–60; health alerts at 500'; slide 2 'No external broker'"},
+    "F14": {"status": "conveyed", "note": "Slide 6: GET /articles/{id} -> api/routes.py -> store/reader.py -> render/template.py -> render/annotations.py, 'p50 28 ms total'"},
+    "F15": {"status": "conveyed", "note": "Slide 8 rule 3: 'only SQLite triggers touch articles_fts, so it can never drift'; schema.sql not named"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Above-the-fold cover carries three of the four critical takeaways (shape, first-change locations, extractor risk) in one screen",
+    "Honest, proportional LOC bar chart (widths verified against values) with the untested web/ row visually set apart below a divider",
+    "Layer diagram makes the import rules and the single pipeline->render violation explicit and correctly directed",
+    "Negative facts (layering crack, xfail purity tests, 0%-tested frontend, copy-pasted auth checks) are foregrounded, not sanded off",
+    "Recap slide restates all takeaways with per-slide backlinks and pointers to deeper docs",
+    "Solid engineering: dark mode, reduced-motion fallback, scroll-snap relaxation on small viewports, IntersectionObserver-driven progress rail"
+  ],
+  "weaknesses": [
+    "T4 (the invariants/discipline) is entirely invisible at a glance — it first appears on slide 8 of 12",
+    "F10 (412 tests, 41 s suite) is missing outright",
+    "Meaningful content hides in hover-only title attributes (module descriptions, 'no framework, no build step'), invisible on touch devices and in print",
+    "One-slide-per-viewport format forces 12 screens of scrolling; no visible table of contents beyond hover tooltips on tiny rail dots",
+    "Slide 4 headline 'Seven parts' sits over an eight-row chart (7 backend rows + web/), a small numeric mismatch",
+    "The 'violation' arrow glyph on slide 9 is cryptic without reading the body text below it"
+  ],
+  "evaluator_notes": "Accuracy per formula: 14 conveyed, 1 absent (F10), 0 distorted, 0 contradicted -> 10*14/15 = 9.3. Glance judged solely from the recorded takeaway: T1 and T2 landed fully, T3 substantially (largest/riskiest file, without the why), T4 absent -> 7.5. Overall = 0.35*9.3 + 0.30*7.5 + 0.15*8.0 + 0.10*7.0 + 0.10*7.5 = 8.2. The page adds many plausible figures not in key_facts (31 endpoints, 1.8 GB, p50 2.1 s, complexity 38, 830/920 LOC hotspot files); none contradict the ground truth, but they were not independently verifiable within this evaluation's inputs. Extras like 'line 41' for the violating import are asserted with a specificity the ground truth does not confirm."
+}

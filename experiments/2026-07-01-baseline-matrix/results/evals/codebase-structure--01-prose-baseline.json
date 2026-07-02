@@ -1,0 +1,46 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "01-prose-baseline",
+  "rubric_version": 1,
+  "glance_takeaway": "This page is an onboarding map of 'meridian', a self-hosted read-later/RSS service with a Python backend, SQLite store, HTTP API, vanilla-JS reader, and CLI. Its main message is that the system is a one-way ingest pipeline (scheduler -> fetcher -> extractor -> dedup -> store -> full-text index) writing into a single SQLite database that the API, web reader, and CLI read back out of; a newcomer's first change will land in pipeline/sources/ or api/routes.py, and pipeline/extractor.py is the file to treat with caution. The repo is ~23k lines split into six backend packages, with a module table showing LOC and coverage per package.",
+  "scores": {
+    "glance_comprehension": 7.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 7.5,
+    "structure_nav": 6.5,
+    "visual_craft": 5.5,
+    "density_fit": 7.0,
+    "overall": 7.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Module table lists all six packages (pipeline, api, store, render, queue, cli) plus shared layer; web/ paragraph: 'no framework, no build step'."},
+    "F2": {"status": "conveyed", "note": "Bold exec summary: 'scheduler -> fetcher -> extractor -> dedup -> store -> full-text index'; expanded in 'How data moves'."},
+    "F3": {"status": "conveyed", "note": "Invariant 2: 'Every INSERT, UPDATE, and DELETE in the codebase lives in that one 610-LOC file; everything else reads through store/reader.py.'"},
+    "F4": {"status": "conveyed", "note": "Invariant 1: 'Bytes in -> Article out; no network, disk, DB, or clock. The same HTML always yields the same Article.'"},
+    "F5": {"status": "conveyed", "note": "Caution callout: extractor.py line 41 imports clean_html() from render/sanitize.py, sideways edge since v0.8, tracked as issue #214."},
+    "F6": {"status": "conveyed", "note": "Layering paragraph: 'store/ sits at the bottom and imports no other meridian package... And nothing imports api/ or cli/.'"},
+    "F7": {"status": "conveyed", "note": "'The one scary file' section: largest file at 1,140 LOC, 14 site-specific extraction heuristics inlined as if/elif chains."},
+    "F8": {"status": "conveyed", "note": "Shape section: '13,710 LOC of backend Python'; table shows pipeline/ at 4,180 LOC as the largest module."},
+    "F9": {"status": "conveyed", "note": "Tests section: '77% overall... store 91%... cli 41%'; caution callout: 'The frontend has no automated tests at all — 0%'."},
+    "F10": {"status": "conveyed", "note": "Tests section: '412 tests total (348 unit + 64 integration), running in ~41 s locally.'"},
+    "F11": {"status": "conveyed", "note": "Write path: '64-bit simhash... Hamming distance <= 3... about 7% of incoming items are dropped this way.'"},
+    "F12": {"status": "conveyed", "note": "Numbered 4-file recipe lists exactly base.py, __init__.py, store/migrations/, cli/commands/add.py (fixture test noted as an addition, consistent with the recipe framing)."},
+    "F13": {"status": "conveyed", "note": "Write path: SQLite jobs table, broker leases to 8 worker threads, typical depth 30-60, health endpoint alerts at 500; table row: 'No Redis, no Celery.'"},
+    "F14": {"status": "conveyed", "note": "Read path: api/routes.py -> store/reader.py (6 ms) -> render/template.py (14 ms) -> render/annotations.py (8 ms); 'Total p50: 28 ms.'"},
+    "F15": {"status": "conveyed", "note": "Invariant 3: 'Only SQLite triggers in schema.sql touch articles_fts'; write path repeats 'application code never writes the index.'"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Perfect factual fidelity: all 15 ground-truth facts are conveyed, most with exact numbers, and negative facts (layering violation, xfail purity tests, 0% frontend coverage) are given visual prominence via caution callouts rather than sanded off.",
+    "Strong above-the-fold executive summary: the bolded lede compresses T1, T2, and half of T3 into one legible paragraph, so a 10-second glance yields the shape, the two first-change locations, and the file to fear.",
+    "Well-chosen prose ordering (shape -> data flow -> rules -> hotspots -> first change -> tests) that matches how a new contributor would actually onboard, ending with a genuine 'In short' recap."
+  ],
+  "weaknesses": [
+    "No diagram for an intrinsically diagrammatic subject: the one-way pipeline, hub-and-spoke store, and import-layering DAG are all described only in running prose, forcing the reader to build the picture mentally.",
+    "The invariants (T4) and the reason extractor.py is scary (T3's specifics) live below the fold and do not survive a glance; the glance carries facts but not the discipline story.",
+    "Long unbroken paragraphs (e.g. the four-stage write path is one ~12-line paragraph packing five facts) hurt re-findability; no table of contents or anchor navigation for a page this long.",
+    "Visual encoding is minimal: one table and two callout styles carry all the structure; LOC and coverage numbers are never encoded visually (no bars, no emphasis on the 41%/62% outliers in the table itself)."
+  ],
+  "evaluator_notes": "A textbook prose baseline: maximally accurate (accuracy is mechanically 10.0 since 15/15 facts are conveyed and none distorted or contradicted) and honestly caveated, but it spends almost nothing on visual conveyance. The glance succeeds on T1/T2 because the author front-loaded a bolded summary sentence, not because of any visual design. Deep comprehension is high for a motivated developer but 2-3 minutes is tight for ~1,600 words; the pipeline order, layering rules, and hotspot rationale would land faster and stick better with even one diagram. Scored per rubric v1: overall = 0.35*10.0 + 0.30*7.0 + 0.15*7.5 + 0.10*6.5 + 0.10*5.5 = 7.925 -> 7.9."
+}

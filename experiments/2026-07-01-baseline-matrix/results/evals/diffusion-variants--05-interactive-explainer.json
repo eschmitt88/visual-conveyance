@@ -1,0 +1,49 @@
+{
+  "testcase": "diffusion-variants",
+  "approach": "05-interactive-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "This page explains how modern AI image generators (Stable Diffusion, Midjourney, DALL-E 3, Flux) work via diffusion: a fixed process destroys an image with noise step by step, and a trained network learns to run that backwards, rebuilding an image starting from pure random noise in roughly 1000 small denoising steps. I'd take away that generation always starts from pure noise rather than an existing photo, that no images are stored in the model (weights encode statistics, not copies), and that the zoo of variants (DDIM, ODE solvers, distillation) mainly exists to cut the ~1000-step sampling cost down to as few as 1-4 steps, while guidance (CFG) is what makes output follow the prompt.",
+  "scores": {
+    "glance_comprehension": 7.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 7.5,
+    "visual_craft": 8.0,
+    "density_fit": 8.0,
+    "overall": 8.6
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Section 1 'Two processes, opposite directions': fixed forward noising vs learned reverse denoising; 'sample fresh pure noise and apply the learned step repeatedly'; also hero dek + trajectory explorer."},
+    "F2": {"status": "conveyed", "note": "Section 1: 'about T = 1000 steps in the original DDPM formulation — following a predefined noise schedule ... statistically indistinguishable from pure noise.'"},
+    "F3": {"status": "conveyed", "note": "Section 2 three-card grid: epsilon / score (gradient of log-probability density) / velocity (defined mixture of image and noise), 'mathematically interchangeable'; inputs = noisy image + timestep t + prompt representation."},
+    "F4": {"status": "conveyed", "note": "Section 3 numbered recipe: random image + random t, noise added 'in one shot — a closed-form formula', mean-squared error penalty, 'No adversarial game as in GANs.'"},
+    "F5": {"status": "conveyed", "note": "Section 4 intro: '~1000 sequential forward passes that cannot be parallelized (each depends on the previous one)'; hero right card frames variants as attacking this cost."},
+    "F6": {"status": "conveyed", "note": "DDIM tab panel: 'same trained network, unchanged', 'deterministic', 'a 20-50-step subsequence ... with only a modest quality loss' (behind tab; summary row visible at rest)."},
+    "F7": {"status": "conveyed", "note": "DDIM tab panel: 'you can invert a generated image back to its noise (useful for editing) and smoothly interpolate between two images by interpolating their noise.'"},
+    "F8": {"status": "conveyed", "note": "ODE/score tab panel: forward process as SDE, reverse-time SDE vs deterministic 'probability flow ODE', 'DDIM is essentially a discretization of this ODE', DPM-Solver '~10-20 steps with no retraining.'"},
+    "F9": {"status": "conveyed", "note": "Section 5: separately trained VAE maps images to latents; latent pipeline panel shows 'VAE decoder — one single pass' converting the clean latent to the full image."},
+    "F10": {"status": "conveyed", "note": "Section 5: '512 x 512 x 3 = 786,432 numbers'; latent panel: '64x64x4 ... 16,384 numbers — ~48x fewer', 8x spatial downsampling, 'made Stable-Diffusion-class models run on consumer GPUs.'"},
+    "F11": {"status": "conveyed", "note": "Section 6: prompt dropped '~10-20%' of training examples, 'every step runs the network twice', exact formula 'guided = unconditional + s x (conditional - unconditional)', 'doubles the network evaluations per step.'"},
+    "F12": {"status": "conveyed", "note": "CFG gauge + cards: 's = 1 — no guidance', 's ~ 7.5 is a common default', 'Pushed too far (roughly s > 12-15 in classic SD): oversaturated colors and burned-in artifacts'; adherence-vs-diversity tradeoff stated."},
+    "F13": {"status": "conveyed", "note": "Distillation tab panel: progressive/adversarial distillation, consistency models 'any noisy point on a trajectory maps directly to the same clean endpoint', 1-4 steps, 'trade some quality and diversity for speed.'"},
+    "F14": {"status": "conveyed", "note": "Flow matching tab panel: velocity field transporting noise to data, rectified flow = straight lines, 'a close sibling of diffusion, not a rival', 'Stable Diffusion 3 and Flux-class models are trained this way.'"},
+    "F15": {"status": "conveyed", "note": "Misconceptions section: collage myth debunked with the rare-memorization nuance ('a real but exceptional memorization failure mode, not the mechanism'); real-photo myth debunked with the explicit img2img/inpainting exception."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Complete and correct fact coverage: all 15 ground-truth facts present with precise numbers (786,432 -> 16,384, ~48x, ~10-20% prompt drop, s>12-15 artifact regime) and no overstatement found.",
+    "Glance zone is genuinely load-bearing: headline states the core mechanism, three chips pre-debunk misconceptions, and the step-count ladder (~1000 -> 20-50 -> 10-20 -> 1-4) is legible without interaction.",
+    "Honest, purposeful visual encodings: the variant step chart is a correctly computed log-scale plot with labeled axis; the pixel-vs-latent pipeline toggle directly encodes the 48x compression; the CFG gauge encodes the working/artifact regimes.",
+    "Caveats survive: distillation quality/diversity cost, VAE compression bottleneck, memorization exception, diminishing returns past ~50 steps, 'guidance is not a quality knob'.",
+    "Graceful degradation: no-JS fallbacks (stage notes list, inline tooltip parentheticals, always-open panels) and a <details> table alternative to the chart."
+  ],
+  "weaknesses": [
+    "Four of the five variant family stories (DDIM, ODE, flow matching, distillation) are hidden behind tabs in the resting state — a scroll-only reader sees only the DDPM panel, so F6-F8, F13, F14 depend on interaction.",
+    "Latent diffusion (T3) is nearly invisible at a glance: name-dropped in the dek and lumped into 'make sampling cheaper', with the VAE/48x/consumer-GPU story only far down the page.",
+    "The dek's framing that latent diffusion 'exists to make sampling cheaper' is loose — it cuts per-step cost, not step count — though the latent section itself corrects this precisely.",
+    "No table of contents or persistent navigation on a long 8-section page; wayfinding relies on numbered kickers alone.",
+    "Density is at the upper edge for the brief's non-ML reader; the section-2 parameterization cards in particular assume comfort with 'gradient of the log-probability density' on first contact (tooltip-scaffolded, but dense)."
+  ],
+  "evaluator_notes": "Accuracy computed exactly per rubric: 15 conveyed, 0 distorted, 0 contradicted -> 10 x 15/15 = 10.0. Overall = 0.35x10.0 + 0.30x7.5 + 0.15x8.5 + 0.10x7.5 + 0.10x8.0 = 8.575 -> 8.6. Glance scored from the recorded takeaway only: T1 and T2 landed fully, T4 partially (purpose of CFG but not the extrapolation mechanism or diversity tradeoff), T3 effectively absent above the fold. Tab-hidden content counted as reachable for depth/accuracy but not for glance, per instructions. Verified chart bar geometry against log10 positions (all rows correct within rounding). full.png shows all sections rendered cleanly, including SVG noise trajectory and gauge; no broken rendering."
+}

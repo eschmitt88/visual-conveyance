@@ -1,0 +1,49 @@
+{
+  "testcase": "tradeoff-decision",
+  "approach": "01-prose-baseline",
+  "rubric_version": 1,
+  "glance_takeaway": "This is an engineering decision brief about picking a production vector-search engine for a company called Fernwick. The recommendation is conditional: go with self-hosted Hearth if a promised hire/headcount actually lands by October, otherwise use the managed option Quiver. Skimming, I can see two other candidates were tested and eliminated for failing hard requirements, and there's some override condition about filtered queries that would force Quiver regardless.",
+  "scores": {
+    "glance_comprehension": 6.5,
+    "accuracy": 9.3,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.0,
+    "visual_craft": 5.5,
+    "density_fit": 6.5,
+    "overall": 7.6
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "All five must-haves with exact thresholds in 'Two options are out on must-haves' opening paragraph: p95 <=100ms incl. filters (M1), recall >=0.92 (M2), filtered recall >=0.90 to 5% sel. (M3), EU residency (M4), <=$2,500/mo (M5)."},
+    "F2": {"status": "conveyed", "note": "Cost section: '4.1M embedded products today and has roughly doubled every year... 100M on a 4-5 year horizon'; 30% filter share in M1 definition and Hearth callout ('has grown every quarter')."},
+    "F3": {"status": "distorted", "note": "Partial: two-week bakeoff (2026-06-08 to 06-19) on the same frozen 10M-vector snapshot for all four candidates is in the lead, but the 48-hour production log replay at 120 QPS, identical hardware for self-hosted options, and brute-force ground-truth recall measurement are absent. Scored distorted (not conveyed) under the numbers-required rule; nothing is misstated."},
+    "F4": {"status": "conveyed", "note": "Matrix row 'p95 latency, unfiltered': Braid 12 ms, Quiver 18 ms, Hearth 41 ms, pgnearest 95 ms; ordering also in prose."},
+    "F5": {"status": "conveyed", "note": "Matrix row 'Recall@10, unfiltered (M2)': 0.98 / 0.97 / 0.94 / 0.89 with pgnearest marked as the sole fail."},
+    "F6": {"status": "conveyed", "note": "'pgnearest (Postgres extension) fails M1 and M2' section: 110 ms filtered p95 vs 100 ms budget, recall 0.89 vs 0.92 floor; also in lead and matrix verdict row FAIL (M1, M2)."},
+    "F7": {"status": "conveyed", "note": "'Braid (embedded library) fails M3': best raw numbers (12 ms, 0.98), no native filtered search, post-hoc filtering collapses recall to 0.71 at 5% selectivity, structural not tunable."},
+    "F8": {"status": "conveyed", "note": "'Both survivors pass all five must-haves'; highlighted callout: Hearth 0.90 at 5% sel. exactly at floor, 0.86 at 1%; Quiver paragraph and flip-trigger callout: 0.95 even at 1%."},
+    "F9": {"status": "conveyed", "note": "Cost bullets (Quiver $180, Hearth $520 at 1M) plus matrix 'Cost @1M' row with all four: $180 / $520 / $240 / $210."},
+    "F10": {"status": "conveyed", "note": "Bullets: 10M Hearth $1,400 vs Quiver $1,900 'both under the $2,500 ceiling'; 100M $6,800 vs $23,000 '3.4x'; matrix marks pgnearest ~$13,500 (est.) and Braid ~$4,200 (est.+DIY) as estimates."},
+    "F11": {"status": "conveyed", "note": "'On infra alone, the crossover is ~3M vectors -- already behind us' (current 4.1M); ~0.2 FTE = ~$2,800/mo loaded moves total-cost crossover to '30M vectors -- around 2029'."},
+    "F12": {"status": "conveyed", "note": "Quiver: 'effectively zero FTE, with vendor on-call behind a 99.9% SLA'; Hearth: ~0.5 FTE first quarter, ~0.2 steady-state, >=4-engineer on-call; PLAT-7 'approved but not yet filled -- the whole plan leans on it'."},
+    "F13": {"status": "conveyed", "note": "Quiver paragraph: proprietary DSL, exit ~3 engineer-weeks 'and growing', in-VPC 'never offered' with 2027 enterprise-contract stakes; matrix In-VPC row 'x never'; Hearth low lock-in, in-VPC EU residency."},
+    "F14": {"status": "conveyed", "note": "Recommendation section: Hearth iff PLAT-7 signed and started by 2026-10-01 AND >=4-eng on-call committed in writing; fallback Quiver with all four exit-plan elements (SearchIndex adapter, quarterly export drill into scratch Hearth cluster, ~3 ew standing budget, re-evaluate at 30M or first renewal)."},
+    "F15": {"status": "conveyed", "note": "Standing flip trigger callout: >60% filtered traffic or selectivity below ~2% flips to Quiver 'even if the hire lands' (0.90/0.86 vs 0.95 margin logic); checkpoint 2026-10-01 and full review 2027-01-15 in byline and bottom line."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Near-exhaustive factual fidelity: 14 of 15 facts fully conveyed with exact numbers, and the one shortfall (bakeoff methodology detail) omits rather than misstates.",
+    "The headline itself carries the conditional recommendation (T2), so the single most decision-critical takeaway survives even a pure headline glance.",
+    "Elimination logic is framed exactly as the material demands -- 'out on must-haves, not taste' -- and the 'but the library benchmarks best' objection is pre-answered in prose (T4).",
+    "The comparison matrix is dense but honest: fail cells bolded, marginal cells marked '~ (at floor)', estimates labeled (est.), and a must-have verdict row.",
+    "Caveats are unusually prominent: zero-margin Hearth callout, residual-risks block for both survivors, sensitivity list, unlocked renewal pricing."
+  ],
+  "weaknesses": [
+    "Above the fold is a wall of serif text; the lead is a ~250-word paragraph, so a 10-second glance yields the headline plus fragments -- the cost inversion (T3) is completely invisible at a glance.",
+    "The cost crossover, the most inherently visual relationship in the material (two curves crossing at ~3M infra / ~30M labor-adjusted), is rendered only as bullets and prose; no chart or timeline anywhere.",
+    "For a 'short on time' audience the full argument requires a ~7-minute read; the 2-3 minute reader gets lead + headings + table but must trust rather than see the crossover reasoning.",
+    "No in-page navigation, anchors, or summary-first visual hierarchy beyond headings; the elimination structure is argued, not shown.",
+    "Bakeoff methodology rigor (48-h replay at 120 QPS, brute-force ground truth) is dropped, weakening the reader's ability to defend the evidence base itself."
+  ],
+  "evaluator_notes": "A very strong prose artifact: rhetorically structured (not a flat feature list), factually meticulous, and the conditional recommendation is impossible to miss since it is the headline. Its ceiling is exactly what the brief predicts for prose: glance-level conveyance of the structural relationships (cost inversion, elimination-vs-tradeoff distinction) is weak because everything is encoded in sentences. Accuracy computed as 10*max(0,14-0)/15 = 9.3 (F3 distorted, counts 0). Overall = 0.35*9.3 + 0.30*6.5 + 0.15*7.5 + 0.10*7.0 + 0.10*5.5 = 7.6."
+}

@@ -1,0 +1,49 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "01-prose-baseline",
+  "rubric_version": 1,
+  "glance_takeaway": "This is a post-incident report on INC-1194, a June 24 SEV-1 partial API outage lasting 4h17m. Its main message is that there was no single root cause: a rewritten search query combined with two latent weaknesses (vacuum debt from a bulk backfill and jitterless client retries) to turn a one-endpoint regression into a platform-wide partial outage - remove any leg and it's just a degradation. A reader also immediately gets the damage (peak 31.2% API errors, 2,312 orgs / 24.4% affected, ~$41,300 SLA credits, no data lost), that 68 minutes of detection/diagnosis lag came from alerting on error rate rather than latency, that rollback was impossible so a feature flag at 17:05 stopped it, and that three P0 remediation items land in Q3 2026.",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.0,
+    "structure_nav": 7.0,
+    "visual_craft": 6.0,
+    "density_fit": 7.5,
+    "overall": 8.6
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Subtitle + 'How bad it was' table: 'SEV-1 · 2026-06-24 14:02–18:19 UTC (4 h 17 m)' and '257 min'."},
+    "F2": {"status": "conveyed", "note": "Table: '19.1% average across the window; peak 31.2% at 15:47'; '≈362,000 of ≈1.9 M requests'."},
+    "F3": {"status": "conveyed", "note": "Table: 'p50 85 ms → 2.9 s; p99 420 ms → 28.4 s'; callout clarifies latency covers completed requests and 30s timeouts surfaced as 504s counted as errors."},
+    "F4": {"status": "conveyed", "note": "Table rows: 2,312 orgs (24.4% of 9,480), ≈$41,300 across 216 enterprise contracts, data loss None, 37,400 webhooks replayed by 19:05."},
+    "F5": {"status": "conveyed", "note": "Cause 1: PR #8841, leading-wildcard LIKE + org scoping moved to app side, seq scan of 274M-row invoices table, 0.4 ms → 24–31 s. Omits the EXPLAIN cost (8.44 → ≈6.2M) and ~312.3M tuples/scan figures, but the fact's meaning lands correctly."},
+    "F6": {"status": "conveyed", "note": "'the canary table holds ~2 M rows; the same scan there takes ~180 ms, under every alert threshold' + timeline 'Canary was green'."},
+    "F7": {"status": "conveyed", "note": "Cause 2: June 22 tax_region backfill, 38.1 M dead tuples, 12.2% bloat, heap 190→213 GB, autovacuum threshold ≈54.9 M not crossed (and why the default is sized wrong for big tables)."},
+    "F8": {"status": "conveyed", "note": "'pushed scan times from an estimated ~26 s (bloat-free) to the observed 24–31 s — straddling the 30-second statement timeout. About 57% of search queries were killed... a killed query still held its database connection for the full 30 seconds.'"},
+    "F9": {"status": "conveyed", "note": "Gloss names the 80-connection pgbouncer pool and its four sharers; '≈5.6/s: demand of 160+ concurrent connections against a pool of 80. Saturation at 15:12'; 'client wait queue peaked at 1,437 at 15:58'; blast-radius framing explicit."},
+    "F10": {"status": "conveyed", "note": "'fixed 1-second interval, 3 attempts, no jitter, no budget... 3,200 rpm baseline to 15,020 rpm at peak — 4.7×... zero extra successes... nearly two hours'; pool bump to 200 at 16:20 backfired, reverted 16:31."},
+    "F11": {"status": "conveyed", "note": "Timeline row 14:20–15:10 (50 minutes, packet-loss advisory anchor) + 'Why diagnosis took 68 minutes' covers the 14:05 advisory, 504s resembling network timeouts, deploy markers broken since June 10, and 68 min from 14:11 to 15:19."},
+    "F12": {"status": "conveyed", "note": "'migration 0412, which dropped idx_invoices_org_number... rolling back the code would restore the old query with no index to serve it... Rebuilding the index on 274 M rows takes ~6 hours (started at 16:05... finished at 21:48, after incident close)'."},
+    "F13": {"status": "conveyed", "note": "'invoice_search_contains' to 0% at 17:05 after staging verification of exact-match fallback on the untouched unique index; flip took 90 s; errors below 3% by 17:15 (timeline); exact-match-only until re-enable June 26. Only the 16:35 staging timestamp is omitted."},
+    "F14": {"status": "conveyed", "note": "Timeline: manual VACUUM 17:12–17:50 removing 38.1 M dead tuples and refreshing statistics; 17:53 all endpoint groups within SLO; 18:19 closed after 26 minutes stable."},
+    "F15": {"status": "conveyed", "note": "'Why diagnosis took 68 minutes': only alert was error-rate (gateway 5xx > 2%, fired 14:11), no latency SLO for invoicing though p99 exploded at 14:07, dashboards sampled 1/100 (~0.7 samples/min), broken deploy marker hid the 14:02 deploy."},
+    "F16": {"status": "conveyed", "note": "'What we're changing' table: 9 items (3 P0/3 P1/3 P2) with named owners and quarters; the three Q3-2026 P0s (Priya N. latency SLO alerts, Marcus T. pgbouncer saturation + isolation, Dana K. backoff/jitter/budgets) and the P1s (autovacuum tuning, migration-reversibility policy, CI plan checks) all match."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Complete and faithful: all 16 ground-truth facts land, with exact figures (57% kill rate, 1,437 cl_waiting peak, 4.7x retry multiplier, 54.9M autovacuum threshold) and no overselling.",
+    "The above-the-fold summary is exceptional: all four required takeaways are stated in the first two paragraphs, so even a 10-second glance delivers the causal thesis.",
+    "Causal structure is explicit, not flattened: 'a trigger and two amplifiers' framing, a numbered end-to-end chain, and remove-one-leg counterfactuals for each leg.",
+    "Audience fit: every DB mechanism (B-tree vs leading wildcard, dead tuples/autovacuum, pgbouncer pooling, covering index) gets a one-line gloss, exactly as the brief requires.",
+    "Measurement caveats are surfaced in a dedicated 'Reading the numbers' callout; blameless tone preserved throughout ('fixing the instruments, not second-guessing the people')."
+  ],
+  "weaknesses": [
+    "Almost no visual encoding: the error-rate trajectory, the 4h17m time budget, and the three-legged causal structure are all narrated or tabulated, never diagrammed or charted - the visual channel is essentially unused.",
+    "No table of contents or anchor links on a very long single page; re-finding a specific number means scrolling and scanning headers.",
+    "At ~2,500 words the page strains the brief's 'in a few minutes' reading goal; the deep detail (EXPLAIN mechanics, pool arithmetic) is mixed inline rather than progressively disclosed.",
+    "A few evidentiary sub-figures are dropped (EXPLAIN cost 8.44 to ~6.2M, ~312.3M tuples read per scan, 16:35 staging-verification time), slightly weakening the quantitative backing for Cause 1."
+  ],
+  "evaluator_notes": "Judged blind per rubric v1. Glance scored solely from the recorded glance_takeaway: T1 and T3 land fully, T2 substantially (misses the 1/100 sampling and hidden deploy marker mechanics), T4 partially (count/quarter/blameless visible, fix content not). Accuracy is mechanical: 16 conveyed, 0 distorted/contradicted = 10.0; the page is an unusually faithful rendering of the source. Depth held to 8.0 rather than higher because length works against the stated few-minute goal. Visual craft 6.0: what little visual design exists (typography, tabular-nums timeline, accent-colored thesis, dark mode) is clean and honest, but the material's causal and temporal structure begged for at least one diagram and got none. Overall = 0.35*10.0 + 0.30*8.5 + 0.15*8.0 + 0.10*7.0 + 0.10*6.0 = 8.6 (rounded from 8.55)."
+}

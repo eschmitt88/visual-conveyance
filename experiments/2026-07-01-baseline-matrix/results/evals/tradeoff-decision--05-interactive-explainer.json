@@ -1,0 +1,49 @@
+{
+  "testcase": "tradeoff-decision",
+  "approach": "05-interactive-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "This is a decision brief recommending a vector-search engine for Fernwick's search platform. The recommendation is conditional, not a flat winner: pick Hearth (self-hosted) if an approved infra hire and a 4-engineer on-call rotation are locked in by Oct 1, 2026; otherwise fall back to Quiver (managed SaaS) with a mandatory, budgeted exit plan. Two of four candidates were eliminated on must-have failures — including the one with the best raw benchmarks — and cost ranking inverts with scale (Quiver cheapest at 1M vectors, most expensive at 10M/100M), with a standing override to Quiver if filtered-query share exceeds 60% or facet selectivity drops below ~2%.",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.0,
+    "visual_craft": 8.0,
+    "density_fit": 8.5,
+    "overall": 8.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Must-have chips M1-M5 with thresholds; tooltips carry the full definitions (e.g. M1 'p95 <= 100 ms at 10M... including the 30% filtered traffic', M3 'down to 5% selectivity')."},
+    "F2": {"status": "conveyed", "note": "Stat strip: '4.1M vectors today, x2/yr', '30% of queries filtered, rising'; cost tabs label '10M — 12 mo' and '100M — 4-5 yr'."},
+    "F3": {"status": "conveyed", "note": "Collapsed 'How the numbers were produced' details: 2026-06-08 -> 06-19, frozen 10M snapshot, identical 3-node allocation for self-hosted, 48-hour log replayed at 120 QPS, recall vs exact brute-force. Reachable, not at rest."},
+    "F4": {"status": "conveyed", "note": "Matrix row 'p95 latency, unfiltered': 18/41/95/12 ms; pgnearest marked '~' (marginal but passing), Braid bolded fastest."},
+    "F5": {"status": "conveyed", "note": "Matrix row 'Recall@10, unfiltered (M2)': 0.97 / 0.94 / 0.89 x / 0.98; only pgnearest flagged as failing."},
+    "F6": {"status": "conveyed", "note": "pgnearest card badge 'Eliminated — fails M1 + M2' with '110 ms filtered x (budget 100) . 0.89 recall x (floor 0.92)'; matrix verdict FAIL (M1, M2)."},
+    "F7": {"status": "conveyed", "note": "Braid card: 'Fastest and highest recall in the bakeoff — and it doesn't matter'; deep dive: 'no native filtered search... 0.71 at 5% — far below M3's 0.90 floor. Structural, not tunable.'"},
+    "F8": {"status": "conveyed", "note": "Hearth deep dive: '0.90 at 5% selectivity — exactly at the M3 floor; degraded to 0.86 at 1%'; Quiver deep dive: 'held 0.95 even at 1%'; matrix shows '0.90 ~ (at floor)'."},
+    "F9": {"status": "conveyed", "note": "Matrix 'Cost @1M' row: $180 (best) / $520 / $240 / $210; 1M cost tab shows Quiver cheapest badge."},
+    "F10": {"status": "conveyed", "note": "Matrix @10M $1,900 vs $1,400 (both check M5) and @100M $23,000 vs $6,800; 100M panel caption 'Quiver is 3.4x Hearth'; pgnearest ~$13,500 (est.), Braid ~$4,200 (est. + DIY build) marked as estimates."},
+    "F11": {"status": "conveyed", "note": "Callouts: 'Infra-only crossover: ~3M vectors — already behind us' and 'Labor-adjusted crossover: ~30M vectors — around 2029'; labor toggle labeled '~0.2 FTE steady-state ~ +$2,800/mo loaded'."},
+    "F12": {"status": "conveyed", "note": "Quiver deep dive 'effectively 0 FTE; vendor on-call; 99.9% SLA'; Hearth deep dive '~0.5 FTE first quarter... settling to ~0.2 FTE, plus a >=4-engineer on-call rotation. Req PLAT-7... approved, not yet filled.'"},
+    "F13": {"status": "conveyed", "note": "Quiver deep dive: proprietary DSL, exit '~3 engineer-weeks today, growing'; 'In-VPC deployment is not offered, ever'; 'Why Hearth first' ties in-VPC to 2027 enterprise-seller contracts; Hearth 'Lock-in: low', in-VPC."},
+    "F14": {"status": "conveyed", "note": "Decision rail IF/OTHERWISE with both dated conditions; 'The Quiver fallback comes with teeth' lists SearchIndex adapter, quarterly export drill into scratch Hearth cluster, ~3 engineer-week budget, re-evaluate at 30M or first renewal."},
+    "F15": {"status": "conveyed", "note": "Standing-override rail card: '>60% of traffic, or... selectivity drops below ~2%: Quiver regardless'; dates line 'Headcount checkpoint 2026-10-01 . full decision review 2027-01-15'."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "The above-the-fold glance zone alone carries the full decision structure: conditional IF/OTHERWISE/OVERRIDE rail with dates, elimination-vs-tradeoff framing, cost inversion, and the 'benchmark winner fails a must-have' point.",
+    "Fact fidelity is essentially perfect: all 15 ground-truth facts present with correct numbers and directionality, estimates flagged as estimates, and Hearth's zero-margin M3 pass stated plainly rather than smoothed over.",
+    "Progressive disclosure is disciplined: cards summarize, deep dives carry the long tail; the cost explorer rests on the decision-relevant 10M view; methodology is available but out of the way.",
+    "The 'What would change your mind?' flips section directly serves the brief's reading goal of defending the decision under attack, with quantified flip conditions (e.g. 25% repricing moves the crossover to ~20M).",
+    "Caveats survive: renewal not price-locked, SLA recourse limited to credits, Braid's 100M figure excludes a DIY build, pgnearest v1.0 undated."
+  ],
+  "weaknesses": [
+    "Bars rescale within each cost tab ('bars scale within each view'), so cross-scale magnitude comparison is not visual — the reader must read labels; a shared-axis or line view would show the crossover shape rather than assert it in callout prose.",
+    "No table of contents or in-page navigation on a long single scroll; wayfinding relies on scanning h2 headings.",
+    "Several load-bearing definitions (M1's 'including filtered traffic', selectivity, FTE) live only in hover/focus tooltips, which are fragile on touch and invisible in print.",
+    "Crossover specifics (~3M past, ~30M/~2029) do not land at glance — they sit mid-page in callouts; a time-pressed director reading only the fold misses T3's sharpest numbers.",
+    "Density is at the ceiling for the audience: the glance zone alone has ~5 chips, a 3-cell rail, and 4 stat-heavy cards; a less motivated reader could stall before the cost section."
+  ],
+  "evaluator_notes": "Accuracy 10.0 is formula-driven: 15/15 facts conveyed, 0 distorted, 0 contradicted (10 x 15/15). Glance scored from the recorded takeaway: T2 and T4 fully landed, T1 landed minus the explicit tradeoff axes, T3 landed minus crossover locations — 8.5, not 10. Interactive content (deep dives, cost tabs, labor toggle, methodology) was credited for depth only; the resting state (10M infra-only view, collapsed cards) was judged for glance. Rendering verified in both screenshots; the no-JS fallback (all panels visible, tabs hidden) is a sound progressive-enhancement choice. Overall = 0.35*10.0 + 0.30*8.5 + 0.15*8.5 + 0.10*8.0 + 0.10*8.0 = 8.925 -> 8.9."
+}

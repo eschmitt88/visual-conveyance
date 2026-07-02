@@ -1,0 +1,47 @@
+{
+  "testcase": "experiment-results",
+  "approach": "01-prose-baseline",
+  "rubric_version": 1,
+  "glance_takeaway": "This page reports an A/B test of a redesigned onboarding flow called 'Pathways.' The overall conversion lift (+0.8pp, 11.4% to 12.2%) is not statistically significant, so the headline warns not to read it as a win. The real finding is a platform split — mobile-web improved strongly (+4.2pp) while iOS significantly regressed (-1.9pp) — so the recommendation is to ship Pathways on mobile-web only, hold it on iOS pending a fix to a step-3 notification prompt, and leave Android unchanged; early-week gains were novelty-inflated and the retention guardrail was flat.",
+  "scores": {
+    "glance_comprehension": 7.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 7.5,
+    "structure_nav": 6.5,
+    "visual_craft": 5.5,
+    "density_fit": 6.5,
+    "overall": 8.1
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Lede: 'moved from 11.4% to 12.2% — +0.8 percentage points (pp)'."},
+    "F2": {"status": "conveyed", "note": "Lede and first section: '95% CI of [-0.3, +1.9] and p = 0.16 ... not statistically significant ... straddles zero'."},
+    "F3": {"status": "conveyed", "note": "'measured on all 184,204 randomized users' (guardrails); trial-starter counts appear per platform in the table (sum to 6,602/6,647 = 13,249); the explicit 92,114/92,090 arm split is not stated."},
+    "F4": {"status": "conveyed", "note": "'the experiment had 80% power to detect an overall lift of +1.55pp; it simply was not sized to confirm effects around +0.8pp'."},
+    "F5": {"status": "conveyed", "note": "'Platform was the single pre-registered subgroup dimension (chosen before launch...)'; trust callout adds 'not discovered by scanning many cuts'."},
+    "F6": {"status": "conveyed", "note": "Table row: 13.9% / 18.1% / +4.2 / [+2.1, +6.3] / <0.0001; callout: 'mobile-web survives easily' under Bonferroni."},
+    "F7": {"status": "conveyed", "note": "Table row: 11.6% / 9.7% / -1.9 / [-3.6, -0.2] / 0.027; callout correctly notes iOS does not survive Bonferroni but is credible via pre-registration + mechanism."},
+    "F8": {"status": "conveyed", "note": "Table row: +0.1 / [-1.7, +1.9] / 0.92; bullet 'Android is null'."},
+    "F9": {"status": "conveyed", "note": "'reconcile arithmetically with the blended +0.8pp. The overall number is a win and a loss averaging each other out'; also 'not a modest win everywhere'."},
+    "F10": {"status": "conveyed", "note": "Novelty section gives +2.9pp week 1 to +0.1pp week 6 with the full weekly sequence (+2.9, +1.5, +0.6, 0.0, -0.4, +0.1)."},
+    "F11": {"status": "conveyed", "note": "'The platform split is not explained by novelty' — weeks 4-6 pooled: mobile-web +3.8pp, iOS -2.2pp, flagged as exploratory."},
+    "F12": {"status": "conveyed", "note": "'7-day retention was flat: 31.2% (A) vs 31.4% (B), +0.2pp, CI [-0.2, +0.6]'; tickets +12% weeks 1-2 then normalized from week 3."},
+    "F13": {"status": "conveyed", "note": "'time-to-first-lesson improved by 38 seconds (4m 52s -> 4m 14s, CI [-45, -31])'; trial-start rate flat 7.17% vs 7.22% with the denominator-soundness point made."},
+    "F14": {"status": "conveyed", "note": "Bullets: iOS step-3 drop-off 8.1% -> 12.7%; mobile-web 3.2% -> 3.4%; Android 5.0% -> 5.6%; OS-dialog mechanism explained."},
+    "F15": {"status": "conveyed", "note": "Recommendation list: ship mobile-web only with 5% holdback, do not ship iOS (follow-up ONB-2026-019 with reverted/softened prompt), do not ship Android; diagnostics clean (SRM p = 0.96, audit clean) in secondaries."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Every one of the 15 key facts survives with correct numbers, directions, and significance status; nothing is oversold — the headline itself is the anti-overclaim ('don't read the overall number as a win').",
+    "Caveats are first-class content: a dedicated callout handles the Bonferroni/multiple-comparisons question honestly in both directions, exploratory analyses are labeled as such, and the confounded dismissed-vs-accepted comparison is explicitly flagged as non-causal.",
+    "The lede front-loads all four required takeaways above the fold, and plain-language explanations (what a CI means, why the experiment was underpowered for +0.8pp) fit the PM-with-basic-stats audience.",
+    "The platform table is clean and correct, with CI and p columns and bolded significant deltas."
+  ],
+  "weaknesses": [
+    "Almost no visual encoding of the data: no chart of the novelty decay series, and CIs that straddle zero look identical (as text) to CIs that do not — the one thing the brief says must be visible at a glance is conveyed only through numerals and prose.",
+    "Above-the-fold is a wall of prose; a genuine 10-second glance likely captures the headline and bold block (T1, T2, T4) but the novelty takeaway (T3) sits in unformatted body text.",
+    "The 'Guardrails and secondaries' section packs retention, tickets, time-to-first-lesson, trial-start rate, and diagnostics into one long paragraph — hard to re-find a specific figure later.",
+    "No table of contents or summary stat block; wayfinding relies entirely on section headings and linear reading."
+  ],
+  "evaluator_notes": "Fact audit: 15/15 conveyed, 0 distorted, 0 contradicted -> accuracy = 10 x 15/15 = 10.0. Overall = 0.35*10.0 + 0.30*7.5 + 0.15*7.5 + 0.10*6.5 + 0.10*5.5 = 8.075 -> 8.1. The page is a model of factual and rhetorical honesty and the mechanical accuracy formula rewards that; the deductions concentrate where they belong for this project — visual conveyance. It communicates through typography and prose alone, leaving the CI-straddles-zero contrast and the week-by-week decay pattern unvisualized. density_fit (6.5) reported but not part of overall: appropriate front-loading, but total length runs past the 'couple of minutes' reading goal for a PM."
+}

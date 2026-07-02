@@ -1,0 +1,48 @@
+{
+  "testcase": "experiment-results",
+  "approach": "04-layered-dashboard",
+  "rubric_version": 1,
+  "glance_takeaway": "This is the final readout of a 6-week A/B test at a company called tessel, comparing an onboarding redesign ('Pathways', variant B) against the current flow (A). The headline insists the overall result is NOT significant (+0.8pp blended, p=0.16) and shouldn't be read as 'B won' -- the real story is a platform split: mobile-web improved significantly (+4.2pp), iOS significantly regressed (-1.9pp), Android was null. The recommendation is to ship narrowly to mobile-web only, not iOS (run an iOS fix experiment on a step-3 notification-permission prompt), with a week-1 novelty bump (+2.9pp) that decayed by week 6 and a retention guardrail that passed.",
+  "scores": {
+    "glance_comprehension": 9.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.5,
+    "visual_craft": 9.0,
+    "density_fit": 9.0,
+    "overall": 9.4
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Overall tile '+0.8pp / 11.4% -> 12.2%' plus primary card table (753/6,602 vs 811/6,647)."},
+    "F2": {"status": "conveyed", "note": "Headline 'not significant'; tile and primary card give CI [-0.3, +1.9], p=0.16, and 'the CI includes both -0.3pp and +1.9pp'."},
+    "F3": {"status": "conveyed", "note": "Validity card: '184,204 signups randomized 50/50 (A: 92,114; B: 92,090)'; trial starters '13,249 (A: 6,602; B: 6,647)'."},
+    "F4": {"status": "conveyed", "note": "Power caveat in primary card and validity card: '80% power to detect +1.55pp... +0.8pp sits below what this test could reliably detect'."},
+    "F5": {"status": "conveyed", "note": "Platforms card: 'single pre-registered subgroup dimension (analysis plan v1.2, filed 2026-04-28, before launch)... not a cut found by fishing'."},
+    "F6": {"status": "conveyed", "note": "Tile + platform table: 13.9% -> 18.1%, +4.2pp, CI [+2.1, +6.3], p<0.0001; Bonferroni caveat says it 'survives easily'."},
+    "F7": {"status": "conveyed", "note": "Tile + table: 11.6% -> 9.7%, -1.9pp, CI [-3.6, -0.2], p=0.027; explicit caveat 'iOS (p=0.027) does not survive the strict correction' with pre-registration + mechanism argument."},
+    "F8": {"status": "conveyed", "note": "Android tile and table: +0.1pp, CI [-1.7, +1.9], p=0.92, chip 'Null -- no evidence'."},
+    "F9": {"status": "conveyed", "note": "Headline/subhead 'a strong win and a real loss averaging each other out'; primary card even shows the weighted reconciliation arithmetic to ~+0.8pp."},
+    "F10": {"status": "conveyed", "note": "Weeks card: chart + table with the full series +2.9, +1.5, +0.6, 0.0, -0.4, +0.1; 'early snapshots materially overstated B'."},
+    "F11": {"status": "conveyed", "note": "Weeks card body: pooled weeks 4-6 mobile-web +3.8pp, iOS -2.2pp; also in the glance decision panel ('persists late +3.8pp, weeks 4-6')."},
+    "F12": {"status": "conveyed", "note": "Guardrail tile (31.2% -> 31.4%, +0.2pp, CI [-0.2, +0.6]) and guardrails table incl. support tickets +12% weeks 1-2 then normal after copy fix."},
+    "F13": {"status": "conveyed", "note": "Secondary table: time-to-first-lesson 292s -> 254s, -38s, CI [-45, -31]; trial-start rate flat 7.17% vs 7.22% used for denominator-integrity argument."},
+    "F14": {"status": "conveyed", "note": "iOS card paired bars + bullets: iOS 8.1% -> 12.7%, mobile-web 3.2% -> 3.4%, Android 5.0% -> 5.6%, with the OS-dialog mechanism explained."},
+    "F15": {"status": "conveyed", "note": "Recommendation card: mobile-web only with 5% holdback, do not ship iOS/Android, ONB-2026-019 fix experiment with prompt reverted/softened; validity card gives SRM chi-sq p=0.96 and clean instrumentation audit."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "All 15 key facts conveyed with correct numbers, directions, and significance status; the fragile blended +0.8pp is aggressively framed as 'not significant -- can't tell' at every level (headline, tile chip, card verdict), which is exactly the failure mode the brief warns about.",
+    "The glance layer alone delivers all four required takeaways: headline states the null overall + platform split + narrow ship; tiles carry CIs and p-values; the decision panel carries the novelty warning.",
+    "Honest visual encoding, verified against the markup: forest-plot dot/CI positions, weekly bar heights, and the +/-2.7pp noise band all recompute correctly from the stated axis scale; filled-vs-open dots encode 'CI excludes zero' distinctly, satisfying the brief's demand that significant and non-significant CIs look different.",
+    "Caveats are first-class citizens: power (+1.55pp MDE), Bonferroni (iOS does not survive strict correction), weekly noise, non-causal funnel data, and the one plan deviation each get a visually distinct caveat block.",
+    "Good wayfinding: sticky anchor nav, expand/collapse-all, nav clicks auto-open the target card, and a closing 'what this readout does NOT support' block that pre-empts the main misreadings."
+  ],
+  "weaknesses": [
+    "Layer 2/3 detail lives behind collapsed <details> cards; a reader who never expands gets only the card leads, and find-in-page may miss closed-card content in some browsers.",
+    "The glance layer is dense for 10 seconds of attention -- five stat tiles plus a forest plot plus a four-item decision panel compete; the guardrail and Android tiles are near-noise at glance level.",
+    "Subhead phrase 'a strong win and a real loss averaging each other out' slightly front-runs the iOS caveat (the -1.9pp does not survive Bonferroni); the hedge only appears inside the collapsed platforms card.",
+    "The weekly noise figure (~+/-2.7pp) and late-window CIs are presented without derivation, so a skeptical reader can't check them from the page."
+  ],
+  "evaluator_notes": "Pass order respected: glance_takeaway was written from glance.png alone before reading key_facts.md, and it captured T1, T2, T4 fully and T3 mostly (novelty decay recorded; the 'mobile-web gain outlasts novelty' clause was on the glance image but not in my recorded takeaway, hence 9.5 not 10). Accuracy is formulaic: 15/15 conveyed, 0 distorted, 0 contradicted -> 10 x 15/15 = 10.0. Overall = 0.35*10.0 + 0.30*9.5 + 0.15*8.5 + 0.10*8.5 + 0.10*9.0 = 9.375 -> 9.4. This cell earns its high score on the accuracy-critical material; deductions are for glance-layer density, collapsed-by-default depth content, and the Bonferroni hedge not surfacing until layer 2."
+}

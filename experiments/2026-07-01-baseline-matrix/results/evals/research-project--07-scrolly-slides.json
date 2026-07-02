@@ -1,0 +1,47 @@
+{
+  "testcase": "research-project",
+  "approach": "07-scrolly-slides",
+  "rubric_version": 1,
+  "glance_takeaway": "A non-expert would believe this page is about a small bird-call audio classifier, and that its main message is that cheap reverb-based data augmentation improves the model — but the improvement mostly benefits the birds/classes that were already easy to classify. The headline number is baseline 0.612 to best 0.671, a +5.9 macro-F1 point gain.",
+  "scores": {
+    "glance_comprehension": 6,
+    "accuracy": 9.3,
+    "depth_comprehension": 8,
+    "structure_nav": 8,
+    "visual_craft": 8,
+    "density_fit": 8,
+    "overall": 7.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Slide 2 statement: 'Do ultra-cheap, natural-reverb-flavoured augmentations lift a small classifier more per unit of compute than reaching for a bigger model would?' — captures both halves of the bet."},
+    "F2": {"status": "conveyed", "note": "Slide 3 statgrid '6,200 call-centred clips / 34 species'; log-mel spectrograms noted slide 2. Finer specs (32 kHz, 5 s, 128-mel) not stated, but dataset size is conveyed."},
+    "F3": {"status": "absent", "note": "No 70/15/15 split or ~930 val/test counts appear anywhere on the page."},
+    "F4": {"status": "conveyed", "note": "Slide 3 stat '5 species under 45 clips' + caption 'top class has 480 clips; the deep tail sits under 45'; slide 10 labels Am. Robin 480. Median/11-under-80/52% specifics absent but heavy long tail is clear."},
+    "F5": {"status": "conveyed", "note": "Slide 3 caption 'primary metric is validation macro-F1 — it weights the rare tail equally with the common head'; slide 4 states variability ~= +/-0.006."},
+    "F6": {"status": "conveyed", "note": "0.612 baseline shown on cover, slide 4 chart point (exp-01 clean), and dashed reference line labelled 'baseline 0.612'."},
+    "F7": {"status": "conveyed", "note": "Slide 5 bignum 0.641, '+0.029 vs baseline', RT60 0.3-0.6 s, p=0.5 in caption."},
+    "F8": {"status": "conveyed", "note": "Slide 6 bignum 0.589, '-0.023 below the no-aug baseline', +-2 semitone / 0.9-1.1x described."},
+    "F9": {"status": "conveyed", "note": "Slide 7 '+0.002 vs reverb-only — inside run-to-run noise (+-0.006)'; chart shows 0.643; SNR 5-20 dB in caption."},
+    "F10": {"status": "conveyed", "note": "Slide 8 bignum 0.671, '+0.059 vs baseline · current best'; caption lists light reverb + noise + SpecAugment + partial class-balanced sampler."},
+    "F11": {"status": "conveyed", "note": "Slide 9 0.663, '-0.008 vs the light-reverb stack'; long-RT60/high-prob helps common, washes out rare. Exact RT60 0.8-1.5/p=0.7 not shown but effect conveyed."},
+    "F12": {"status": "conveyed", "note": "Slide 6 caption: pitch/stretch 'smear the fine formant and timing cues rare classes depend on — several deep-tail species collapse toward zero recall.' The '<50 real clips' anchoring detail omitted."},
+    "F13": {"status": "conveyed", "note": "Slide 7 caption: null on its own, '+-0.006' noise, 'Kept in the stack only on the hypothesis that it composes with SpecAugment.'"},
+    "F14": {"status": "conveyed", "note": "Slide 8 caption gives the stack composition and notes pitch/stretch and heavy reverb are excluded (their slides are the regression/below-best). Exact SpecAugment mask counts and 0.5 sampler rate not enumerated ('partial')."},
+    "F15": {"status": "conveyed", "note": "Slide 10 grouped bars for the exact 5 species with deltas +0.06/+0.07/+0.06/+0.03/-0.01 and clip counts; slide 8 '~4.5 of the 5.9 points still come from common and mid tiers.'"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Exceptionally faithful and complete: 14/15 checkable facts land correctly, including the hard nuances (asymmetric harm, null-inside-noise, class-dependent reverb).",
+    "Honest framing throughout — 'partially supported, not cleanly confirmed', seed noise +-0.006 shown, H2 flagged as 'asserted, not shown'; nothing is oversold.",
+    "Two purposeful, legible SVG charts (metric trajectory colour-coded by outcome; per-species baseline-vs-best bars with deltas) do real explanatory work.",
+    "Strong wayfinding: fixed labelled progress rail with 12 anchors, numbered slide kickers, and 'look deeper' links back to specific slides."
+  ],
+  "weaknesses": [
+    "Glance conveys only the topic and takeaway T1; T2 (regression/null), T3 (stack), and T4 (class-conditional next step) are entirely below the fold.",
+    "Dataset split (70/15/15, ~930 val/test) is absent — the only fully-missing fact.",
+    "12 full-height scroll-snap slides is a long journey for an audience wanting a 'couple minutes' read; the payload is thin per slide.",
+    "The trajectory line connecting six discrete experiments implies a continuous path; caption mitigates but the encoding slightly overstates continuity."
+  ],
+  "evaluator_notes": "A genuinely strong scrolly-narrative presentation. accuracy = 10 * 14/15 = 9.3 (F3 the sole absent fact, no distortions or contradictions). depth, structure, and visual craft are all high; the honest verdict slide and per-species chart are the standouts. The main ceiling is the glance: the single-glance reader gets the best-possible one-liner but none of the other three required takeaways, holding glance_comprehension to 6. overall = 0.35*9.3 + 0.30*6 + 0.15*8 + 0.10*8 + 0.10*8 = 7.855 -> 7.9."
+}

@@ -1,0 +1,48 @@
+{
+  "testcase": "diffusion-variants",
+  "approach": "06-visual-metaphor",
+  "rubric_version": 1,
+  "glance_takeaway": "A non-expert would believe this page explains how AI image generators (diffusion models) work, using a transit-map metaphor: making an image is a 'trip' from pure random noise (t=1000) to a finished picture (t=0), and the variants — DDPM, DDIM, DPM-Solver, rectified flow, distilled models — are different train lines on the same railway making fewer stops (denoising steps): ~1000 for DDPM down to 1-4 for distilled shuttles, trading a little quality for speed. They'd also pick up that the journey happens in a compressed 'latent underground' (VAE space, ~48x fewer numbers than pixels, decoded back to a 512x512 image at the end), and that CFG 'guided service' steers every line by running the network twice per stop (guided = unconditional + s*(cond-uncond), s~7.5 typical, doubling the cost).",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 7.5,
+    "visual_craft": 5.5,
+    "density_fit": 7.5,
+    "overall": 8.6
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "'Reading this map' + grey-line/return-trip sections: fixed destructive forward process, learned reverse 'one small step at a time', boards with 'fresh random static — never a photo'."},
+    "F2": {"status": "conveyed", "note": "Grey Line section: 'about T = 1000 steps... predefined noise schedule... statistically indistinguishable from pure Gaussian noise'."},
+    "F3": {"status": "conveyed", "note": "'given a noisy image and the stop number t'; prompt representation mentioned; 'One ticket, three ways to punch it' lists noise (eps) / score / velocity as interconvertible ('simple algebra converts between them')."},
+    "F4": {"status": "conveyed", "note": "4-step training recipe: real image, random t, noise added 'in one shot: a closed-form formula', MSE penalty; 'no adversarial game as in GANs'."},
+    "F5": {"status": "conveyed", "note": "LINE 1 section: '~1000 sequential forward passes... stops cannot be parallelized'; 'nearly every other line on this map exists to attack that cost'."},
+    "F6": {"status": "conveyed", "note": "LINE 2: 'same trained network, unchanged... deterministic... 20-50 stops is the typical practical range, with only a modest quality loss'."},
+    "F7": {"status": "conveyed", "note": "LINE 2: 'noise -> image becomes a well-defined function, so a generated image can be inverted back to its noise... interpolating between two noises smoothly interpolates the images'."},
+    "F8": {"status": "conveyed", "note": "LINE 3: forward as SDE, reverse-time SDE vs 'probability flow ODE', 'DDIM is essentially a discretization of this ODE', DPM-Solver '~10-20 stops with no retraining'."},
+    "F9": {"status": "conveyed", "note": "TUNNEL section: entire process runs in VAE latent space; 'decode the final clean latent through the VAE decoder — one single pass'."},
+    "F10": {"status": "conveyed", "note": "Exact numbers in both map ('64x64x4 = 16,384... ~48x fewer than 512x512x3 = 786,432') and prose ('8x in each spatial dimension'... 'made Stable-Diffusion-class models run on consumer GPUs')."},
+    "F11": {"status": "conveyed", "note": "Guided Service: prompt dropped '~10-20%' in training; driven twice per segment; formula 'guided = unconditional + s x (conditional - unconditional)'; 'doubles the network evaluations per stop'."},
+    "F12": {"status": "conveyed", "note": "'s = 1 means no guidance; s ~ 7.5 is a common default... reduces diversity... roughly s > 12-15 in classic SD... oversaturated colors and burned-in artifacts'."},
+    "F13": {"status": "conveyed", "note": "LINE 5: progressive distillation halving rounds, consistency models 'any noisy point on a given trajectory maps directly to the same clean endpoint', adversarial distillation, 1-4 stops, 'trade some quality and diversity'."},
+    "F14": {"status": "conveyed", "note": "LINE 4: velocity field along 'straight lines'; 'a close sibling of diffusion... a reframing that generalizes, not a rival mechanism'; 'Stable Diffusion 3 and Flux-class models are trained this way'."},
+    "F15": {"status": "conveyed", "note": "'Lost property' section debunks collage and real-photo myths, notes rare memorization of heavily duplicated images as 'a real but exceptional memorization failure mode, not the mechanism', and flags img2img/inpainting as the explicit exception."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "Multiple text collisions in the SVG map: LINE 2-5 labels partially hidden behind the left terminus capsule (read as 'NE 2', 'NE 3', ...); right-anchored line captions clipped by the right arrival capsule; the two terminus/arrival footnotes overlap each other mid-map into garbled text; LINE 4 label collides with its own caption; VAE DECODER annotation overlaps the finished-image inset; CFG box's last line runs to the box edge. Page otherwise renders correctly.",
+  "strengths": [
+    "Exceptional factual coverage: all 15 ground-truth facts conveyed correctly, with the source's concrete numbers (1000 / 20-50 / 10-20 / 1-4 steps, 48x, 8x, s=7.5, 10-20% prompt drop) intact rather than vaguened.",
+    "The transit metaphor is load-bearing, not decorative: a legend maps every visual element to its technical referent, and a 'Where the map breaks' box explicitly bounds the metaphor — rare intellectual honesty for this genre.",
+    "Glance conveys all four critical takeaways: the noise-to-image trip, the step-count spectrum across variants, the latent underground with compression numbers, and the CFG formula are all above the fold.",
+    "Well-pitched for the brief's audience: ML jargon glossed inline, SDE/ODE material introduced gently, misconception debunking and pocket glossary directly serve the stated reading goal."
+  ],
+  "weaknesses": [
+    "The centerpiece SVG has at least five text-collision/clipping defects (line labels behind the terminus capsule, overlapping terminus footnotes, clipped right-edge captions) that make parts of the map look broken and force the reader to infer occluded words.",
+    "Line sections are ordered 1, 2, 3, Tunnel, Guided, 5, 4 — the Line 5/Line 4 inversion (justified pedagogically but never signposted) undermines the numbered-line wayfinding the map itself establishes.",
+    "Station-dot counts on the map are schematic and disagree with the printed step counts; the disclaimer note exists but sits below the legend where a glancing reader may miss it.",
+    "No table of contents or in-page anchors despite ~15 sections; re-finding a specific fact relies on scanning colored chips.",
+    "The map packs many small annotations (encoder path, toll note, gradient captions) into the right margin at near-illegible size and with overlaps — density at the edge of what the glance format supports."
+  ],
+  "evaluator_notes": "Accuracy is mechanically 10.0: 15/15 facts conveyed, none distorted or contradicted; caveats (compression bottleneck, quality tradeoffs per tier, memorization exception, guidance artifact regime) are all visible. The overall is held below its content ceiling by visual craft: the SVG's fixed-coordinate text layout collides in at least five places, which is a genuine rendering defect in the page's single most important element, though not 'broken rendering' in the cap-at-2 sense since the map remains substantially legible and honest. Glance scored from the recorded takeaway: T2/T3 fully landed, T1 missing the explicit 'learned reversal of a fixed forward process' framing, T4 missing the diversity-vs-adherence tradeoff. Overall = 0.35*10.0 + 0.30*8.5 + 0.15*8.5 + 0.10*7.5 + 0.10*5.5 = 8.6."
+}

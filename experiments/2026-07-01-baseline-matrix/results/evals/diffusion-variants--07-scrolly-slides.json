@@ -1,0 +1,48 @@
+{
+  "testcase": "diffusion-variants",
+  "approach": "07-scrolly-slides",
+  "rubric_version": 1,
+  "glance_takeaway": "This page is a guided tour of diffusion models — how AI image generators work. The main message: every AI-generated image begins as pure random noise, and a trained network turns it into a new image through many small learned denoising steps — no existing photo is edited and no database is searched (image-to-image, where you supply a photo, is an explicit opt-in). The variants mentioned — DDIM, latent diffusion, CFG, flow matching — mostly exist to reduce ~1000 steps down to 1-4.",
+  "scores": {
+    "glance_comprehension": 6.0,
+    "accuracy": 9.3,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.5,
+    "visual_craft": 7.5,
+    "density_fit": 7.5,
+    "overall": 7.7
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Slide 2 'The forward process is fixed — no learning. Gaussian noise is added over ~1000 small steps' + slide 4 'Start from fresh random noise; denoise step by step' + slide 1 cover."},
+    "F2": {"status": "conveyed", "note": "Slide 2: '~1000 tiny additions of Gaussian noise', 'A preset noise schedule sets how much each step adds', 'Step 1000: statistically pure static'."},
+    "F3": {"status": "distorted", "note": "Inputs (noisy image + t = 700, prompt on slide 9) and the noise target are conveyed on slide 3, but slide 3 frames noise-guessing as the network's 'one skill'; score (slide 7) and velocity (slide 11) each appear in isolation and the page never states the three are interconvertible parameterizations of the same target — a reader learns only the epsilon story."},
+    "F4": {"status": "conveyed", "note": "Slide 3: 'Training: billions of guess-the-added-noise quizzes, scored by mean-squared error. That stability — no adversarial GAN game — is why diffusion won'; slide 5 adds 'Training touches one noise level at a time'."},
+    "F5": {"status": "conveyed", "note": "Slide 5: '~1000 sequential full-network passes per image', 'every pass consumes the previous one's output — nothing runs in parallel', 'Every variant below asks: fewer steps, how?'"},
+    "F6": {"status": "conveyed", "note": "Slide 6: 'The same trained network admits a deterministic sampler that tolerates big jumps: 20-50 steps instead of 1000, with modest quality loss.'"},
+    "F7": {"status": "conveyed", "note": "Slide 6: 'Fixed starting noise → identical image every time — enabling inversion and interpolation.'"},
+    "F8": {"status": "conveyed", "note": "Slide 7: reverse-time SDE (random walk) vs probability-flow ODE diagram, 'DDIM ≈ one discretization', 'Purpose-built ODE solvers (DPM-Solver) reach good samples in ~10-20 steps — no retraining.'"},
+    "F9": {"status": "conveyed", "note": "Slide 8: diffusion runs in the VAE latent, 'decode — one pass' restores full resolution, 'VAE — a separately trained encoder-decoder'."},
+    "F10": {"status": "conveyed", "note": "Slide 8: '512 × 512 × 3 / 786,432 numbers' → 'latent: 64 × 64 × 4 = 16,384', '≈48× fewer numbers at every denoising step', 'putting Stable-Diffusion-class models on consumer GPUs'."},
+    "F11": {"status": "conveyed", "note": "Slide 9: formula 'guided = unconditional + s × (conditional − unconditional)', 'one network — prompt dropped ~10-20% of training', '2 network passes per step', 'doubles per-step cost'."},
+    "F12": {"status": "conveyed", "note": "Slide 9: 'scale s (≈7.5 default). Higher s: stronger adherence, less diversity; past ~12-15, oversaturated artifacts.' (s = 1 = no guidance is omitted, but the tradeoff and both anchor numbers land.)"},
+    "F13": {"status": "conveyed", "note": "Slide 10: '1-4 steps, after retraining the model to take big jumps', progressive distillation 1000→500→…→4, 'consistency: any point ↦ the same endpoint', 'Outputs: slightly softer, less varied'."},
+    "F14": {"status": "conveyed", "note": "Slide 11: 'regression target: a constant velocity (image − noise)', 'rectified flow — a straight line', 'Straight paths need fewer steps', 'It reframes diffusion rather than rivaling it — SD3 and Flux train this way.'"},
+    "F15": {"status": "conveyed", "note": "Slide 1: 'no photo edited, no database searched (image-to-image modes, where you supply one, are explicit opt-ins)'; slide 4: 'Weights encode statistics, not copies; only images repeated many times in training risk rare near-duplication — exceptional, not the mechanism.'"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Near-complete factual coverage: 14 of 15 facts land verbatim-checkably, including the hard ones (F8 SDE/ODE unification, F11 CFG formula with dropout rate, F15 misconception debunk with the memorization exception).",
+    "Honest, purposeful SVG diagrams with consistent color semantics (blue = generation, red = destruction, gold = guidance, green = latent/compression) reused across slides; the latent-diffusion size comparison and the DDPM-vs-DDIM two-rail diagram encode the actual quantities.",
+    "Strong wayfinding for a scroll deck: fixed dot rail with per-slide tooltips, slide counter, numbered kickers grouping slides into mechanism/bottleneck/fixes, and a recap slide whose five lines link back to the relevant slides.",
+    "Caveats consistently carried: DDIM 'modest quality loss', latent 'slight compression-quality cost', distillation 'slightly softer, less varied', CFG oversaturation past ~12-15."
+  ],
+  "weaknesses": [
+    "The glance (cover) compresses T2 into 'cut ~1000 steps to 1-4' and only name-drops latent diffusion and CFG, so T3 and T4 do not land above the fold; listing CFG among variants that 'exist to cut steps' is loose (CFG doubles cost and exists for steering, as the page itself later says).",
+    "The three interconvertible output parameterizations (noise/score/velocity, F3) are never unified; 'score' is used on slide 7 without ever being defined for a non-ML reader.",
+    "Slide 7 (SDE/ODE) is the terse outlier for the stated audience — 'probability-flow ODE' and 'the learned score' get one line each.",
+    "Recap bar chart introduces an unsourced 'rectified flow ~20-30 (fewer viable)' tier and the cover's four-line body paragraph is dense for a title slide.",
+    "Mandatory scroll-snap on desktop can fight readers who want to compare two slides."
+  ],
+  "evaluator_notes": "12-slide scroll-snap deck, one idea per slide, mechanism (2-4) → bottleneck (5) → fixes (6-11) → recap (12). Fact audit: 14 conveyed, 1 distorted (F3), 0 contradicted → accuracy = 10 × 14/15 = 9.3. Glance scored from recorded takeaway only: topic unmistakable, T1 fully, T2's endpoint compression lands without the intermediate ladder, T3/T4 name-drops only → 6.0. Overall = 0.35×9.3 + 0.30×6.0 + 0.15×7.5 + 0.10×7.5 + 0.10×7.5 = 7.7. full.png shows all 12 slides rendering correctly; no broken visuals."
+}

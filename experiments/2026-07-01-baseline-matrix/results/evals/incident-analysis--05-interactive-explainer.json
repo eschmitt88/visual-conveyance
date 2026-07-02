@@ -1,0 +1,51 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "05-interactive-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "A blameless post-incident analysis of INC-1194, a SEV-1 partial outage of ledgerline's invoicing API on June 24, 2026 (14:02-18:19 UTC, 4h17m). Main message: three failures had to align - a search-query regression from a deploy (trigger), pre-existing autovacuum debt, and jitterless client retries exhausting a shared 80-connection database pool - and removing any one leg would have left only a degradation. Also legible: 31.2% peak error rate, 2,312 orgs affected (~24%), ~$41,300 SLA credits, zero data lost, 68 minutes to correct diagnosis (50 on a wrong network theory, alerting watched error rate not latency), rollback impossible so a feature flag stopped the bleeding at 17:05, and three P0 fixes landing in Q3 2026.",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 7.5,
+    "visual_craft": 8.0,
+    "density_fit": 8.5,
+    "overall": 8.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Kicker 'SEV-1 partial API outage, June 24, 2026, 14:02-18:19 UTC' + stat tile '4 h 17 m (257 min)'."},
+    "F2": {"status": "conveyed", "note": "Stat tile '31.2% peak API error rate, 15:47 (19.1% avg)'; notes bullet 'approx 362,000 of approx 1.9 M requests in the window failed'."},
+    "F3": {"status": "conveyed", "note": "Notes bullet: 'completed requests only: p50 85 ms -> 2.9 s; p99 420 ms -> 28.4 s. Requests that hit the 30 s gateway timeout count as errors, not in these percentiles.'"},
+    "F4": {"status": "conveyed", "note": "Stat tiles '2,312 (24.4% of 9,480)', 'approx $41,300 (216 contracts)', 'Zero data lost'; notes + What-went-well callout: 37,400 webhooks replayed by 19:05."},
+    "F5": {"status": "conveyed", "note": "Trigger card + detail-q panel: PR #8841, leading-wildcard LIKE, unscoped after org-scoping moved to app-side, evidence block with cost 0.56..8.44 -> 6,214,891, 0.4 ms -> 24-31 s, Rows Removed 312,344,806."},
+    "F6": {"status": "conveyed", "note": "detail-q 'Why canary didn't catch it': ~2 M rows, ~180 ms, under every alert threshold, invisible until production scale."},
+    "F7": {"status": "conveyed", "note": "detail-b: Jun 22 backfill of 38.1 M rows, 38.1 M dead tuples, 190 GB -> 213 GB, 12.2% bloat, autovacuum threshold 20% = ~54.9 M on 274.2 M rows never crossed."},
+    "F8": {"status": "conveyed", "note": "detail-b: ~26 s bloat-free estimate -> 24-31 s straddling the 30 s statement timeout; '~57% of search queries were killed'; killed query still held its pooled connection the full 30 s."},
+    "F9": {"status": "conveyed", "note": "detail-r: 80-connection pgbouncer pool shared by reads/writes/PDF/webhooks; ~5.6/s arrivals demanding 160+ connections; saturation 15:12; cl_waiting peak 1,437 at 15:58; sharing widened blast radius."},
+    "F10": {"status": "conveyed", "note": "detail-r + timeline: fixed 1 s, 3 attempts, no jitter, no budget; 3,200 -> 15,020 rpm = 4.7x; zero extra successes; pinned 15:12-17:18; pool bump 80->200 at 16:20 backfired, reverted 16:31."},
+    "F11": {"status": "conveyed", "note": "Tab 2 + pill + timeline: network hypothesis 14:20-15:10 (50 min) anchored by 14:05 provider advisory, 504s resembling network timeouts, deploy markers broken since June 10; 68 min from 14:11 alert to 15:19 diagnosis."},
+    "F12": {"status": "conveyed", "note": "Tab 3: migration 0412 dropped idx_invoices_org_number; code rollback 'would seq-scan just the same'; CREATE INDEX CONCURRENTLY 16:05 -> 21:48 (~6 h, after close)."},
+    "F13": {"status": "conveyed", "note": "Tab 3 + timeline: invoice_search_contains -> 0% at 17:05 after 16:35 staging verification of the exact-match fallback on the untouched unique index; errors < 3% by 17:15; flip took 90 seconds; exact-match-only until re-enable June 26."},
+    "F14": {"status": "conveyed", "note": "Timeline + tab 3: manual VACUUM (ANALYZE) 17:12-17:50 removed 38.1 M dead tuples, stats refreshed; SLOs met from 17:53; closed 18:19 after 26 stable minutes."},
+    "F15": {"status": "conveyed", "note": "Tab 2's four cards: only alert was 5xx > 2%/5 min (14:11); no latency SLO alert despite 14:07 p99 explosion; 1/100 sampling = ~0.7 samples/min; broken deploy marker hid the 14:02 deploy."},
+    "F16": {"status": "conveyed", "note": "Tab 4: 'Nine action items ... three P0s landing in Q3 2026' + full 9-row table with owners (Priya N., Marcus T., Dana K., etc.) and quarters; P1s include migration-reversibility policy, autovacuum tuning, CI query-plan checks."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Perfect fact coverage: all 16 key facts are present and numerically exact, most in both a glance-level and an evidence-level form.",
+    "Above-the-fold zone alone carries all four critical takeaways: headline/lede state the three-leg conjunction, stat tiles carry impact, and three pills cover detection lag, rollback impossibility, and the Q3 2026 P0 plan.",
+    "The counterfactual toggle section is a genuinely explanatory device - it makes 'no single root cause' operational rather than asserted, with per-leg counterfactuals that match the source's estimates (~26 s bloat-free, ~34/80 connections).",
+    "Time-spent bar honestly encodes the 257 minutes with flex values proportional to actual durations; the 50 m detour and 106 m mitigation hunt visually dominate as the source intends.",
+    "Audience fit per brief is excellent: every DB-specific mechanism (dead tuples, autovacuum, covering index, pooling, jitter, statement timeout, p99) has a one-line hover gloss, and a no-JS fallback shows all hidden content.",
+    "Caveats survive: 'completed requests only', 'seen only in retrospect', 'estimated ~26 s', 'representative query plans', 'disk marked reusable, not returned', and the blameless framing is kept throughout."
+  ],
+  "weaknesses": [
+    "Heavy reliance on progressive disclosure: the three cause-evidence panels are collapsed by default and 3 of 4 deep-dive tabs are hidden, so the resting page conceals most of the quantitative evidence and the entire fix table; a reader who never clicks gets summaries only.",
+    "Re-finding specifics is mediocre: no table of contents or anchor links, and content inside collapsed cards/tabs cannot be found with browser text search until opened.",
+    "Hover-only glosses and time-bar tooltips are awkward on touch devices (tabindex helps keyboard users, but tap behavior is unreliable for CSS :hover tooltips).",
+    "The narrow time-bar segments (9 m bands) carry no visible label at rest; the reader must consult the legend or hover.",
+    "A few details (e.g. 'checkout had a latency SLO alert; invoicing did not', the 14:55 status-page cadence) go beyond key_facts.md and could not be verified against ground truth, though nothing contradicts it."
+  ],
+  "evaluator_notes": "Fact audit: 16 conveyed, 0 absent, 0 distorted, 0 contradicted -> accuracy = 10 x 16/16 = 10.0. Glance judged strictly from the recorded takeaway: T1 and T3 land completely, T2 and T4 land in essence (missing the 1/100-sampling/deploy-marker mechanism and the P1 policy layer) -> 8.5. Depth 8.5: a motivated non-expert gets the full causal structure in 2-3 minutes, and interactive content is reachable, but real understanding of the evidence requires clicking cards and tabs. Structure 7.5 for the disclosure/no-anchor costs; visual craft 8.0 - honest proportional encodings, consistent color system, dark-mode support, no decorative noise. Overall = 0.35*10.0 + 0.30*8.5 + 0.15*8.5 + 0.10*7.5 + 0.10*8.0 = 8.875 -> 8.9. This is an unusually high score, earned almost entirely by the flawless fact audit and a glance zone that compresses all four takeaways above the fold."
+}

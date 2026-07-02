@@ -1,0 +1,49 @@
+{
+  "testcase": "experiment-results",
+  "approach": "02-mermaid-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "This page is about an A/B test of a new onboarding flow ('Pathways') for a product called Tessel. The headline verdict is that the overall +0.8pp lift is not statistically significant — 'not a win, a split': mobile-web genuinely improved (+4.2pp, a real effect that persists), iOS genuinely got worse (−1.9pp, a step-3 prompt is suspected), and Android was flat/inconclusive. The recommended action is to ship the change on mobile-web only, fix and retest iOS rather than shipping it, and the retention guardrail held.",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 8.0,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.5,
+    "visual_craft": 7.0,
+    "density_fit": 7.5,
+    "overall": 7.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Overview caption: 'Overall trial-to-paid conversion moved 11.4% → 12.2% (+0.8pp ...)'"},
+    "F2": {"status": "conveyed", "note": "Overview caption: '95% CI [−0.3, +1.9], p = 0.16 — not statistically significant'; headline reinforces 'can't tell'"},
+    "F3": {"status": "distorted", "note": "Partial: '184,204 randomized users' appears (guardrail caption) but the 13,249 trial-starter denominator and per-arm counts are absent — reader never learns what the primary metric is computed on"},
+    "F4": {"status": "absent", "note": "No mention of 80% power / +1.55pp MDE for the original experiment (the ±1.5pp powering mentioned is for the follow-up ONB-2026-019)"},
+    "F5": {"status": "conveyed", "note": "Split caption: 'Platform was the single pre-registered subgroup'; diagram edges labeled 'pre-registered split'"},
+    "F6": {"status": "conveyed", "note": "Split caption: 'mobile-web +4.2pp (13.9% → 18.1%, CI [+2.1, +6.3], p < 0.0001)'; Bonferroni survival implied by 'mobile-web needs no such hedging'"},
+    "F7": {"status": "conveyed", "note": "Split caption: 'iOS −1.9pp (11.6% → 9.7%, CI [−3.6, −0.2], p = 0.027)' plus explicit Bonferroni caveat and credible-signal framing"},
+    "F8": {"status": "conveyed", "note": "Split caption: 'Android +0.1pp (7.8% → 7.9%, CI [−1.7, +1.9], p = 0.92)'; dashed box in both diagrams"},
+    "F9": {"status": "conveyed", "note": "CI diagram edges 'pulls up / pulls down / adds nothing' into Overall +0.8pp; overview caption: 'The blend averages a strong mobile-web win against a real iOS loss'"},
+    "F10": {"status": "conveyed", "note": "xychart bars [2.9, 1.5, 0.6, 0, −0.4, 0.1] match weekly deltas exactly; caption: 'decayed from +2.9pp (week 1) to +0.1pp (week 6)... week-2 interim readout superseded'"},
+    "F11": {"status": "conveyed", "note": "Decay caption: 'pooled weeks 4–6 (exploratory) still show mobile-web +3.8pp... iOS stays negative at −2.2pp'; also 'persists late, +3.8pp' edge in overview diagram"},
+    "F12": {"status": "conveyed", "note": "Guardrail held box + overview caption '7-day retention... flat at +0.2pp (CI [−0.2, +0.6])'; absolute rates 31.2/31.4 and the support-ticket blip are omitted"},
+    "F13": {"status": "absent", "note": "No mention anywhere of time-to-first-lesson (−38s) or trial-start rate flatness / denominator unbiasedness"},
+    "F14": {"status": "conveyed", "note": "Mechanism diagram + caption: iOS step-3 drop-off 8.1% → 12.7%, mobile-web 3.2% → 3.4%, Android 5.0% → 5.6%, with the friction explanation and 'exploratory, not causal proof' caveat"},
+    "F15": {"status": "conveyed", "note": "Decision section: ship mobile-web with 5% holdback, 'iOS: do not ship' + fix test ONB-2026-019 with prompt reverted/explainer arm, 'Android: hold'; SRM/diagnostics-clean detail is omitted"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "Minor: xychart y-axis label 'delta (pp)' renders with overlapping/garbled rotated glyphs; edge labels in the CI diagram ('pulls up / pulls down / adds nothing') crowd together; bar+line in the decay chart double-encode identical data. Page depends on CDN Mermaid at runtime — pre-render fallback is deliberately faint raw source. All diagrams rendered correctly in the captured screenshots.",
+  "strengths": [
+    "Headline and subtitle state the anti-goal verdict outright ('not a win — a split', 'can't tell'), making the T1 failure mode nearly impossible at a glance",
+    "Solid-vs-dashed box borders honestly encode CI-excludes-zero vs CI-straddles-zero, and the encoding is explicitly explained in a caption",
+    "Caveats are unusually faithful: Bonferroni non-survival for iOS, 'exploratory' labels on late-window pooling and funnel evidence, wide weekly CIs, 'credible signal... short of proof'",
+    "Decision section maps each finding to a concrete action (5% holdback, ONB-2026-019 follow-up, retire the week-2 interim readout)",
+    "Weekly decay chart values match ground truth exactly and the caption pre-empts citing the superseded week-2 interim number"
+  ],
+  "weaknesses": [
+    "Nearly all precise numbers live in small dense prose captions, not in the diagrams — the diagrams alone carry only headline deltas, so skimmers who skip captions lose the CIs and rates",
+    "Power analysis (F4) entirely absent: a PM cannot tell the experiment was underpowered to detect +0.8pp, which is part of why 'can't tell' is the verdict",
+    "Secondary metrics (F13: time-to-first-lesson win, trial-start-rate flatness) missing, as are the 13,249 trial-starter denominator and the support-ticket blip",
+    "Decay chart redundantly overlays a line on identical bars and has a garbled rotated y-axis label; CI-diagram edge labels collide",
+    "No sample-size context near the primary result — 184,204 appears only inside the guardrail sentence"
+  ],
+  "evaluator_notes": "Fact audit: 12 conveyed, 1 distorted (F3 partial), 2 absent (F4, F13), 0 contradicted; accuracy = 10 × 12/15 = 8.0. Glance pass landed T1, T2, and T4 fully; T3 only partially (the 'Novelty decay' box is visible but its substance — early weeks overstated B — is not legible at a glance, though 'persists late, +3.8pp' is). The page is structurally a sequence of five flowchart/chart sections, each carrying its quantitative payload in a caption; this division of labor is honest but means the visual layer alone is number-light. Overall = 0.35×8.0 + 0.30×8.5 + 0.15×7.5 + 0.10×7.5 + 0.10×7.0 = 7.9."
+}

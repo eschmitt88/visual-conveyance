@@ -1,0 +1,47 @@
+{
+  "testcase": "research-project",
+  "approach": "04-layered-dashboard",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is about a small-data bird-call classifier project (\"murmur\") testing whether cheap reverb-inspired audio augmentation helps. The headline states the main message plainly: the bet is 'partially supported' — augmentation lifts validation macro-F1 from 0.612 to 0.671 (+5.9 pts), but the gain sits in common classes and barely reaches the rare tail. Supporting stat cards and a line chart show one augmentation arm (pitch/stretch, exp-03) actively regressed to 0.589 and the best result is a stack (exp-05).",
+  "scores": {
+    "glance_comprehension": 8,
+    "accuracy": 10,
+    "depth_comprehension": 7.5,
+    "structure_nav": 8,
+    "visual_craft": 8,
+    "density_fit": 8,
+    "overall": 8.6
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Card 'The bet' + details: 'Cheap, natural-reverb-inspired augmentations beat reaching for a bigger model'; H1 efficacy and H2 efficiency stated explicitly."},
+    "F2": {"status": "conveyed", "note": "Dataset card + table: '6,200 clips, 34 species', '5 s, mono', '32 kHz', 'log-mel, 128 mels, 25 ms / 10 ms'."},
+    "F3": {"status": "conveyed", "note": "Dataset table: 'Split (strat., seeded) 70 / 15 / 15', 'Val / test clips ~930 / ~930 (held out)'."},
+    "F4": {"status": "conveyed", "note": "Dataset card: '11 species have <80 clips, 5 have <45'; '8 most common species are ~52%'; 'top class, American Robin, has 480'; 'Median is =120 clips per class'."},
+    "F5": {"status": "conveyed", "note": "Subhead + hero caption: primary metric validation macro-F1; 'Seed-to-seed noise is = +/-0.006'."},
+    "F6": {"status": "conveyed", "note": "Ledger table: '01 baseline-clean 03-08 0.612 floor'."},
+    "F7": {"status": "conveyed", "note": "Ledger: '02 reverb-light-ir 03-24 0.641 +0.029 first win'; detail 'RT60 = 0.3-0.6 s, p=0.5'."},
+    "F8": {"status": "conveyed", "note": "Ledger: '03 pitchshift-timestretch 04-11 0.589 -0.023 regression'; detail '+/-2-semitone pitch-shift and 0.9-1.1x time-stretch'."},
+    "F9": {"status": "conveyed", "note": "Ledger: '04 noise-mix-snr 04-29 0.643 null vs exp-02'; detail '+0.002 over exp-02 - inside noise'; SNR 5-20 dB stated."},
+    "F10": {"status": "conveyed", "note": "Ledger + 'What worked' card: exp-05 stack (light reverb + noise + SpecAugment + partial class-balanced sampler) = 0.671, +0.059 best."},
+    "F11": {"status": "conveyed", "note": "Ledger: '06 reverb-heavy-longrt60 06-14 0.663 common-only'; detail 'long RT60 0.8-1.5 s, p=0.7', helped common, blurred rare."},
+    "F12": {"status": "conveyed", "note": "'What didn't' detail: pitch/time warp 'moves synthetic examples across the exact decision boundaries', '<50 real clips there aren't enough true examples to anchor', 'Common classes shrug it off'."},
+    "F13": {"status": "conveyed", "note": "Ledger + 'What didn't' detail: exp-04 +0.002 inside +/-0.006 seed spread, null on its own, 'kept only on the bet it would compose with SpecAugment'."},
+    "F14": {"status": "conveyed", "note": "'What worked' details code block: small_cnn + logmel_128 + reverb_ir p=0.5 rt60 0.3-0.6 + noise_mix 5-20 dB + specaugment 2/2 + class_balanced 0.5; pitch/stretch and heavy reverb OFF."},
+    "F15": {"status": "conveyed", "note": "Dumbbell chart + table: Robin 0.79->0.85, Cardinal 0.76->0.83, Song Sparrow 0.68->0.74, Wood Thrush 0.51->0.54, Kirtland's 0.34->0.33 (-0.01); '=4.5 come from common/mid'."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Headline is exceptionally information-dense and accurate: states the partial-support verdict with exact numbers (0.612->0.671, +5.9) and the head/tail asymmetry above the fold.",
+    "Perfect factual fidelity: every one of the 15 checkable facts is present and numerically exact, including dates, deltas, config, and per-species F1s.",
+    "Honest caveat surfacing: H2 asserted-not-shown, confounded sampler, single pitch strength tested, per-tier decomposition is not a controlled ablation, test split held out - all explicitly flagged.",
+    "Purposeful visual encoding: trajectory line chart with baseline reference and selective labels, plus a dumbbell chart whose shape literally is the head/tail result.",
+    "Strong wayfinding: sticky section nav with anchors to all eight sections, expand/collapse-all controls, consistent card structure and caveat styling; dark-mode aware."
+  ],
+  "weaknesses": [
+    "Deep facts (regression mechanism, best-recipe config, ledger detail) are hidden behind collapsed <details> by default - a reader who does not expand cards misses much of the depth.",
+    "At a glance the 'what's next' takeaway (class-conditional augmentation) and the class-dependent-reverb nuance are not visible; they live below the fold / inside cards.",
+    "Progressive-disclosure design means the full picture requires active interaction rather than a single scroll."
+  ],
+  "evaluator_notes": "A genuinely strong layered dashboard. Glance carries T1 and T2 completely with exact numbers, T3 mostly, T4 not (below fold). Deep read: all F1-F15 conveyed and exact, so accuracy = 10 x 15/15 = 10.0. Depth marked at 7.5 (not higher) because the richest content sits behind collapse toggles. overall = 0.35*10 + 0.30*8 + 0.15*7.5 + 0.10*8 + 0.10*8 = 8.6. High but earned - the artifact is accurate, honest about its own caveats, and well-organized."
+}

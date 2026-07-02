@@ -24,7 +24,7 @@ and `/new-experiment`.
 
 ## Active experiments
 
-(list of `experiments/YYYY-MM-DD-<slug>/` folders currently in flight)
+- [[experiments/2026-07-01-baseline-matrix]] — 7 approaches × 6 testcases; AI eval done (dashboard 9.02 leads), awaiting human ratings
 
 ## Open questions
 

@@ -1,0 +1,49 @@
+{
+  "testcase": "experiment-results",
+  "approach": "07-scrolly-slides",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is the final 6-week readout of an onboarding A/B test ('Pathways' at Tessel). Its main message: the overall blended effect (+0.8pp) is not statistically significant, but that hides a split decision — a significant mobile-web win (+4.2pp) and a significant iOS loss (-1.9pp) that cancel out. The recommendation is to ship the redesign to mobile-web only (neither ship everywhere nor kill it); a novelty-decay card (+2.9 -> +0.1pp week 1->6) warns early results overstated variant B.",
+  "scores": {
+    "glance_comprehension": 8.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.5,
+    "visual_craft": 8.5,
+    "density_fit": 8.0,
+    "overall": 8.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Slide 3 hero: '+0.8pp (11.4% -> 12.2%)'; slide 2 defines primary metric as trial-to-paid conversion (first payment within 14 days)."},
+    "F2": {"status": "conveyed", "note": "Slide 3: '95% CI [-0.3, +1.9], p = 0.16 — not statistically significant' plus a CI chart visibly straddling zero; cover chip says 'can't tell'."},
+    "F3": {"status": "conveyed", "note": "Slide 2: '184,204 new signups, split 50/50 ... the 13,249 who started a trial.' Per-arm counts (92,114/92,090; 6,602/6,647) are not given, but the fact's substance lands."},
+    "F4": {"status": "conveyed", "note": "Slide 3 support: 'The test had 80% power only for lifts of +1.55pp or more, so a +0.8pp true effect was never confirmable here.' (alpha=0.05 implicit.)"},
+    "F5": {"status": "conveyed", "note": "Slide 4 support: 'Platform was the only subgroup pre-registered before launch'; reinforced on slide 9 ('single pre-registered subgroup, chosen in advance')."},
+    "F6": {"status": "conveyed", "note": "Slide 4 chart: +4.2, CI whiskers, p < 0.0001; cover chip CI [+2.1, +6.3]; slide 9: 'survives the correction easily'. Raw rates 13.9%->18.1% not shown, delta/CI/p all correct."},
+    "F7": {"status": "conveyed", "note": "Slide 4: -1.9, CI [-3.6, -0.2] (cover chip), p = 0.027; slide 9 explicitly covers Bonferroni non-survival vs pre-registration + mechanism -> 'credible signal that warrants action ... stopping short of proof'."},
+    "F8": {"status": "conveyed", "note": "Slide 4: Android +0.1, p = 0.92, gray 'CI straddles zero — null' encoding; CI [-1.7, +1.9] in the chart/aria-label."},
+    "F9": {"status": "conveyed", "note": "Slide 5 cancellation equation (+4.2 x mobile-web + -1.9 x iOS + +0.1 x Android ~ +0.8 overall) and '+0.8pp is not a modest win everywhere'."},
+    "F10": {"status": "conveyed", "note": "Slide 6 bar chart with exact weekly values +2.9, +1.5, +0.6, 0.0, -0.4, +0.1 and headline 'Early snapshots overstated B'."},
+    "F11": {"status": "conveyed", "note": "Slide 7: pooled weeks 4-6, mobile-web +3.8pp, iOS -2.2pp still negative; correctly labeled exploratory and iOS CI shown straddling zero at the halved sample."},
+    "F12": {"status": "conveyed", "note": "Slide 10: 31.2% -> 31.4%, +0.2pp, CI [-0.2, +0.6], measured on all 184k; support tickets +12% weeks 1-2 then normalized."},
+    "F13": {"status": "conveyed", "note": "Slide 11 support: 'users reach a first lesson 38 seconds sooner (CI [-45, -31])'. The trial-start-rate flatness (7.17% vs 7.22%, denominator unbiased) sub-clause is absent."},
+    "F14": {"status": "conveyed", "note": "Slide 8: iOS step-3 drop-off 8.1% -> 12.7%, mobile-web 3.2% -> 3.4%, Android 5.0% -> 5.6%, with the iOS OS-dialog mechanism explained."},
+    "F15": {"status": "conveyed", "note": "Slide 11: ship mobile-web only with 5% holdback; iOS do-not-ship with fix experiment reverting the prompt; Android hold. SRM/diagnostics-clean detail is absent."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "The cover alone lands nearly the whole story: verdict headline ('the overall result is not significant', 'ship mobile-web only') plus four stat chips with CIs and significance status — the exact anti-'B won overall' framing the brief demands.",
+    "All 15 key facts survive with correct numbers, directions, and significance status; nothing distorted or contradicted.",
+    "Honest uncertainty encoding throughout: consistent color semantics (blue = CI clears zero positive, red = negative, gray = straddles zero) with a legend; the late-window iOS interval is deliberately recolored gray when it stops clearing zero; the weekly bars sit inside an explicit ±2.7pp noise band.",
+    "Slide 9 is a dedicated honesty check (Bonferroni against vs pre-registration for), and exploratory analyses (late window, funnel) are labeled as such.",
+    "Strong wayfinding: numbered kickers (n/12), a fixed dot rail with hover titles and click-to-jump, and a recap slide with anchor links back to each claim."
+  ],
+  "weaknesses": [
+    "Minor omissions: per-arm sample sizes, raw platform conversion rates (13.9%->18.1%, 11.6%->9.7%), trial-start-rate flatness (F13's denominator-unbiased point), and the clean SRM diagnostic are all absent.",
+    "The cover chip labels iOS '-1.9pp — significant loss' without the Bonferroni qualification; a cover-only reader gets a slightly firmer iOS verdict than slide 9 justifies.",
+    "12 full-viewport slides is on the long side for the brief's 'couple of minutes' PM read; the depth is earned but the mandatory scroll-snap forces a linear march (mitigated by the rail and recap anchors).",
+    "Android-flat and the iOS fix-and-retest action are below the fold, so the glance alone misses those two secondary takeaway elements.",
+    "Week-4 (0.0) and week-6 (+0.1) bars in the novelty chart are near-invisible slivers, carried mostly by their text labels."
+  ],
+  "evaluator_notes": "Scroll-snap slide deck, 12 sections, static SVG charts, no external dependencies; renders cleanly in full.png including dark-mode support in CSS. Accuracy is formulaic: 15/15 conveyed, 0 distorted, 0 contradicted -> 10.0. Glance scored from the recorded takeaway: T1 fully, T2 minus Android-flat, T3 core (missing 'gain outlasts novelty'), T4 headline action only -> 8.0. Overall = 0.35*10.0 + 0.30*8.0 + 0.15*8.5 + 0.10*8.5 + 0.10*8.5 = 8.9. This cell avoids the material's central trap (blended +0.8pp read as a win) at every level — headline, chip, hero slide, equation slide, and recap."
+}

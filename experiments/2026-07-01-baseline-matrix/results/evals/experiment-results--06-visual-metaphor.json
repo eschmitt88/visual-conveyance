@@ -1,0 +1,49 @@
+{
+  "testcase": "experiment-results",
+  "approach": "06-visual-metaphor",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is the final readout of an A/B test at 'Tessel' — an onboarding redesign ('Pathways', B) vs. the current flow (A), experiment ONB-2026-014, run 6 weeks. Its main message: overall trial-to-paid conversion moved 11.4% -> 12.2% (+0.8pp, CI [-0.3, +1.9], p=0.16), which is not statistically significant — do NOT read it as 'B won.' The blended number hides a real mobile-web gain (+4.2pp, significant) and a real iOS loss (-1.9pp, significant, tied to a step-3 permission prompt), so decisions go per platform: ship B on mobile-web with a 5% holdback, don't ship iOS (run a fix experiment), Android null; beware the week-1 +2.9pp read, which was novelty that decayed to +0.1pp, and a 7-day retention guardrail held flat.",
+  "scores": {
+    "glance_comprehension": 9.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.0,
+    "visual_craft": 8.0,
+    "density_fit": 8.5,
+    "overall": 9.2
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Headline verdict '11.4% -> 12.2% (+0.8pp)'; also primary-result table and full gauge table."},
+    "F2": {"status": "conveyed", "note": "Headline: '95% CI [-0.3, +1.9], p = 0.16 — not statistically significant'; #mouth section explains the CI includes zero."},
+    "F3": {"status": "conveyed", "note": "Headwaters caption '13,249 users... (A: 6,602 / B: 6,647)'; levee note 'all 184,204 randomized users'; guardrails '92,114 vs 92,090'."},
+    "F4": {"status": "conveyed", "note": "#mouth: 'The gauge wasn't built to read this fine... 80% power to detect an overall lift of +1.55pp... +0.8pp blip is below what this instrument can resolve.'"},
+    "F5": {"status": "conveyed", "note": "'Platform was the one pre-registered subgroup (declared 2026-04-28, before launch)... not fished out of the data afterward'; reiterated in iOS section."},
+    "F6": {"status": "conveyed", "note": "Warm tributary label '+4.2pp, CI [+2.1, +6.3], p < 0.0001'; #warm section notes it survives Bonferroni (alpha = 0.0167) and 13.9% -> 18.1%."},
+    "F7": {"status": "conveyed", "note": "Cold tributary '-1.9pp, CI [-3.6, -0.2], p = 0.027'; #cold gives the honest caveat that p = 0.027 does NOT survive strict Bonferroni but pre-registration + mechanism make it actionable."},
+    "F8": {"status": "conveyed", "note": "'ANDROID — still water (can't tell): +0.1pp, CI [-1.7, +1.9], p = 0.92'; own section and table row."},
+    "F9": {"status": "conveyed", "note": "'It's a mix, not a measurement of anything real' with explicit width-weighted arithmetic reconciling to ~+0.8pp; 'a strong win and a real loss averaging each other out.'"},
+    "F10": {"status": "conveyed", "note": "Season-log bar chart + details table with the exact weekly series +2.9, +1.5, +0.6, 0.0, -0.4, +0.1; prose 'decayed from +2.9pp in week 1 to +0.1pp in week 6.'"},
+    "F11": {"status": "conveyed", "note": "'Pooled over the late window (weeks 4-6)... mobile-web remains +3.8pp... iOS remains negative at -2.2pp'; also in mobile-web tooltip and #warm."},
+    "F12": {"status": "conveyed", "note": "Levee annotation + guardrails section: retention 31.2% vs 31.4%, +0.2pp, CI [-0.2, +0.6]; support tickets +12% weeks 1-2, normalized after copy fix."},
+    "F13": {"status": "conveyed", "note": "Guardrails: 'Time-to-first-lesson improved by 38 seconds (median 4m 52s -> 4m 14s, CI [-45, -31])'; trial-start rate flat 7.17% vs 7.22% with the denominator-soundness point."},
+    "F14": {"status": "conveyed", "note": "STEP-3 RAPIDS annotation 'iOS drop-off at step 3: 8.1% (A) -> 12.7% (B); mobile-web 3.2% -> 3.4%, Android 5.0% -> 5.6%'; expanded with counts in #cold."},
+    "F15": {"status": "conveyed", "note": "Decision chips + engineering plan: mobile-web only with 5% holdback, do not ship iOS/Android, follow-up ONB-2026-019 with prompt reverted/softened; 'channels weren't rigged' covers SRM chi-square p = 0.96 and clean instrumentation audit."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "All 15 key facts conveyed with correct numbers, directions, and significance status; nothing distorted or contradicted.",
+    "Uncertainty is visually load-bearing, exactly as the brief demands: solid color is 'earned' only when the 95% CI excludes zero, and everything CI-straddling (the whole blended river, Android, every weekly bar) is hatched gray — a CI that straddles zero literally looks different.",
+    "The above-the-fold region alone delivers all four required takeaways (non-significant overall, platform split, novelty decay, narrow ship decision) via headline, bold verdict, and four decision chips.",
+    "Unusually strong epistemic hygiene: Bonferroni caveat on iOS stated against interest, funnel evidence labeled exploratory and non-causal, power limitation explained, and a dedicated 'Where the metaphor breaks' section that preempts the metaphor's own failure mode (rivers merge; platforms don't).",
+    "Statistical jargon (pp, CI, power, holdback) glossed inline for the PM audience; full reconciliation arithmetic and a complete gauge table support re-finding any number."
+  ],
+  "weaknesses": [
+    "The weekly chart's claim 'no single week clears zero on its own' is slightly overstated: week 1 (+2.9pp) sits outside the stated ~+/-2.7pp noise band, which the page itself admits only in the SVG aria-label ('barely outside it').",
+    "The river metaphor imposes vocabulary overhead (mouth, tributary, levee, rapids, season log); section kickers are metaphor-first, so scanning for 'guardrails' or 'recommendation' requires reading the paired plain-language titles.",
+    "Long single page (~5,300px) with no table of contents or jump navigation; wayfinding relies on scrolling.",
+    "Tributary path geometry (vertical position, curvature) carries no data — only color, hatching, and width are encoded — so parts of the large hero graphic are scenery.",
+    "Some supporting figures (weekly noise band +/-2.7pp, step-3 reach counts 31,240/31,020, week-2 interim +2.2pp) are not in key_facts.md and could not be verified against ground truth, though all are internally consistent and hedged."
+  ],
+  "evaluator_notes": "Fact audit: 15/15 conveyed, 0 distorted, 0 contradicted -> accuracy = 10 x 15/15 = 10.0. Glance: all four takeaways (T1-T4) appear verbatim in the recorded glance_takeaway, including the do-not-read-as-a-win framing, the per-platform split, novelty decay, and the narrow recommendation; scored 9.5 rather than 10 because the above-the-fold area asks a real 10-second reader to parse a bold multi-clause verdict plus four chips. Overall = 0.35*10.0 + 0.30*9.5 + 0.15*8.5 + 0.10*8.0 + 0.10*8.0 = 9.225 -> 9.2. The page directly avoids the brief's stated failure mode: it is nearly impossible to leave believing 'B won overall, ship everywhere.' Rendering clean in both glance and full screenshots; tooltips are JS-progressive-enhancement with all critical data also present in static text/tables."
+}

@@ -44,11 +44,35 @@ State precisely what we expect, before running anything:
 
 ## Result
 
-Fill in after the run.
+AI-evaluation phase complete (42/42 cells, rubric v1, `metrics.json`).
+Ranking by mean overall: **layered-dashboard 9.02** > interactive-explainer
+8.73 > visual-metaphor 8.43 > scrolly-slides 8.23 > **prose control 7.95** >
+svg-infographic 7.38 > mermaid-diagrams 7.30. Layered-dashboard won 5 of 6
+test cases outright (interactive-explainer took research-project by 0.1).
+Human ratings: pending (0/42) — gallery at
+https://eschmitt88.github.io/visual-conveyance/presentations/.
 
 ## Interpretation
 
-Fill in after the run.
+Per the AI judge (all anchors in `metrics.json`):
+
+- **H1 (all visuals beat prose on glance): partial.** Dashboard (8.67),
+  interactive (8.05), metaphor (7.67), slides (7.00) beat prose (6.92);
+  infographic and mermaid (both 6.58) LOST to well-structured prose at
+  a glance — the two "most visual" approaches underdelivered.
+- **H2 (a visual approach beats prose on overall): confirmed.** Four do.
+- **H3 (approach × material interaction, no universal winner): refuted**
+  at this granularity — layered-dashboard was near-universal. Caveat:
+  a single-model judge may systematically favor progressive disclosure
+  (everything present + designed glance layer scores well on every
+  rubric axis); this is exactly what the human pass should test.
+- **H4 (infographic trades accuracy for glance): half right.** Its
+  accuracy did crater (8.02, lowest tier) but the glance payoff never
+  materialized (6.58). Compression cost fidelity without buying
+  glanceability. Mermaid failed similarly: diagram-DSL pages rendered
+  small/unlegible-at-a-glance diagrams (see codebase-structure--02 eval).
+- Prose is a strong baseline on accuracy (9.88) — visuals mainly move
+  the glance axis, which was the motivating axis of this project.
 
 ## Diagnostics
 
@@ -62,14 +86,15 @@ Unless otherwise noted, metric numbers here reference `metrics.json`
 (AI-evaluator scores). Human ratings in `results/human/` are reported
 separately once collected.
 
-- intended_effect_confirmed: n/a
-- leakage_check: n/a
-- overfitting_signal: n/a
-- delta_from_prior: n/a
-- unexpected_findings: n/a
+- intended_effect_confirmed: partial — visuals beat prose overall (metrics.json:approach_ranking_by_overall) but H1/H3 deviations noted in Interpretation
+- leakage_check: generators never saw key_facts.md (eval/protocol.md separation); evaluators never saw approach specs — enforced by prompt contract, spot-checked in agent transcripts
+- overfitting_signal: n/a for this run — single-pass matrix, no iteration on the eval signal yet; guard is the pending human pass (results/human/)
+- delta_from_prior: n/a — first experiment in project
+- unexpected_findings: the two most "visual" approaches (infographic, mermaid) scored WORST — below the prose control on glance (metrics.json:by_approach); dashboard's near-universal win may be judge bias toward progressive disclosure
 - next_candidates:
-  - n/a
-  - n/a
+  - Human-vs-AI rank correlation once ratings land; if dashboard's sweep doesn't replicate in human ranking, study judge bias directly (multi-judge panel, lens-diverse verify per [[llm-as-judge-for-visuals]])
+  - Fix the diagram-size failure mode: regenerate mermaid cells with a min-diagram-height constraint in the approach spec (v2) and re-evaluate the delta
+  - Hybrid approach spec: dashboard glance layer + metaphor hero visual, testing whether metaphor adds glance value on top of progressive disclosure
 
 ## Follow-up
 

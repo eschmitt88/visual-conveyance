@@ -1,0 +1,50 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "06-visual-metaphor",
+  "rubric_version": 1,
+  "glance_takeaway": "This is a post-incident analysis (INC-1194, SEV-1) of a 4-hour-17-minute partial outage of a 'Ledgerline Invoicing API' on June 24, 2026, drawn as a river-basin metaphor. The main message is that there was no single root cause: a bad deploy (a search rewritten to a leading-wildcard LIKE that couldn't use an index) was the trigger, but two pre-existing weaknesses — a 'silted' database (dead tuples from a backfill) and jitterless fixed-interval retries — amplified one endpoint's regression into a valley-wide outage saturating a shared pgbouncer pool, with 68 minutes lost to a wrong diagnosis. Key numbers a reader absorbs: 31.2% peak error rate, 2,312 orgs affected (24.4%), ~$41,300 in SLA credits, zero data loss, and 3 P0 fixes targeted for Q3 2026, one per contributing factor.",
+  "scores": {
+    "glance_comprehension": 7.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.0,
+    "structure_nav": 7.5,
+    "visual_craft": 7.5,
+    "density_fit": 7.5,
+    "overall": 8.3
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Header eyebrow '2026-06-24, 14:02–18:19 UTC' + 'SEV-1'; KPI chip '4 h 17 m outage'; flow log '257 min'."},
+    "F2": {"status": "conveyed", "note": "Damage survey: '19.1% average across the window; peak 31.2% at 15:47'; '≈362,000 of ≈1.9 M requests'."},
+    "F3": {"status": "conveyed", "note": "Damage survey: 'p50 85 ms → 2.9 s; p99 420 ms → 28.4 s' + note that 504s at 30 s count as errors, not latency."},
+    "F4": {"status": "conveyed", "note": "Customer districts panel + damage survey: 2,312 orgs (24.4% of 9,480), ≈$41,300 across 216 enterprise contracts, zero data loss, 37,400 webhooks all replayed by 19:05."},
+    "F5": {"status": "conveyed", "note": "Section 1: PR #8841 leading-wildcard LIKE, org scoping moved to app-side, cost 0.56..8.44 → 0.00..6,214,891, 0.4 ms → 24–31 s, 'Rows Removed by Filter: 312,344,806', 274.2 M-row table."},
+    "F6": {"status": "conveyed", "note": "Section 1 'Why canary didn't catch it': ~2 M rows, same seq scan ~180 ms, under every threshold."},
+    "F7": {"status": "conveyed", "note": "Section 2: Jun 22 backfill of 38.1 M rows, 38.1 M dead tuples, 12.2% bloat, heap 190→213 GB, 20% scale factor → ≈54.9 M threshold never crossed."},
+    "F8": {"status": "conveyed", "note": "Section 2: ~26 s bloat-free estimate → 24–31 s straddling the 30-s levee; ~57% killed (query_canceled) as 5xx; killed query still held its connection the full 30 s."},
+    "F9": {"status": "conveyed", "note": "Section 4: 80-connection pgbouncer pool shared by reads/writes/PDF/webhooks; ≈5.6/s retry-multiplied arrivals → ≈160+ demand; saturated 15:12; cl_waiting peak 1,437 at 15:58; 'the blast radius stopped being search'."},
+    "F10": {"status": "conveyed", "note": "Section 3 + timeline: fixed 1 s, 3 attempts, no jitter, no budget; 3,200 → 15,020 rpm (4.7×); zero extra successes; pool pinned 15:12–17:18; pool bump 80→200 at 16:20 worsened write latency, reverted 16:31."},
+    "F11": {"status": "conveyed", "note": "Section 5 + timeline: network hypothesis 14:20–15:10 (50 min), anchored by 14:05 cloud advisory + gateway 504s + deploy markers broken since Jun 10; 68 min from 14:11 alert to 15:19 diagnosis."},
+    "F12": {"status": "conveyed", "note": "Section 6: migration 0412 dropped idx_invoices_org_number; code rollback would still seq-scan; rebuild ~6 h; CREATE INDEX CONCURRENTLY 16:05 → 21:48, after incident close."},
+    "F13": {"status": "conveyed", "note": "Section 6 + timeline: invoice_search_contains set to 0% at 17:05 after 16:35 staging verification of the exact-match fallback on the untouched unique index; <3% by 17:15; flip took 90 s; re-enabled June 26."},
+    "F14": {"status": "conveyed", "note": "Section 6 + timeline: manual VACUUM (ANALYZE) 17:12–17:50 removing 38.1 M dead tuples and refreshing stats; SLOs met from 17:53; closed 18:19 after 26 min stable."},
+    "F15": {"status": "conveyed", "note": "Section 5: only firing alert was gateway 5xx > 2%/5 min at 14:11; no latency SLO alert for invoicing despite p99 exploding 14:07; 1/100 sampling (~0.7 samples/min); broken deploy marker hid the 14:02 deploy from every graph."},
+    "F16": {"status": "conveyed", "note": "Flood-defenses table: 9 items, 3×P0/3×P1/3×P2, named owners and target quarters; P0s (Q3 2026) = latency SLO alerts (Priya N.), pgbouncer saturation alerting + isolation (Marcus T.), standardized retries with backoff/jitter/budgets (Dana K.); P1s include migration-reversibility policy, autovacuum tuning, CI query-plan checks."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Perfect fact coverage: all 16 key facts are on the page, numerically exact, most in two reinforcing places (map annotation + prose/table).",
+    "The causal structure (trigger + two amplifiers) is the page's literal geography, and the 'no storm / no silt / no pump storm' counterfactual panel makes T1 explicit rather than implied.",
+    "Unusually honest: a 'Where the metaphor breaks' section pre-empts the three ways the river analogy would mislead, plus 'Notes on the numbers' caveats and retrospective markers in the timeline.",
+    "DB mechanisms (dead tuples, covering index, pgbouncer) each get an explicit one-line 'Gloss:' — exactly what the brief's non-DB-specialist audience needs.",
+    "Layered structure for re-finding: KPI chips, numbered map keyed to sections, proportional 257-min flow bar, full timeline table, damage-survey table, owner/quarter remediation table."
+  ],
+  "weaknesses": [
+    "The rollback-impossible / feature-flag-saved-the-day takeaway (T3) does not land at a glance — 'old bypass' and 'sluice gate' are small, metaphor-coded map labels that only pay off after reading the legend.",
+    "Metaphor-first section headings ('The wrong valley', 'The bypass that couldn't be re-dug') tax scanning: a reader hunting for 'rollback' or 'detection' must translate through the analogy.",
+    "The map's center is busy: small annotation text, a dashed retry loop crossing other labels, and dense multi-line callouts reduce legibility at the illustration's core.",
+    "The page is very long (~10k px); the brief's 'few minutes' reading goal is met only if the reader trusts the layering and skips, and the blameless framing appears only below the fold.",
+    "River widths and flooded areas are illustrative, not quantitative encodings — honest here because annotated, but the visual channel itself carries no measured data outside the flow bar."
+  ],
+  "evaluator_notes": "Accuracy is mechanical: 16/16 conveyed, 0 distorted, 0 contradicted -> 10 x 16/16 = 10.0. Glance (scored strictly from the recorded takeaway): T1 fully landed, T2 headline only, T4 mostly, T3 absent -> 7.0. Overall = 0.35*10.0 + 0.30*7.0 + 0.15*8.0 + 0.10*7.5 + 0.10*7.5 = 3.5 + 2.1 + 1.2 + 0.75 + 0.75 = 8.3. Caveat fidelity is true and exceptional (metaphor-break section, estimate hedges, 'reusable not returned' disk note, 'affected' definition). Blameless tone of the source is preserved ('systems, tools, and process gaps — not people'). Rendering intact in both screenshots; page notes horizontal scroll on narrow screens but desktop capture is clean. Depth held below 8.5 because the metaphor indirection adds real translation overhead for a first-time reader despite the legend; structure and craft held at 7.5 for the metaphor-coded headings and the crowded map center."
+}

@@ -1,0 +1,48 @@
+{
+  "testcase": "research-project",
+  "approach": "06-visual-metaphor",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is a bioacoustics ML project ('murmur') framed as a mountain-climbing expedition 'up the macro-F1 slope.' A non-expert would understand it is about teaching a small audio classifier to recognize birds using cheap, physically-plausible (reverb) noise augmentations instead of reaching for a bigger model. The main message: the bet 'partially works' — the augmentation route climbed +5.9 points (0.612 at Trailhead to 0.671 at High Camp), but the 'summit' (rare-species ceiling) is still in cloud. The line chart shows waypoints: Trailhead (no aug, 0.612), Camp 2 (light reverb, 0.641), a Ravine 'turned back' failure (pitch/stretch, 0.589), Camp 4 (+noise mix, 0.643), High Camp (the stack, 0.671, best), and a Summit-in-cloud with a rare-tail concern ('is 41 clips even learnable?'), plus heavy reverb at 0.663.",
+  "scores": {
+    "glance_comprehension": 7.5,
+    "accuracy": 9.3,
+    "depth_comprehension": 8.0,
+    "structure_nav": 7.5,
+    "visual_craft": 7.5,
+    "density_fit": 8.0,
+    "overall": 8.2
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Header 'The wager' states both halves: cheap reverb-inspired augs improve small-data bird classification AND beat spending same compute on a bigger/pretrained backbone; verdict revisits the efficiency (H2) claim."},
+    "F2": {"status": "conveyed", "note": "'6,200 clips, 34 species' in wager; 'log-mel, 128 mels' in recipe table. Clip duration (5 s), mono, and 32 kHz sample rate are not stated, but the dataset-size meaning lands."},
+    "F3": {"status": "absent", "note": "70/15/15 stratified/seeded split and ~930 val size not stated. Only the ~930-clip test split is mentioned (footer: 'the ~930-clip test split has not been touched during search'); the split design itself is absent."},
+    "F4": {"status": "conveyed", "note": "Long-tail emphasized throughout; per-species table shows top class American Robin at 480 clips and deep-tail Kirtland's Warbler at 41, with common/mid/rare/deep-tail tiers. Detailed distribution stats (11 <80, 5 <45, median ~120, 8 classes ~52%) are not on the page."},
+    "F5": {"status": "conveyed", "note": "Legend: 'Height on the map = validation macro-F1 ... weights the rare tail equally with the common head.' One-glance section: seed wobble '~ +/-0.006.'"},
+    "F6": {"status": "conveyed", "note": "Ledger row 01 baseline-clean 2026-03-08 = 0.612 'floor'; Trailhead section 'Establishes where the climb starts: 0.612 ... no augmentation.'"},
+    "F7": {"status": "conveyed", "note": "Camp 2 section: light IR reverb RT60 0.3-0.6 s, p=0.5, 0.641 (+0.029), 'first clear win.' Ledger row 02 matches."},
+    "F8": {"status": "conveyed", "note": "The ravine section: pitch +/-2 semitones + time-stretch 0.9-1.1x on top of Camp 2, 0.589, 'below the no-aug baseline.' Ledger row 03 = 0.589 regression."},
+    "F9": {"status": "conveyed", "note": "Camp 4 section: SNR-controlled noise mixing 5-20 dB, 0.643, '+0.002 over Camp 2, inside run-to-run noise. A null result.' Ledger note confirms +0.002 vs exp-02."},
+    "F10": {"status": "conveyed", "note": "High Camp section + ledger row 05: full stack (light reverb + noise mix + SpecAugment + partial class-balanced sampler), 0.671, +0.059, 'best.'"},
+    "F11": {"status": "conveyed", "note": "The spur section + ledger row 06: heavy long-RT60 (0.8-1.5 s), p=0.7, 0.663, below best; 'Common up, rare down, small net loss.'"},
+    "F12": {"status": "conveyed", "note": "Ravine section: 'Warping pitch and tempo smears the fine formant and timing cues the rare classes depend on ... Common classes shrug it off, hiding the asymmetric harm.' The '<50 real clips to anchor' detail is not explicit but mechanism conveyed."},
+    "F13": {"status": "conveyed", "note": "Camp 4 + ledger note: +0.002 inside +/-0.006 seed noise, read as null; 'Kept in the pack anyway on the hunch that it would compose with SpecAugment further up.'"},
+    "F14": {"status": "conveyed", "note": "'The recipe at High Camp' table lists small_cnn, log-mel-128, class_balanced 0.5, reverb p0.5 RT60 0.3-0.6, noise_mix 5-20 dB, specaugment 2 freq/2 time, and OFF row for pitch/stretch + heavy reverb. Exact match."},
+    "F15": {"status": "conveyed", "note": "Per-species table matches exactly: Robin 0.79->0.85, Cardinal 0.76->0.83, Song Sparrow 0.68->0.74, Wood Thrush 0.51->0.54, Kirtland's 0.34->0.33 (-0.01); '~4.5 of those 5.9 points come from the common and mid tiers.'"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "Minor label crowding at the summit region of the SVG: the gold '0.671 - best' text sits close to the 'High Camp / the stack' and 'Summit - in cloud' cloud labels and the dashed planned-route lines cross that area; still legible in full.png. In the glance viewport the right-edge 'heavy reverb - 0.663' label is slightly clipped. Nothing broken.",
+  "strengths": [
+    "Exceptionally faithful: 14 of 15 facts conveyed with exact numbers, including the full ledger, per-species decomposition, and best-config table.",
+    "Glance is highly effective — the headline states the verdict verbatim ('partially works ... +5.9 points ... summit still in cloud') and the chart shows the regression (Ravine) and the best-vs-heavy-reverb result.",
+    "Outstanding caveat fidelity: seed noise, null result, per-tier-not-per-class caveats, H2-not-shown, a dedicated 'Where this map lies' honesty section, and the untouched test split are all surfaced. No overselling.",
+    "Honest, purposeful visual encoding: height = macro-F1 with a real axis, waypoints at true scores, dashed spurs for abandoned runs, clouds for the unknown ceiling; the legend explicitly disclaims decorative ridges as carrying no meaning."
+  ],
+  "weaknesses": [
+    "Split design (70/15/15, stratified, seeded, ~930 val) is essentially absent; only the test split size is mentioned.",
+    "Some F2/F4 sub-details missing (5 s / mono / 32 kHz clip format; distribution stats like median ~120 and 8-classes-52%), though the meaning-bearing facts land.",
+    "Long single-scroll page with no table of contents or anchors; the metaphor names (Ravine, spur, High Camp) require mapping back to exp numbers, though the exp tags help.",
+    "Label crowding at the most important data point (0.671 best) in the SVG summit area slightly hurts legibility.",
+    "Next-steps (T4, class-conditional augmentation) do not surface at all in the glance."
+  ],
+  "evaluator_notes": "A genuinely excellent, harsh-standard-clearing page. Accuracy is formulaically high (14/15 conveyed, 1 absent, no distortions or contradictions = 9.3) and warranted by a near-complete, faithful rendering. Glance scored 7.5: topic plus T1 (partial support, +5.9) and T2 (pitch/stretch regression) land clearly, T3 (stack is best; heavy reverb below) mostly lands, T4 (next steps) is absent above the fold. Depth is strong (8.0) given the thorough per-experiment mechanisms, per-species table, open-questions, and verdict; density is appropriate for the technical-collaborator audience though the page runs long. Overall = 0.35*9.3 + 0.30*7.5 + 0.15*8.0 + 0.10*7.5 + 0.10*7.5 = 8.2."
+}

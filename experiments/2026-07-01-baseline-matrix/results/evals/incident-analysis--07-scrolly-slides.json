@@ -1,0 +1,52 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "07-scrolly-slides",
+  "rubric_version": 1,
+  "glance_takeaway": "This is a blameless post-incident review of INC-1194, an outage of the Ledgerline Invoicing API on June 24, 2026. The main message is that there was no single root cause: a rewritten search query hit two dormant weaknesses (vacuum debt and jitterless retries), turning a one-endpoint regression into a platform-wide partial outage lasting 4h17m with a 31.2% peak error rate, 2,312 orgs affected (24.4%), and roughly $41,300 in SLA credits. Rollback was impossible; a feature flag stopped it, and three P0 fixes land Q3 2026.",
+  "scores": {
+    "glance_comprehension": 7.0,
+    "accuracy": 9.4,
+    "depth_comprehension": 8.0,
+    "structure_nav": 7.5,
+    "visual_craft": 8.5,
+    "density_fit": 8.5,
+    "overall": 8.2
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Cover '4h17m outage duration' + June 24, 2026; slide 2 timeline 14:02 deploy -> 18:19 incident closed. SEV-1 label never appears anywhere on the page."},
+    "F2": {"status": "conveyed", "note": "Slide 2: 'approx 362,000 of approx 1.9M requests failed - 19.1% average'; timeline dot '15:47 peak: 31.2% errors'."},
+    "F3": {"status": "absent", "note": "Endpoint latency figures (p50 85ms->2.9s, p99 420ms->28.4s) nowhere on page. Only qualitative 'search p99 exploded' (slide 7) and query-level 0.4ms->24-31s (slide 3); 504-at-30s-as-error appears only implicitly via slide 4 timeout-kill and slide 7 '504s'."},
+    "F4": {"status": "conveyed", "note": "Cover tiles: 2,312 orgs (24.4%), approx $41,300; slide 2 + slide 9: zero data loss, 37,400 webhooks replayed by 19:05. '216 enterprise contracts' detail omitted."},
+    "F5": {"status": "conveyed", "note": "Slide 3: PR #8841, 0.4ms -> 24-31s, Index Only Scan -> Seq Scan chips, 274M-row table, approx 312M rows read then discarded, gloss explains leading-wildcard LIKE and lost org scoping. EXPLAIN cost 8.44->6.2M omitted."},
+    "F6": {"status": "conveyed", "note": "Slide 3 caption: 'Why canary was green: its ~2M-row table ran the same scan in ~180ms - under every threshold.'"},
+    "F7": {"status": "conveyed", "note": "Slide 4: June 22 backfill, 38.1M dead tuples (with gloss), approx 54.9M autovacuum trigger 'never crossed, so cleanup never ran', proportional bar chart. 12.2% bloat / heap 190->213GB omitted."},
+    "F8": {"status": "conveyed", "note": "Slide 4 chart: 24-31s observed vs 30s kill line; '~57% of searches were killed by the timeout (query_canceled)'; caption 'A killed query still held its connection for 30s first.' Bloat-free ~26s estimate only implicit in slide 6 'No bloat' counterfactual chip."},
+    "F9": {"status": "conveyed", "note": "Slide 5: pool of 80 shared by reads/writes/PDF rendering/webhooks, demand approx 160+, saturation 15:12, peak wait queue 1,437 (15:58), pgbouncer gloss; slides 5-6 make blast-radius-via-shared-pool explicit."},
+    "F10": {"status": "conveyed", "note": "Slide 5: 4.7x (3,200 -> 15,020 rpm), fixed 1-second beat, no jitter, no budget, 'zero extra successes'; slide 8 card: pool bump 80->200 at 16:20 worsened write latency, reverted 16:31. '3 attempts' omitted."},
+    "F11": {"status": "conveyed", "note": "Slide 7: proportional 68-min bar (14:11 first alert -> 15:19 database identified), 50-min wrong network hypothesis 14:20-15:10, 14:05 packet-loss advisory anchor, gateway 504s, deploy markers broken since June 10."},
+    "F12": {"status": "conveyed", "note": "Slide 8: Migration 0412 dropped the old covering index, rebuild approx 6h (started 16:05, finished 21:48 after close); body: code rollback 'would seq-scan just the same'. Index name idx_invoices_org_number omitted."},
+    "F13": {"status": "conveyed", "note": "Slide 8: invoice_search_contains -> 0% at 17:05 after staging verified the exact-match fallback's index, 'Errors under 3% within ten minutes'; slide 9: 90s to flip once approved; note: contains search returned June 26. 16:35 staging timestamp omitted."},
+    "F14": {"status": "conveyed", "note": "Slide 8 note: 'manual VACUUM 17:12-17:50 removed the 38.1M dead tuples; SLOs met from 17:53; closed 18:19.' Statistics refresh and 26-min-stable detail omitted."},
+    "F15": {"status": "conveyed", "note": "Slide 7 body: alerting watched error rate not latency, 'search p99 exploded four minutes before any alert' (14:07 vs 14:11, correct), dashboards sampled 1 in 100, broken deploy markers; timeline labels first alert '14:11 (5xx rate)'. Exact 2%/5min threshold omitted."},
+    "F16": {"status": "conveyed", "note": "Slide 10: three P0 cards, Q3 2026, one per failure leg, with owning teams (Observability/Infrastructure/Platform); body lists 'six more' including autovacuum tuning, migration-reversibility policy, CI query-plan checks. Named individual owners and explicit 3/3/3 P1-P2 split omitted."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Near-complete fact coverage: 15 of 16 facts conveyed, zero distortions or contradictions, with timestamps and quantities matching ground truth exactly.",
+    "The causal structure is the page's spine: one slide per cause with consistent color tags, then a combination slide whose counterfactual chips ('No bloat -> ...', 'No retry storm -> ...') directly render T1's remove-any-leg logic.",
+    "All SVG encodings are proportionally honest (verified pixel scales on the timeline, dead-tuple bar, scan-time-vs-timeout bar, pool-demand bar, and 68-minute diagnosis bar).",
+    "One-line glosses for every DB-specific mechanism (index, dead tuples, pgbouncer pool) exactly as the brief's audience requires.",
+    "Recap slide compresses the story into five lines with deep links back to evidence slides - directly serves the 'brief your own team' reading goal.",
+    "Uncertainty markers from the source (approx, ~, estimated) are preserved throughout; blameless tone is explicit ('given what responders could see, the network theory was reasonable')."
+  ],
+  "weaknesses": [
+    "F3 (endpoint latency impact: p50 85ms->2.9s, p99 420ms->28.4s) is entirely absent - the customer-experienced latency story is told only via query time and error rate.",
+    "Severity classification (SEV-1) never appears.",
+    "T2 (the 68-minute misdiagnosis) is invisible at a glance - nothing above the fold hints at detection lag, so a skimmer misses one of four required takeaways.",
+    "Wayfinding depends on hover-only rail tooltips (suppressed on mobile) and there is no upfront table of contents; a reader hunting for one number must scroll or already know the recap slide has links.",
+    "Mandatory scroll-snap paging can fight readers who want to compare adjacent slides or skim at their own pace.",
+    "Individual remediation owners (Priya N., Marcus T., Dana K.) are dropped in favor of team names, weakening the 'named owners' accountability signal."
+  ],
+  "evaluator_notes": "Accuracy = 10 * 15 conveyed / 16 facts = 9.4 (0 distorted, 0 contradicted). Overall = 0.35*9.4 + 0.30*7.0 + 0.15*8.0 + 0.10*7.5 + 0.10*8.5 = 8.2. Glance pass: cover lands T1 strongly, T3 in compressed form, T4 partially (count + quarter + 'blameless' kicker); T2 absent above the fold -> 7.0. The high overall is earned almost entirely by the fact audit and verified-honest charting; the page's main real gaps are the missing endpoint-latency numbers and glance-invisibility of the detection-lag takeaway."
+}

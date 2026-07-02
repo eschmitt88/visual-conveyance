@@ -1,0 +1,48 @@
+{
+  "testcase": "tradeoff-decision",
+  "approach": "02-mermaid-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is about choosing a vector-search engine for Fernwick's product search among four candidates (pgnearest, Braid, Quiver, Hearth) against five hard requirements. Two options (pgnearest, Braid) are eliminated outright for must-have failures; between the two survivors there is no dominant winner, so the recommendation is conditional: Hearth is primary IF a PLAT-7 hire starts and a >=4-engineer on-call rotation is committed by 2026-10-01, otherwise fall back to Quiver (managed SaaS) with a budgeted exit plan, plus a standing override to Quiver if filters exceed 60% of traffic or facet selectivity drops under 2%. Scale context: 4.1M vectors today, doubling yearly.",
+  "scores": {
+    "glance_comprehension": 6.5,
+    "accuracy": 7.3,
+    "depth_comprehension": 7.0,
+    "structure_nav": 7.0,
+    "visual_craft": 5.0,
+    "density_fit": 7.0,
+    "overall": 6.8
+  },
+  "fact_audit": {
+    "F1": {"status": "distorted", "note": "Header claims 'five hard requirements' but only three are ever specified (0.92 unfiltered floor, 0.90 filtered floor, 100 ms ceiling in benchmark caption); M4 EU residency and M5 $2,500/mo ceiling never appear, so a reader cannot enumerate the must-haves."},
+    "F2": {"status": "conveyed", "note": "Header '(4.1M vectors today, doubling yearly)'; cost x-axis '10M (12-month scale)'; timeline caption '100M on a 4-5 year horizon'; benchmark caption '30% of production queries carry filters (share growing every quarter)'."},
+    "F3": {"status": "conveyed", "note": "Timeline 2026-06: 'Two-week bakeoff - 4 engines, one 10M-vector snapshot, 120 QPS replay'; omits 48-hour log, identical hardware, and brute-force ground truth, but the core methodology is correct."},
+    "F4": {"status": "distorted", "note": "Only Braid's 12 ms p95 appears (benchmark caption, 'fastest... unfiltered'); Quiver 18 ms, Hearth 41 ms, pgnearest 95 ms unfiltered latencies and the full ordering are missing."},
+    "F5": {"status": "distorted", "note": "Braid 0.98 and pgnearest 0.89 vs the 0.92 floor appear in the benchmark caption; Quiver 0.97 and Hearth 0.94 unfiltered recall are missing."},
+    "F6": {"status": "conveyed", "note": "Overview edge 'M1 fail 110 ms filtered p95 . M2 fail recall 0.89' on pgnearest; repeated in benchmark caption."},
+    "F7": {"status": "conveyed", "note": "Overview edge 'M3 fail filtered recall 0.71'; benchmark caption: 'fastest, highest-recall engine unfiltered... post-hoc filtering collapses it to 0.71 here, a structural limit, not a tuning problem'."},
+    "F8": {"status": "conveyed", "note": "Overview edges 'all 5 must-haves pass' for both; overview caption 'Hearth's filtered recall sits exactly at the 0.90 must-have floor (0.86 at 1% selectivity) while Quiver holds 0.95 even at 1%'; bar chart shows Quiver 0.96 vs Hearth 0.90 at 5%."},
+    "F9": {"status": "conveyed", "note": "Cost caption 'Quiver is cheapest at 1M ($180/mo vs Hearth's $520 HA floor)'; pgnearest $240 and Braid $210 at 1M are omitted (eliminated options excluded from the chart)."},
+    "F10": {"status": "conveyed", "note": "Cost caption '$1,900 vs $1,400 at 10M and $23,000 vs $6,800 (3.4x) at 100M'; omits the $2,500 ceiling check and the eliminated options' 100M estimates."},
+    "F11": {"status": "conveyed", "note": "Cost caption: 'the infra curves cross around 3M vectors - already behind today's 4.1M... Counting Hearth's ~0.2 FTE steady-state ops labor (~$2,800/mo loaded), Quiver stays cheaper in total until roughly 30M vectors - around 2029 at 2x/yr growth'."},
+    "F12": {"status": "conveyed", "note": "Overview node 'Quiver wins ops ~0 FTE'; ~0.2 FTE steady-state in cost caption; >=4-eng on-call in overview and triggers; triggers caption 'PLAT-7 is approved but not yet filled, and that is the plan's biggest risk'. Omits ~0.5 FTE first quarter and 99.9% SLA."},
+    "F13": {"status": "distorted", "note": "'Hearth wins cost trajectory + low lock-in' (overview) and the mandatory, price-lock-motivated exit plan (~3 eng-week budget) convey the lock-in direction, but the proprietary query DSL, permanent in-VPC unavailability, and the EU-residency/2027-enterprise-contract risk are entirely absent."},
+    "F14": {"status": "conveyed", "note": "Overview IF/THEN edges plus triggers flowchart: PLAT-7 signed + started AND >=4-engineer on-call by 2026-10-01 -> Hearth; else Quiver with 'SearchIndex adapter / quarterly JSONL export drill into scratch Hearth / standing ~3 eng-week migration budget / re-evaluate at 30M vectors or first renewal'."},
+    "F15": {"status": "conveyed", "note": "Dotted 'standing override - filters over 60% of traffic or facet selectivity under 2%' edge in overview, S1 in triggers ('flips to Quiver even if hire lands'), zero-margin rationale in overview caption; 2026-10-01 checkpoint and 2027-01-15 full review on the timeline."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "All five Mermaid diagrams render, but the two xychart-beta charts have defects: the bar-chart title is clipped at both ends ('ecall@10 ... floor 0.90' missing characters), and both charts' rotated y-axis labels overlap the tick numbers into garbled text. The bar chart has no 0.90 reference line, so pass/fail lives only in x-tick label text; the cost chart's series are identified only by 'blue Quiver, green Hearth' in the title rather than a legend. The triggers flowchart has colliding edge labels on the left branch, and the timeline renders as low-contrast dark-gray boxes with small text.",
+  "strengths": [
+    "The overview flowchart is a genuinely strong glance artifact: eliminations (red), primary (green), fallback (yellow), and the dated IF/THEN condition plus standing override are all legible above the fold, so T1 and T2 land in seconds.",
+    "The conditional recommendation is conveyed with full fidelity, including the complete four-part exit plan, the standing sensitivity trigger, and both check-in dates (F14/F15 fully intact).",
+    "The cost-inversion story (F11) is complete and honest: infra crossover ~3M already past, labor-adjusted crossover ~30M/~2029, with the 'SaaS is cheaper' rebuttal pre-armed in the caption.",
+    "Caveats survive: Hearth's zero filtered-recall margin, PLAT-7 approved-but-unfilled as the biggest risk, Quiver's 12-month price lock, and Braid's failure framed as structural."
+  ],
+  "weaknesses": [
+    "The five must-haves are never enumerated; EU residency and the $2,500/mo ceiling appear nowhere, so a reader cannot reconstruct the elimination criteria they are told exist (F1).",
+    "No per-option comparison matrix: unfiltered latency and recall numbers for Quiver and Hearth are missing (F4/F5), weakening the engineer-facing 'benchmarks' defense the brief calls for.",
+    "Much of the numeric payload lives in long prose captions rather than in the diagrams; the charts themselves are information-thin (unlabeled gray bars, no threshold line, title-as-legend).",
+    "xychart rendering blemishes (clipped title, overlapping axis labels, colliding edge labels, murky timeline contrast) undercut polish and slow reading.",
+    "The lock-in/residency case against Quiver is asserted but not substantiated (no DSL, no in-VPC point), leaving one leg of the T1 tradeoff thinly supported (F13)."
+  ],
+  "evaluator_notes": "Fact audit: 11 conveyed, 4 distorted (F1, F4, F5, F13 - partial/incomplete rather than misstated), 0 contradicted, 0 fully absent; accuracy = 10*max(0, 11-0)/15 = 7.3. Glance: T1 and T2 land fully from the above-the-fold flowchart, T3 is absent above the fold, T4 only hinted (Braid's 0.71 visible but not its benchmark-winner status), so 6.5. Overall = 0.35*7.3 + 0.30*6.5 + 0.15*7.0 + 0.10*7.0 + 0.10*5.0 = 6.8. The structural/conditional content - the hard part of this test case - is conveyed very well; the losses are in enumerable detail (must-have list, benchmark table) and in chart craft, where the diagram tooling's weak chart support pushes numbers into captions."
+}

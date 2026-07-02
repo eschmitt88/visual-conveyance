@@ -1,0 +1,47 @@
+{
+  "testcase": "research-project",
+  "approach": "01-prose-baseline",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is a research write-up titled 'murmur' about teaching a small CNN classifier to recognize bird calls using cheap, reverberation-inspired audio augmentations. The main message, from the bold lead paragraph, is that the bet is 'partially supported': cheap reverb augmentation lifts validation macro-F1 from 0.612 to 0.671 (+5.9 points) at negligible compute, but the gain concentrates in common classes and barely reaches the rare tail. The lede also flags that not every augmentation helped (pitch/time-stretch regressed, noise-mixing was null), the best result is a stack of tricks, and the next step is class-conditional augmentation.",
+  "scores": {
+    "glance_comprehension": 6.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.0,
+    "structure_nav": 7.0,
+    "visual_craft": 6.0,
+    "density_fit": 7.0,
+    "overall": 8.0
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Lede + 'The bet' blockquote + H1/H2 split state the reverb-augmentation hypothesis and the efficiency-vs-bigger-architecture half."},
+    "F2": {"status": "conveyed", "note": "The dataset: '6,200 clips across 34 species, 5 s mono at 32 kHz, featurised as 128-mel log-mel spectrograms (25 ms window / 10 ms hop)'."},
+    "F3": {"status": "conveyed", "note": "'70/15/15 train/val/test, stratified by species and seeded - roughly 930 clips each for validation and the held-out test set'."},
+    "F4": {"status": "conveyed", "note": "'8 most common species account for ~52%'; American Robin 480; '11 species have fewer than 80 clips ... and 5 have fewer than 45'; 'Median clips per class ~120'."},
+    "F5": {"status": "conveyed", "note": "Metric is validation macro-F1 weighting tail equally (blockquote); 'Seed-to-seed variability ... ~ +/-0.006'."},
+    "F6": {"status": "conveyed", "note": "Ledger table row 01 baseline-clean 0.612 'floor'; exp-01 section repeats."},
+    "F7": {"status": "conveyed", "note": "Row 02 reverb-light-ir 0.641 (+0.029) 'first win'; exp-02 section."},
+    "F8": {"status": "conveyed", "note": "Row 03 pitchshift-timestretch 0.589, marked regression below baseline; exp-03 callout '-0.023 vs baseline'."},
+    "F9": {"status": "conveyed", "note": "Row 04 noise-mix-snr 0.643, note 'null vs exp-02'; exp-04 callout '+0.002 vs exp-02'."},
+    "F10": {"status": "conveyed", "note": "Row 05 stack-reverb-noise-specaug 0.671 (+0.059) 'best', bolded best row + Current best callout."},
+    "F11": {"status": "conveyed", "note": "Row 06 reverb-heavy-longrt60 0.663 below best; exp-06 section: helps common, hurts rare, class-dependent."},
+    "F12": {"status": "conveyed", "note": "exp-03 callout + post-mortem: pitch/time warping smears fine spectral/timing cues, <50 real clips, common classes unaffected."},
+    "F13": {"status": "conveyed", "note": "exp-04 callout: +0.002 inside +/-0.006 seed noise = null; kept because it composes with SpecAugment in exp-05."},
+    "F14": {"status": "conveyed", "note": "Reproduce-recipe code block lists small_cnn, logmel_128, reverb p0.5 rt60 0.3-0.6, noise 5-20 dB, SpecAugment 2/2, class_balanced 0.5; pitch/stretch and heavy reverb OFF."},
+    "F15": {"status": "conveyed", "note": "Per-species table exp-01->exp-05: Robin 0.79->0.85, Cardinal 0.76->0.83, Song Sparrow 0.68->0.74, Wood Thrush 0.51->0.54, Kirtland's 0.34->0.33; text '~4.5 of the 5.9 points come from common/mid'."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Exceptionally faithful: every one of the 15 ground-truth facts is present and numerically exact, with no distortion or overselling.",
+    "Scrupulous caveat discipline - explicit 'honest caveat' notes, null-result framing, '±0.006 seed noise', 'asserted not shown' for H2, and a held-out-test-untouched discipline note.",
+    "The bold summary lede front-loads the headline verdict (T1) so it lands even on a quick scan.",
+    "Clear section hierarchy, semantic color-coded ledger deltas and good/bad/flat callouts, and an actual reproduce recipe give a motivated reader near-complete depth."
+  ],
+  "weaknesses": [
+    "Pure prose baseline: the glance is a dense text block, so takeaways T2/T3/T4 (regression, stack, class-conditional next step) require reading a running paragraph rather than landing visually.",
+    "The brief explicitly wanted the metric trajectory made legible; it is delivered as a table, with no chart of the baseline->best arc that 'is the result'.",
+    "Long single-column scroll with no in-page navigation/anchors, so re-finding a specific item means scrolling.",
+    "Visual encoding does minimal work beyond typography and a few colored table cells - little that a text dump could not achieve."
+  ],
+  "evaluator_notes": "Overall = 0.35*10 + 0.30*6.5 + 0.15*8.0 + 0.10*7.0 + 0.10*6.0 = 7.95, reported to one decimal as 8.0. Accuracy is a genuine 10 (all F1-F15 conveyed exactly), which anchors the score high; the page's weakness is that it is a prose baseline doing essentially no visual conveyance, penalized in glance_comprehension and visual_craft. Glance scored 6.5 (topic crystal clear + T1 fully from the bold lede, but T2-T4 buried in prose a non-expert would only skim at a glance)."
+}

@@ -1,0 +1,49 @@
+{
+  "testcase": "tradeoff-decision",
+  "approach": "06-visual-metaphor",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is about choosing a production vector-search engine behind semantic product search ('Fernwick'), drawn as a transit map. Four candidates depart (Braid, pgnearest, Hearth, Quiver); two are cut by hard must-have filtered-search gates (pgnearest fails latency/recall gates M1+M2, Braid fails recall gate M3), and the surviving two - Hearth and Quiver - trade infrastructure cost against operations, with cost crossovers around 3M and ~30M vectors as the corpus grows. The verdict is conditional, not a flat winner: Hearth is primary only if an infra hire (PLAT-7) and a >=4-engineer on-call rotation are committed by a 2026-10-01 checkpoint; otherwise Quiver, plus a standing override to Quiver if filtered traffic exceeds 60%.",
+  "scores": {
+    "glance_comprehension": 7.0,
+    "accuracy": 9.3,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.0,
+    "visual_craft": 7.5,
+    "density_fit": 8.0,
+    "overall": 7.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "'The five gates' strip defines M1-M5 with exact thresholds (p95<=100ms at 10M incl. filtered, recall>=0.92, filtered recall>=0.90 to 5%, EU region, <=$2,500/mo at ~10M), with plain-language glosses."},
+    "F2": {"status": "conveyed", "note": "Departure block ('4.1M products ... 30% filtered'), axis footnote 'doubles yearly: 10M = the 12-month scale ... 100M in 4-5 yr', and Stop 4 'Filter share has grown every quarter'."},
+    "F3": {"status": "conveyed", "note": "Stop 1 opening paragraph: two-week bakeoff 2026-06-08 -> 06-19, frozen 10M snapshot, identical hardware for self-hosted, 48-hour log replayed at 120 QPS, recall vs exact brute-force ground truth."},
+    "F4": {"status": "conveyed", "note": "Braid 12 ms (cutcard), Quiver 18 / Hearth 41 (table), pgnearest 'unfiltered scrapes by at 95 ms' (cutcard); ordering and within-ceiling status all present, though scattered across card + table."},
+    "F5": {"status": "conveyed", "note": "Braid 0.98 (cutcard), Quiver 0.97 / Hearth 0.94 (table), pgnearest 0.89 '<0.92' (cutcard + top chip)."},
+    "F6": {"status": "conveyed", "note": "Top chip and wall label: 'pgnearest fails gates M1+M2 (110 ms filtered, 0.89 recall)'; cutcard repeats with detail."},
+    "F7": {"status": "conveyed", "note": "Braid cutcard: cut at M3, no native filtered search, post-hoc recall collapses to 0.71 at 5% vs 0.90 floor, despite 12 ms / 0.98 being best in bakeoff; 'structural, not tunable'."},
+    "F8": {"status": "conveyed", "note": "Table row 'Filtered recall@10': Hearth '0.90 at 5% - exactly at the M3 floor; degraded to 0.86 at 1%'; Quiver 'holds 0.95 even at 1%'; wall shows both green checks."},
+    "F9": {"status": "distorted", "note": "Quiver cheapest at 1M ($180 vs Hearth's $520 HA floor) is stated in Stop 3 and on the map, but the Braid cutcard claims Braid had 'the cheapest infrastructure at every scale', which contradicts ground truth at 1M (Braid $210 > Quiver $180); pgnearest $240 / Braid $210 figures absent."},
+    "F10": {"status": "conveyed", "note": "Table 'Infra $/mo at 1M/10M/100M': $180/$1,900/$23,000 vs $520/$1,400/$6,800; '3.4x' at terminus label; Stop 3 aside gives ~$13,500 pgnearest and ~$4,200 Braid flagged as unvalidated/excluding serving layer."},
+    "F11": {"status": "conveyed", "note": "Map markers '~3M: infra fares cross - already behind us' and '~30M ~2029: labor-adjusted crossover with Hearth's ~0.2 FTE = $2,800/mo counted'; Stop 3 restates both."},
+    "F12": {"status": "conveyed", "note": "Table 'Ops burden': Quiver ~0 FTE vendor on-call 99.9% SLA; Hearth ~0.5 FTE first quarter settling to ~0.2, >=4-engineer rotation; Stop 4: PLAT-7 'approved but not yet filled, and the whole plan leans on it'."},
+    "F13": {"status": "conveyed", "note": "Table 'Lock-in' (proprietary DSL, ~3 engineer-weeks and growing, exit feasible but real) and 'In-VPC: Not offered - ever' vs Hearth 'Low ... data on our disks' + 'Yes; EU region in our own VPC'; termini labels repeat it."},
+    "F14": {"status": "conveyed", "note": "Ticket-rules banner (both conditions, 2026-10-01, 'Either fails -> QUIVER + mandatory exit plan') plus Stop 4 spells out the SearchIndex adapter, quarterly export drill into a scratch Hearth cluster, standing ~3 engineer-week budget, re-evaluation at 30M or first renewal."},
+    "F15": {"status": "conveyed", "note": "Banner 'Standing override (S1): filtered queries >60% or facet selectivity <~2% -> QUIVER even if the hire lands'; dates 2026-10-01 and full review 2027-01-15 in banner and Stop 4."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Near-perfect fact coverage: 14 of 15 ground-truth facts land verbatim or better, including the full bakeoff methodology and the complete fallback exit plan.",
+    "The conditional recommendation is impossible to miss: it appears in the header chips, as the ticket-rules banner embedded in the map, at the interchange symbol, and again in Stop 4 - the IF/THEN structure survives at every reading depth.",
+    "The transit metaphor is load-bearing, not decorative: post-wall line height is a real log-cost encoding, the x-axis is a real log-corpus scale, both crossovers are plotted where they belong, and the fare-axis note explicitly flags that ops labor is excluded.",
+    "Elimination-vs-tradeoff distinction (the brief's hard part) is structural: the wall with red X / green check markers separates hard fails from the survivors' soft comparison table.",
+    "Rare intellectual honesty: a 'Where the metaphor breaks' section, unvalidated estimates flagged as such, Hearth's zero-margin M3 pass repeatedly surfaced, and the Signals section directly answers 'what would change your mind?'."
+  ],
+  "weaknesses": [
+    "The Braid cutcard's 'cheapest infrastructure at every scale' overstates ground truth (Braid $210 > Quiver $180 at 1M), mildly undercutting the page's own 'Quiver is cheapest at 1M' claim (F9 distorted).",
+    "Metaphor vocabulary taxes the reader: 'fares', 'fare-control wall', 'ticket rules', 'Stop 3 - the fare zones' all require translation back to cost/must-haves/recommendation; section headings are less scannable than plain ones.",
+    "Eliminated options' numbers (Braid 12 ms / 0.98, pgnearest 95-110 ms / 0.89, their 1M and 100M costs) live only in prose cutcards and an aside, not in the comparison table - findability suffers on a second visit.",
+    "SVG annotation text is 10-11 px and dense around the wall and crossover regions; at a glance much of it is borderline legible, and the page has no table of contents despite its length.",
+    "Pre-wall line heights are arbitrary (Braid and pgnearest drawn high, survivors low) while post-wall height means cost; the legend scopes the encoding to 'the fare zone' but a fast reader can misread the pre-wall geometry."
+  ],
+  "evaluator_notes": "Accuracy = 10 * 14 conveyed / 15 = 9.3 (F9 distorted, credit 0; no contradictions). Overall = 0.35*9.3 + 0.30*7.0 + 0.15*7.5 + 0.10*7.0 + 0.10*7.5 = 7.93 -> 7.9. Glance pass captured T2 fully, T1 substantially, T3 partially (crossovers but not the explicit cheapest->most-expensive inversion), T4 not at all -> 7.0. The page is unusually strong on the brief's stated failure modes: it presents neither a flat feature list nor an unconditional winner, and it pre-arms the reader against both anticipated attacks ('the SaaS is cheaper' -> Stop 3; 'the library benchmarks best' -> Braid cutcard). Main costs are metaphor overhead and small-type density. Scored from glance.png, full.png, index.html, brief.md, and key_facts.md only; no knowledge of the generating method."
+}

@@ -1,0 +1,45 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "05-interactive-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "This page explains the architecture of 'meridian', a self-hosted read-later/RSS service. The core message is that a single SQLite file is the hub of the whole system: a one-way ingest pipeline (scheduler -> queue -> fetcher -> extractor -> dedup) writes into the store, and everything else (render, API, vanilla-JS web reader, CLI) reads back out. Two dangers are flagged prominently: pipeline/extractor.py is the scary hotspot (1,140 LOC, and it commits the codebase's one layering violation by importing clean_html() from render/sanitize.py, issue #214), and the 3,280-line frontend has zero automated tests, in contrast to 77% backend coverage.",
+  "scores": {
+    "glance_comprehension": 6.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.0,
+    "visual_craft": 7.5,
+    "density_fit": 8.0,
+    "overall": 8.3
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Coverage table names all six packages (store/, queue/, pipeline/, render/, api/, cli/) plus web/ 'frontend — not Python'; web node/inspector: 'vanilla JS, no build step', 'No framework, no build step'."},
+    "F2": {"status": "conveyed", "note": "Write-path lane: scheduler -> queue -> fetcher -> extractor -> dedup -> 'into the store'; FTS via hub 'triggers maintain the FTS index'. Queue insertion is consistent with F13 and preserves the order."},
+    "F3": {"status": "conveyed", "note": "Invariants card: 'Only store/writer.py writes the database. Every INSERT/UPDATE/DELETE... in that one 610-LOC file; everything else reads through store/reader.py.'"},
+    "F4": {"status": "conveyed", "note": "Invariants card + extractor inspector: 'Pure: no network, disk, DB, or clock; deterministic.'"},
+    "F5": {"status": "conveyed", "note": "Callout + layering card: 'pipeline/extractor.py:41 imports clean_html() from render/sanitize.py — a sideways pipeline -> render edge, in place since v0.8... issue #214'."},
+    "F6": {"status": "conveyed", "note": "Layering card: 'store/ is the bottom: imports no other meridian package (stdlib + sqlite3 only)... Nothing imports api/ or cli/.'"},
+    "F7": {"status": "conveyed", "note": "Extractor node/inspector/hotspot card: '1,140 LOC, the largest file in the repo', '14 site-specific extraction heuristics inlined as if/elif chains'."},
+    "F8": {"status": "conveyed", "note": "Header chip '13,710 backend Python LOC'; table shows pipeline/ 4,180 as largest module."},
+    "F9": {"status": "conveyed", "note": "Chip '77% backend line coverage'; table: store/ 91% (highest), cli/ 41% (lowest), web/ '0% no test harness'."},
+    "F10": {"status": "conveyed", "note": "Tests section: '412 tests total: 348 unit + 64 integration; the full suite runs in ~41 s locally.'"},
+    "F11": {"status": "conveyed", "note": "Dedup node 'simhash, ~7% dropped'; dedup inspector (click-reachable): '64-bit simhash... Hamming distance <= 3... About 7%... flagged and dropped.'"},
+    "F12": {"status": "conveyed", "note": "Default-active tab 'The 4-file recipe': sources/base.py, sources/__init__.py, store/migrations/, cli/commands/add.py."},
+    "F13": {"status": "conveyed", "note": "Queue node '8 workers, SQLite-backed'; queue inspector 'no external broker... pool of 8 threads'; scheduler inspector 'typical queue depth is 30-60 jobs; the health endpoint alerts at 500.'"},
+    "F14": {"status": "conveyed", "note": "Read-path lane 'from the store -> render -> api...' with 'p50 28 ms'; api inspector: 'reader 6 ms + template 14 ms + annotations 8 ms = p50 28 ms.'"},
+    "F15": {"status": "conveyed", "note": "Invariants card: 'articles_fts is updated only by SQLite triggers in schema.sql — no Python touches it.'"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Perfect fact fidelity: all 15 ground-truth facts present and numerically exact; negative facts (layering violation, untested frontend) are given a dedicated red callout rather than being sanded off.",
+    "Honest, purposeful encodings: proportional coverage bars, red reserved for genuine warnings, tabular numerics; the resting interactive state is well chosen (extractor pre-selected in the inspector, most-common contribution tab open).",
+    "Strong wayfinding: system map -> first change -> invariants -> hotspots -> coverage table -> tests mirrors exactly what a new contributor needs, and everything is findable again."
+  ],
+  "weaknesses": [
+    "Glance does not land T2 (where a newcomer's first change goes) or T4 (the load-bearing invariants); both live below the fold or behind headings, so the ~10-second impression is shape + hotspot only.",
+    "Inspector detail for 10 of 11 nodes is click-gated; a reader who never clicks misses dedup/queue/scheduler specifics, and the aria-live panel is the only place some numbers (30-60 depth, alert 500) appear.",
+    "The read-path row muddles flow slightly: cli sits on the same row as web reader with no arrow, floating outside the store -> render -> api -> web chain; the map is text-in-boxes rather than a true spatial diagram."
+  ],
+  "evaluator_notes": "Accuracy computed mechanically: 15 conveyed, 0 distorted, 0 contradicted -> 10 x 15/15 = 10.0. Glance judged strictly from the recorded takeaway: T1 and T3 fully landed, T2 and T4 absent -> 6.5 (topic clear + two takeaways). Overall = 0.35*10.0 + 0.30*6.5 + 0.15*8.5 + 0.10*8.0 + 0.10*7.5 = 8.275 -> 8.3. Page degrades gracefully without JS (all inspector sections and tab panels display). The write path inserts a queue stage between scheduler and fetcher; this is treated as consistent elaboration (F13 documents the jobs-table queue), not distortion."
+}

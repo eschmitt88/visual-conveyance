@@ -1,0 +1,48 @@
+{
+  "testcase": "experiment-results",
+  "approach": "05-interactive-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "This is the final readout of a six-week onboarding A/B test ('Pathways', ONB-2026-014) with ~184k signups. The headline message: the new flow did not win overall — the blended +0.8pp trial-to-paid lift (11.4%→12.2%) is not statistically significant (p=0.16), because a big significant mobile-web win (+4.2pp) is cancelled by a real significant iOS loss (−1.9pp), with Android null and the 7-day retention guardrail flat/passing. The call is to ship the redesign for mobile-web only, fix iOS instead of shipping it, and ship nothing else.",
+  "scores": {
+    "glance_comprehension": 8.3,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.5,
+    "visual_craft": 9.0,
+    "density_fit": 8.5,
+    "overall": 9.0
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Lede and Overall tile: '11.4% → 12.2% — +0.8 percentage points'; also appendix table row Overall."},
+    "F2": {"status": "conveyed", "note": "Overall tile: '95% CI [−0.3, +1.9] · p = 0.16' with badge 'NOT SIGNIFICANT — CAN'T TELL'; hollow dot crossing zero in forest plot."},
+    "F3": {"status": "conveyed", "note": "Lede: '184,204 new signups randomized 50/50 ... 13,249 trial starters'; appendix tnote gives A 92,114 / B 92,090; forest plot shows n 6,602 / 6,647."},
+    "F4": {"status": "conveyed", "note": "'Multiple comparisons & statistical power' details: '80% power to detect a +1.55pp lift overall ... not powered to confirm effects smaller than ~1.5pp — relevant context for the +0.8pp point estimate.' Behind a collapsed <details>, so deep-read only."},
+    "F5": {"status": "conveyed", "note": "Forest figcaption: 'Platform was the single pre-registered subgroup dimension' with tooltip citing analysis plan v1.2 filed 2026-04-28; repeated in iOS panel and power details."},
+    "F6": {"status": "conveyed", "note": "Mobile-web tile and panel: '13.9% → 18.1% (+4.2pp, CI [+2.1, +6.3], p < 0.0001)', 'easily survives the multiple-comparison correction'."},
+    "F7": {"status": "conveyed", "note": "iOS tile/panel: '11.6% → 9.7% (−1.9pp, CI [−3.6, −0.2], p = 0.027)'; panel honestly states 'p = 0.027 does not survive the strict correction' but pre-registration + mechanism make it 'a credible signal that warrants action, while stopping short of proof'."},
+    "F8": {"status": "conveyed", "note": "Android panel and table: '7.8% → 7.9% (+0.1pp, CI [−1.7, +1.9], p = 0.92)', 'null'."},
+    "F9": {"status": "conveyed", "note": "Figcaption: 'the overall number is a win and a loss averaging out, not a modest win everywhere'; headline 'it split'; appendix note shows counts summing (325+293+135=753; 428+246+137=811)."},
+    "F10": {"status": "conveyed", "note": "'Why the early weeks lied' bar chart (+2.9 W1 → +0.1 W6) plus weekly table with the exact sequence +2.9, +1.5, +0.6, 0.0, −0.4, +0.1."},
+    "F11": {"status": "conveyed", "note": "Late-window toggle on the forest plot and figcaption: mobile-web '+3.8pp, still significant', iOS '−2.2pp ... does not recover'; 'The platform split is not explained by novelty.' Also in appendix tnote."},
+    "F12": {"status": "conveyed", "note": "Guardrail tile '31.2% → 31.4% · CI [−0.2, +0.6] FLAT — PASS'; guardrails details cover the +12% support-ticket blip in weeks 1–2 normalizing from week 3."},
+    "F13": {"status": "conveyed", "note": "Secondary-metrics details: 'Median time-to-first-lesson fell 38 seconds: 4m 52s (292s) → 4m 14s (254s), CI [−45, −31]'; trial-start rate 7.17% vs 7.22% flat, with denominator-integrity argument in the experiment-health details."},
+    "F14": {"status": "conveyed", "note": "iOS panel table: step-3 drop-off iOS 8.1% → 12.7%, mobile-web 3.2% → 3.4%, Android 5.0% → 5.6%; identified as the relocated notification-permission prompt (OS dialog on iOS)."},
+    "F15": {"status": "conveyed", "note": "'The call' card + Next steps: ship mobile-web only with 5% holdback, don't ship iOS (run ONB-2026-019 with prompt reverted to day-2 soft ask + explainer arm), don't ship Android; SRM χ² p = 0.96 and clean instrumentation in the health details."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "The glance layer alone carries T1, T2, and T4: headline 'Pathways didn't win overall — it split', a 'CAN'T TELL' badge on the blended number, and an explicit ship/don't-ship call card — the brief's worst failure mode ('B won, ship everywhere') is structurally impossible to take away.",
+    "Perfect fact survival: all 15 key facts present with correct numbers, directions, and significance status; even the awkward nuances (iOS fails strict Bonferroni, late-window iOS CI crosses zero, power floor at +1.55pp, denominator integrity) are stated rather than smoothed over.",
+    "Honest visual encoding: forest plot uses filled vs hollow dots for CI-clear-of-zero vs CI-crossing-zero — exactly the 'CIs that straddle zero must look different' requirement — with a zero line, direction annotations, and a ±2.7pp noise band on the weekly decay chart.",
+    "A 'don't say' myth strip preemptively kills the four likely misreadings, and interaction degrades gracefully (no-JS fallback via title attributes, tabs/toggle hidden without JS, aria labels throughout).",
+    "Layered density: tiles for 10 seconds, chart + call for 2 minutes, collapsible trust section and full appendix tables for verification — well matched to a stats-literate PM."
+  ],
+  "weaknesses": [
+    "T3 (novelty decay) does not land at a glance: the 'Why the early weeks lied' card sits below the fold with only its top edge visible, so a 10-second reader misses that early snapshots overstated B.",
+    "Meaningful content is parked behind interaction at rest: power/F4, denominator integrity, and guardrail detail live in collapsed <details>, and the iOS/Android platform stories are behind tabs — fine for depth, invisible to a skimmer, and the resting state shows only the mobile-web (positive) panel.",
+    "No in-page wayfinding aids (TOC/anchors) for a long page; a reader hunting for 'that power number' must remember it is inside the third collapsed accordion.",
+    "The page is dense overall — the lede alone is five bolded clauses — and leans on small 10.5–12px annotation type that borders on straining at normal zoom."
+  ],
+  "evaluator_notes": "Scored blind to the approach spec. Accuracy is mechanical: 15/15 conveyed, 0 distorted, 0 contradicted → 10 × 15/15 = 10.0. Glance: my recorded takeaway captured T1, T2, and T4 with correct numbers and significance framing but missed T3 entirely (heading only edge-visible above the fold); interpolating the rubric anchors (~1.67 per takeaway above topic-clear) gives 8.3. Interactive content behind tabs/toggles/details was counted as reachable for depth but not for glance, per instructions. Overall = 0.35(10.0) + 0.30(8.3) + 0.15(8.5) + 0.10(8.5) + 0.10(9.0) = 9.015 → 9.0. This is an unusually high score for a harsh rubric, but it is driven by the fact audit: the page simply does not drop or distort any key fact, and it foregrounds exactly the non-significance and split that the brief says must not be lost. Caveat fidelity is exemplary (exploratory labels, ≈ CIs, 'stopping short of proof', 'not causal on its own')."
+}

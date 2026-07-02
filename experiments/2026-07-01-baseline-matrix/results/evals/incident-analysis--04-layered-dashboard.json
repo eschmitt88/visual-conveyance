@@ -1,0 +1,49 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "04-layered-dashboard",
+  "rubric_version": 1,
+  "glance_takeaway": "This is a post-incident report for a June 24 SEV-1 outage (INC-1194) of an Invoicing API that lasted 4h17m with a peak 31.2% API error rate, affecting 2,312 customers and ~$41,300 in SLA credits. The main message is that a bad search-query rewrite (PR #8841) was only the trigger — two dormant amplifiers (autovacuum bloat from a backfill and jitterless client retries) combined with it to saturate a shared connection pool and turn a one-endpoint slowdown into a platform-wide outage. Diagnosis, not repair, dominated the 257 minutes (68 min alert-to-diagnosis); rollback was impossible, a feature flag ended it at 17:05, no data was lost, and 3 P0 fixes land Q3 2026.",
+  "scores": {
+    "glance_comprehension": 9.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.5,
+    "visual_craft": 8.0,
+    "density_fit": 9.0,
+    "overall": 9.1
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Header meta + duration tile + impact table: 'SEV-1 · partial outage', '2026-06-24 14:02–18:19 UTC (4h17m / 257 min)'"},
+    "F2": {"status": "conveyed", "note": "Peak tile '31.2% at 15:47 · avg 19.1%'; impact table '≈362,000 of ≈1.9M requests'"},
+    "F3": {"status": "conveyed", "note": "Impact table 'p50 85ms → 2.9s; p99 420ms → 28.4s' plus explicit caveat that figures cover completed requests and 504s count as errors"},
+    "F4": {"status": "conveyed", "note": "Tiles '2,312 / 24.4% of 9,480' and '≈$41,300 across 216 enterprise contracts'; Wins card '0 records lost, 37,400 webhooks replayed by 19:05'"},
+    "F5": {"status": "conveyed", "note": "Cause 1 detail: leading-wildcard LIKE, org scoping moved out of SQL, cost 0.56..8.44 → 6,214,891, 0.4ms → 24–31s, Rows Removed 312,344,806"},
+    "F6": {"status": "conveyed", "note": "Cause 1 caveat: 'canary invoices table holds ~2M rows... seq scan takes ~180ms — under every alert threshold'"},
+    "F7": {"status": "conveyed", "note": "Cause 2 detail: June 22 backfill, 38.1M dead tuples, 12.2% bloat, 190GB → 213GB, autovacuum threshold ≈54.9M on 274.2M rows"},
+    "F8": {"status": "conveyed", "note": "Cause 2 detail: ~26s bloat-free estimate → 24–31s straddling the 30s statement timeout; ~57% killed (query_canceled); killed queries hold connection full 30s"},
+    "F9": {"status": "conveyed", "note": "Cause 3 detail: 80-connection shared pgbouncer pool saturates 15:12, ≈5.6/s arrivals demanded 160+ connections, cl_waiting peak 1,437 at 15:58, sharing widened blast radius"},
+    "F10": {"status": "conveyed", "note": "Cause 3 detail: fixed 1s interval, 3 attempts, no jitter/budget, 3,200 → 15,020 rpm (4.7x), zero extra successes, pool pinned 15:12–17:18; pool bump 80→200 at 16:20 backfired, reverted 16:31"},
+    "F11": {"status": "conveyed", "note": "Diagnosis card + timeline: network hypothesis 14:20–15:10 (50 min), 14:05 provider advisory, deploy markers broken since June 10, 68 min from 14:11 alert to 15:19 diagnosis"},
+    "F12": {"status": "conveyed", "note": "Rollback card: migration 0412 dropped idx_invoices_org_number, code rollback would seq-scan just the same, CREATE INDEX CONCURRENTLY 16:05 → 21:48 (≈6h)"},
+    "F13": {"status": "conveyed", "note": "Rollback card + timeline: invoice_search_contains to 0% at 17:05 after 16:35 staging verification of the untouched unique index; errors <3% by 17:15; 90-second flip; exact-match-only until June 26 re-enable"},
+    "F14": {"status": "conveyed", "note": "Timeline + rollback detail: manual VACUUM 17:12–17:50 removed 38.1M dead tuples and refreshed statistics; SLOs met from 17:53; closed 18:19 after 26 min stable"},
+    "F15": {"status": "conveyed", "note": "Diagnosis card: only alert was gateway 5xx > 2%/5min at 14:11; no latency SLO for invoicing though p99 exploded 14:07; 1/100 sampling (~0.7 samples/min); broken deploy marker hid the 14:02 deploy"},
+    "F16": {"status": "conveyed", "note": "Actions table: all 9 items with owners and quarters; three P0s Q3 2026 (Priya N., Marcus T., Dana K.); P1s include migration-reversibility policy, autovacuum tuning, CI query-plan checks"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none material — minor cosmetic quibble: in the causal SVG the arrows from causes 1 and 3 converge onto a horizontal connector with arrowheads pointing toward each other mid-line, which reads slightly ambiguously at a glance",
+  "strengths": [
+    "Above-the-fold layer alone delivers all four critical takeaways: headline states the conjunction thesis, chips carry rollback-impossible/flag-fix/no-data-loss/3xP0, the causal diagram shows trigger-plus-two-amplifiers with the remove-any-leg counterfactual, and the phase strip shows where the 257 minutes went",
+    "Fact fidelity is essentially perfect: all 16 ground-truth facts present and numerically exact, including hard-to-carry details (EXPLAIN costs, cl_waiting 1,437, ~57% query_canceled, 16:35 staging verification, pool-bump reversal)",
+    "Audience fit is deliberate: every DB mechanism (B-tree/leading wildcard, dead tuples/autovacuum, covering index, pgbouncer pooling) gets a one-line gloss, exactly as the brief requires for a non-DB-specialist EM",
+    "Caveats and blameless tone preserved in dedicated caveat blocks (completed-requests latency caveat, canary blind spot, pool-bump backfire, pg_repack loose end, explicit blameless framing)",
+    "Honest quantitative encoding: phase-bar flex-basis percentages match the minute counts exactly (9/68/106/48/26 of 257), and tick/bracket positions are proportionally correct"
+  ],
+  "weaknesses": [
+    "The full evidence lives behind collapsed <details>; a reader who never expands (or a static capture) gets only the card summaries, so depth depends on interaction — mitigated but not eliminated by Expand all",
+    "Nav link 'Causes' anchors only to Cause 1 though there are three cause cards; an opened card spans the full grid row, reflowing the card grid and mildly disturbing spatial memory",
+    "The sequential blue ramp on the phase strip makes the darker phases (recovery vs stability) hard to tell apart at small size, and the converging arrowheads in the causal SVG are slightly ambiguous",
+    "Above-the-fold density is very high (5 tiles + 4 chips + diagram + strip); appropriate for this technical audience but near the ceiling before it would become cluttered"
+  ],
+  "evaluator_notes": "Scored blind to the generating method. Glance pass recorded before any other file was opened; glance_comprehension judged strictly from that recorded takeaway, which captured T1, T2's core, T3, and most of T4 (missing only the one-fix-per-leg/blameless nuance, which was on screen but not in my recorded impression). Fact audit: 16/16 conveyed, 0 distorted, 0 contradicted; accuracy = 10 x 16/16 = 10.0 by the rubric formula — I looked hard for overstatement and found none; every glance-layer claim reconciles with the detail layer and the ground truth. Overall = 0.35*10.0 + 0.30*9.0 + 0.15*8.5 + 0.10*8.5 + 0.10*8.0 = 9.125 -> 9.1. This is a genuinely rare high score, driven by a mechanically perfect fact audit and a glance layer that carries all four takeaways; the deductions reflect interaction-gated depth, minor nav/reflow issues, and small diagram legibility flaws."
+}

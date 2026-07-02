@@ -1,0 +1,49 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "02-mermaid-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is an architecture overview of 'meridian', a self-hosted read-later/RSS service. Its main message: the whole system layers on a single SQLite file — a one-way ingest pipeline writes into it, and an HTTP API, vanilla-JS web reader, and CLI read back out, with no external broker/cache/DB server. A glancer would also pick up that pipeline/extractor.py is the dangerous hotspot (biggest file, 14 fragile heuristics) and that write/read paths are cleanly separated — but the diagrams themselves are rendered so small they are completely illegible at a glance; the prose captions carry all the meaning.",
+  "scores": {
+    "glance_comprehension": 6.0,
+    "accuracy": 7.3,
+    "depth_comprehension": 6.5,
+    "structure_nav": 7.0,
+    "visual_craft": 3.5,
+    "density_fit": 6.5,
+    "overall": 6.4
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Six packages (api, pipeline, queue, store, render, cli) all visible as nodes in the legible import-rules diagram; 'vanilla-JS web reader' in the header subtitle."},
+    "F2": {"status": "distorted", "note": "Stage order scheduler->fetcher->extractor->dedup->store->FTS exists only in the whole-system and write-path flowcharts, which render at illegible thumbnail size; captions mention the stages in scattered prose without the order."},
+    "F3": {"status": "conveyed", "note": "Caption 1: 'only store/writer.py ever writes the database'; reader.py appears on the read side."},
+    "F4": {"status": "conveyed", "note": "Caption 2: 'The extractor is pure — bytes in, Article out, no network, disk, DB, or clock — enforced by a property test'."},
+    "F5": {"status": "conveyed", "note": "Legible red edge 'VIOLATION: extractor.py:41 imports clean_html()' in import-rules diagram; caption gives render/sanitize.py, since v0.8, issue #214."},
+    "F6": {"status": "conveyed", "note": "Caption 4: 'store/ sits at the bottom and imports no other meridian package (stdlib + sqlite3 only), and nothing imports api/ or cli/'."},
+    "F7": {"status": "conveyed", "note": "Caption 1: 'the repo's largest file at 1,140 LOC with 14 site-specific if/elif heuristics'."},
+    "F8": {"status": "absent", "note": "Neither the 13,710 backend LOC total nor pipeline/ at 4,180 LOC appears anywhere on the page."},
+    "F9": {"status": "conveyed", "note": "Legible bar chart plus caption 5: store 91%, cli 41%, 77% backend overall, frontend 0% / 'no JS test harness at all'."},
+    "F10": {"status": "conveyed", "note": "Caption 5: '412 tests (348 unit + 64 integration, ~41 s'."},
+    "F11": {"status": "conveyed", "note": "Caption 2: 'dedup (Hamming distance <= 3 on a 64-bit simhash)'; the ~7%-dropped figure exists only as an illegible diagram edge label."},
+    "F12": {"status": "conveyed", "note": "Legible 4-file recipe diagram plus caption 6 naming all four exact files (sources/base.py, sources/__init__.py, store/migrations/, cli/commands/add.py)."},
+    "F13": {"status": "conveyed", "note": "Header: 'no external broker, cache, or database server' on a single SQLite file; caption 2: depth 30-60, alert at 500. The '8 worker threads' and explicit jobs-table node are only in the illegible write-path diagram."},
+    "F14": {"status": "distorted", "note": "Read-path chain (routes -> reader -> template -> annotations) and p50 28 ms exist only in the read-path flowchart, rendered as an unreadable strip; caption 3 covers highlights fragility instead."},
+    "F15": {"status": "distorted", "note": "'triggers only' / 'SQL triggers, never Python' appear solely as edge labels in the two illegible flowcharts; no caption mentions triggers or schema.sql."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "The first three Mermaid flowcharts (whole system, write path, read path) render at a tiny, completely illegible size — node labels and edge annotations cannot be read at the captured resolution, defeating the diagrams' purpose. The import-rules diagram, the xychart coverage bars, and the first-change diagrams render legibly. No raw code blocks or script errors visible.",
+  "strengths": [
+    "Figcaptions are dense, precise, and copy source numbers exactly (1,140 LOC, 14 heuristics, 412 tests, 41 s, Hamming <= 3, 30-60 depth/500 alert, per-module coverage), so most ground-truth facts survive even where diagrams fail.",
+    "Header subtitle alone conveys the T1 system shape (one-way pipeline into one SQLite file, API/web/CLI read back, no external services).",
+    "The import-rules diagram is the best element: legible layering with the single violation as a labeled red edge, faithfully including negative facts (xfail purity tests, issue #214).",
+    "Negative facts are kept prominent throughout: untested 920-LOC reader.js, 0% frontend coverage, 54%-covered 830-LOC routes.py with copy-pasted auth checks.",
+    "'Where your first change goes' section directly serves the brief's newcomer-orientation goal with the exact 4-file recipe."
+  ],
+  "weaknesses": [
+    "Three of six diagrams — including the flagship whole-system diagram above the fold — are illegible thumbnails, so the pipeline stage order, queue mechanics (8 workers, jobs table), read-path chain/latency, and trigger-maintained FTS are effectively lost to a reader.",
+    "T2 (where changes start) is buried at the very bottom of a long page; nothing above the fold hints at it.",
+    "Backend size facts (13,710 LOC total, pipeline/ 4,180 LOC) are omitted entirely.",
+    "The consistent color coding (blue=pipeline, green=store hub, yellow=read side, red=hotspot) is never explained by a legend, so its meaning must be inferred.",
+    "The glance experience is carried entirely by prose; the visual layer above the fold contributes nothing, which is a poor showing for a diagram-led page."
+  ],
+  "evaluator_notes": "Accuracy computed per rubric: conveyed=11, distorted=3 (F2, F14, F15 present only in illegibly-rendered diagrams), absent=1 (F8), contradicted=0; accuracy = 10 * max(0, 11 - 0) / 15 = 7.3. Overall = 0.35*7.3 + 0.30*6.0 + 0.15*6.5 + 0.10*7.0 + 0.10*3.5 = 6.4. Visual_craft scored 3.5, not the broken-render cap of 2, because rendering completed without errors and three diagrams are fully legible and purposeful; the failure is severe sizing/legibility on the other three. Glance score judged strictly from the recorded takeaway: T1 fully landed, T3 mostly, T4 partially, T2 absent."
+}

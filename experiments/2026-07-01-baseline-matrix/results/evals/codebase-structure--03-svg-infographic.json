@@ -1,0 +1,48 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "03-svg-infographic",
+  "rubric_version": 1,
+  "glance_takeaway": "This is an infographic about 'Meridian,' a self-hosted read-later/RSS app whose architecture is a single ingestion pipeline (scheduler -> fetcher -> extractor -> dedup) writing into one SQLite file (with FTS5), which the API, web reader, and CLI all read back out -- no broker, no server, ~1.8 GB database. The backend is ~13.7k lines of Python across 31 endpoints with 412 tests and 77% coverage, but the frontend/web code (3,280 LOC) has 0% coverage -- flagged with warning marks as the notable weak spot. A bar chart shows where code lives by directory, with pipeline/ largest and web/ the untested outlier.",
+  "scores": {
+    "glance_comprehension": 5.5,
+    "accuracy": 8.0,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.5,
+    "visual_craft": 7.5,
+    "density_fit": 8.0,
+    "overall": 7.1
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "All six packages appear in the 'Where code lives' bars and the import-layer diagram (api/, cli/, pipeline/, render/, queue/, store/) plus web/ frontend; the 'vanilla-JS, no framework, no build step' attribute is not stated but nothing contradicts it."},
+    "F2": {"status": "conveyed", "note": "Hero flow diagram: scheduler -> fetcher -> extractor -> dedup -> 'SQLite + FTS5' (store + FTS index collapsed into one node, order correct)."},
+    "F3": {"status": "conveyed", "note": "Four-rules card: 'Only store/writer.py writes the DB.' (store/reader.py as the read path is not named, but the single-writer invariant lands)."},
+    "F4": {"status": "conveyed", "note": "Four-rules card: 'Extractor is pure -- bytes in, Article out.' Compressed but correct; determinism implication intact."},
+    "F5": {"status": "conveyed", "note": "Tread-carefully panel: 'Imports render/sanitize.clean_html() (issue #214)' plus the layer diagram's dashed 'the violation' arrow pipeline/ -> render/. Since-v0.8 detail absent."},
+    "F6": {"status": "conveyed", "note": "Rule 4: 'store/ imports nothing; nothing imports api/ or cli/', reinforced by the 'imports point down' layer diagram with store/ at the bottom."},
+    "F7": {"status": "conveyed", "note": "Hotspot chips: '1,140 LOC -- largest file' and '14 site heuristics' on pipeline/extractor.py."},
+    "F8": {"status": "conveyed", "note": "Stat tile '13,710 backend Python LOC'; LOC bar shows pipeline/ largest at 4,180."},
+    "F9": {"status": "conveyed", "note": "77% tile with 'frontend 0%'; bars show store/ 91% (highest) and cli/ 41% (lowest); caveat box states web/ has zero tests."},
+    "F10": {"status": "conveyed", "note": "Stat tile '412 tests, suite ~41 s'; the 348 unit / 64 integration split is omitted but the atomic totals are correct."},
+    "F11": {"status": "absent", "note": "Dedup appears only as a pipeline node; no simhash, Hamming distance, or ~7% drop rate anywhere."},
+    "F12": {"status": "conveyed", "note": "'Add a source type - 4 files' recipe lists exactly base.py, __init__.py, store/migrations/, cli/commands/add.py."},
+    "F13": {"status": "absent", "note": "Only the fragment 'no broker, no server' in the hero; the SQLite jobs table, 8 worker threads, 30-60 depth, and 500 alert threshold are all missing."},
+    "F14": {"status": "absent", "note": "Read side of the flow shows SQLite -> API -> web reader/CLI, but the store/reader -> render/template -> render/annotations chain and the 28 ms p50 are not on the page (the 2.1 s tile is the ingest-side latency)."},
+    "F15": {"status": "conveyed", "note": "Rule 3: 'FTS index updated by triggers only.' (articles_fts / schema.sql names omitted, invariant intact)."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Above-the-fold nails the system shape (T1): one-way write path into a single SQLite file with API/web/CLI reading back out, plus honest headline stats.",
+    "LOC bar chart uses a purposeful dual encoding (length = LOC, fill = coverage) with a legend, and renders web/'s 0% as an empty dashed track -- honest, not decorative.",
+    "The 'Tread carefully' panel is excellent: hotspot chips, the concrete violation with issue #214, and a small import-layer diagram that makes 'imports point down' and the sideways edge legible.",
+    "Negative facts (layering violation, untested 3,280-line frontend) are given prominent amber treatment rather than sanded off, matching the brief's explicit instruction.",
+    "Both contribution recipes (4-file source type, api/routes.py endpoint) are presented as numbered step lists under a heading that also states store//queue/ are rarely touched (T2)."
+  ],
+  "weaknesses": [
+    "The glance region under-delivers on 3 of 4 takeaways: the extractor hotspot is only a tiny warning glyph on a flow node (easily misread as relating to the web/ 0% warning), and the change-recipes and four invariants are entirely below the fold.",
+    "Dedup mechanics (simhash, ~7% dropped), queue internals (jobs table, 8 workers, depth/alert thresholds), and the read-path chain with its 28 ms p50 are all absent -- three of fifteen facts missing.",
+    "The four-rules cards' icons are generic and carry no meaning; the rules also arrive last, after the reader has already seen consequences of them.",
+    "store/reader.py is never named, so the write/read symmetry of the single-writer rule is only half stated."
+  ],
+  "evaluator_notes": "Scored blind to the generating method. Accuracy = 10 * max(0, 12 conveyed - 0 contradicted)/15 = 8.0. Overall = 0.35*8.0 + 0.30*5.5 + 0.15*7.5 + 0.10*7.5 + 0.10*7.5 = 7.075 -> 7.1. Nothing on the page contradicts ground truth; unverifiable extras (complexity 38, 2 purity xfails, 1,400-page fixture corpus, reader.js 920 LOC) are plausible source details and were not penalized. Glance score reflects that only T1 landed in the recorded takeaway; the extractor warning was visible but misattributed at glance, which is exactly the failure the glance-ordering rule is designed to surface."
+}

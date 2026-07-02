@@ -1,0 +1,49 @@
+{
+  "testcase": "diffusion-variants",
+  "approach": "03-svg-infographic",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is about how AI diffusion models generate images: they start from pure random noise and reverse a noising process, rather than editing or copying stored photos. A big number pair says generation used to take ~1,000 network passes but distilled variants need only 1-4, with intermediate stats (DDIM 20-50 steps, latent diffusion ~48x fewer values, CFG guidance s ~ 7.5) shown in a row. A diagram shows the forward process destroying an image into noise over ~1,000 fixed steps and a learned reverse process removing a little noise per step.",
+  "scores": {
+    "glance_comprehension": 6.5,
+    "accuracy": 8.0,
+    "depth_comprehension": 6.0,
+    "structure_nav": 7.0,
+    "visual_craft": 7.5,
+    "density_fit": 6.5,
+    "overall": 7.1
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Mechanism section: 'Forward — add noise, ~1,000 fixed steps, no learning' / 'Reverse (learned) — remove a little noise per step' / 'Generation starts from pure random noise'."},
+    "F2": {"status": "conveyed", "note": "'~1,000 fixed steps' plus tile sequence ending at 't=1,000 pure noise'; the predefined noise-schedule detail is omitted but the fact's core lands."},
+    "F3": {"status": "absent", "note": "No mention of network inputs (noisy image + timestep) or of the epsilon/score/velocity output parameterizations anywhere on the page."},
+    "F4": {"status": "absent", "note": "Training is never described — no closed-form one-shot noising, no MSE objective, no contrast with GANs."},
+    "F5": {"status": "conveyed", "note": "Hero '~1,000 -> 1-4 network passes per image, DDPM vs. distilled'; bar chart row 'DDPM ~1,000, sequential, unparallelizable'."},
+    "F6": {"status": "conveyed", "note": "Bar row 'DDIM 20-50, same model, deterministic'; hero stat '20-50 DDIM everyday range'; quality loss covered generically by 'Below ~10 steps, undistilled models degrade'."},
+    "F7": {"status": "absent", "note": "No mention of inversion of images to noise or interpolation enabled by DDIM determinism."},
+    "F8": {"status": "conveyed", "note": "Bar row 'ODE solvers 10-20, no retraining' conveys the practical core; the SDE / probability-flow-ODE framing and DDIM-as-ODE-discretization are absent."},
+    "F9": {"status": "conveyed", "note": "Latent section: 'diffuse in compressed space' and 'VAE encode -> diffuse here -> decode once'."},
+    "F10": {"status": "conveyed", "note": "Exact numbers: 'pixels 512x512x3, 786,432 values' vs 'latent 64x64x4, 16,384', '~48x fewer', 'cheap enough for consumer GPUs'; the small square is drawn area-accurately (~48x)."},
+    "F11": {"status": "conveyed", "note": "Formula 'guided = unconditional + s x (conditional - unconditional)', title 'run twice, exaggerate the difference', note 'two passes per step'; the ~10-20% training-time prompt-drop detail is absent."},
+    "F12": {"status": "conveyed", "note": "Guidance scale diagram: 's = 1 no guidance', 's ~ 7.5 default', shaded zone 's > 12-15 oversaturated, artifacts' — all correctly positioned on the 0-16 track."},
+    "F13": {"status": "conveyed", "note": "Bar row 'Distilled 1-4, mild quality & diversity cost' and hero '1-4 distilled'; consistency models and their any-point-to-endpoint mechanism are not named."},
+    "F14": {"status": "conveyed", "note": "Bar row 'Rectified flow, straight paths (SD3, Flux), ~20-30' conveys straight-line paths, fewer steps, and the SD3/Flux association; velocity-field training and sibling-not-rival framing are absent."},
+    "F15": {"status": "conveyed", "note": "Myths section debunks 'collages a database' (weights hold statistics, not copies) and 'cleans a real photo' (starts from synthetic noise); exceptions chip covers rare near-duplication of heavily repeated training images and image-to-image deliberately starting from your photo."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Honest quantitative encodings: the step-count bar chart is drawn to true linear scale and the latent-space comparison square is area-accurate at ~48x, with exact printed values (786,432 vs 16,384).",
+    "The headline and hero figure carry the two most important ideas (generation = reversing noise, not editing photos; ~1,000 -> 1-4 passes) so the core message survives a 10-second glance.",
+    "Caveats are visible rather than buried: distillation's quality/diversity cost, latent diffusion's fine-text/small-face ceiling, the s > 12-15 artifact zone, and a memorization/img2img exceptions note.",
+    "The myths section directly and correctly debunks the collage and photo-cleanup misconceptions, including the rare-memorization exception — matching the brief's debunking goal.",
+    "Consistent visual language (blue = mechanism/data, orange = caveats/costs) and clean rendering in both light-mode screenshots; SVG figures have meaningful aria-labels."
+  ],
+  "weaknesses": [
+    "The training story is missing entirely: nothing about what the network takes as input or predicts (F3) or how it is trained (one-shot noising, MSE, no adversarial game — F4), so the 'learned' half of the mental model is asserted rather than explained.",
+    "DDIM's inversion/interpolation payoff (F7) and the SDE/probability-flow view (F8's framing) are absent; 'flow matching' — a term the brief explicitly wants decoded — never appears, only 'rectified flow' as a bar label.",
+    "Explanation-light overall: the guidance formula is shown but why extrapolating the conditional/unconditional difference steers toward the prompt is never explained, which strains the stated non-expert audience.",
+    "At true linear scale, four of five bars in the step chart are nearly invisible slivers; comparison among DDIM/ODE/rectified/distilled rests on the printed labels, and the solid-vs-faded range encoding within bars is unexplained.",
+    "Glance conveys latent diffusion and guidance only as bare stats ('~48x', 's ~ 7.5') without meaning; T3 and T4 do not land above the fold."
+  ],
+  "evaluator_notes": "Fact audit: 12 conveyed, 3 absent (F3, F4, F7), 0 distorted, 0 contradicted. Accuracy = 10 x max(0, 12 - 0)/15 = 8.0. Several 'conveyed' marks are partial-credit judgment calls on compound facts (F8, F11, F13, F14): the page states the checkable practical core correctly but drops the mechanism/framing half; nothing on the page is wrong or oversold. Overall = 0.35*8.0 + 0.30*6.5 + 0.15*6.0 + 0.10*7.0 + 0.10*7.5 = 7.1. The page is a numbers-forward infographic that nails what happens and what it costs, but not how the network learns to do it — accurate and honest, shallower than the brief's 'genuinely understand' goal."
+}

@@ -1,0 +1,50 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "03-svg-infographic",
+  "rubric_version": 1,
+  "glance_takeaway": "This page is a post-incident infographic for incident INC-1194 at Ledgerline on 2026-06-24 — a 4h 17m partial outage that had no single root cause. Its main message is that three factors combined: a query regression from a 14:02 deploy (the trigger) plus two amplifiers — autovacuum debt (38.1M dead tuples from a Jun 22 backfill) and a retry storm with no jitter that saturated an 80-connection pgbouncer pool — and removing any one leg would have made it a minor one-endpoint slowdown rather than an outage. Impact was severe but contained: 31.2% peak error rate, 2,312 orgs (24.4%) affected, ~$41,300 in SLA credits, and zero records lost.",
+  "scores": {
+    "glance_comprehension": 5.5,
+    "accuracy": 8.1,
+    "depth_comprehension": 6.5,
+    "structure_nav": 7.5,
+    "visual_craft": 7.5,
+    "density_fit": 7.0,
+    "overall": 7.0
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Hero '4h 17m', kicker '2026-06-24', timeline 14:02 deploy -> 18:19 closed, 'WHERE 257 MINUTES WENT'; SEV-1 label absent"},
+    "F2": {"status": "conveyed", "note": "Tile '31.2% peak error rate . 15:47' with matching donut arc; average 19.1% and 362k/1.9M failed requests absent"},
+    "F3": {"status": "absent", "note": "p50/p99 latency figures nowhere on page; only the caveat chip's 'timeouts count as errors' clause survives"},
+    "F4": {"status": "conveyed", "note": "Tiles '2,312 orgs hit . 24.4%', 'approx $41,300 SLA credits', '0 records lost'; caveat 'all 37,400 delayed webhooks replayed by 19:05'; 9,480 base and 216 contracts absent"},
+    "F5": {"status": "conveyed", "note": "Trigger card: 'The 14:02 deploy rewrote search so no index applied: 0.4ms became 24-31s full scans of 274M rows'; PR #8841, leading-wildcard LIKE mechanism, EXPLAIN costs absent (simplified but correct)"},
+    "F6": {"status": "absent", "note": "Canary blind spot never mentioned"},
+    "F7": {"status": "conveyed", "note": "Amplifier 1 card: 'Jun 22's backfill left 38.1M dead tuples - stale row copies awaiting cleanup'; bloat %, heap growth, autovacuum threshold math absent"},
+    "F8": {"status": "conveyed", "note": "'pushing scans past the 30s timeout: slow became failing' captures the interaction; 57% kill rate and 30s connection-hold detail absent"},
+    "F9": {"status": "conveyed", "note": "Amplifier 2 card: 'The shared pgbouncer pool - 80 database connections - saturated at 15:12, stalling every endpoint'; cl_waiting peak absent"},
+    "F10": {"status": "conveyed", "note": "'Failures retried every 1s, no jitter: traffic x4.7'; 3-attempt detail, rpm figures, and the reverted pool-bump-to-200 episode absent"},
+    "F11": {"status": "conveyed", "note": "Timeline 'wrong diagnosis . 68m' with ticks '14:11 alert' and '15:19 database found'; caption '50 minutes chased a phantom network issue'; anchoring causes (cloud advisory, broken deploy markers) absent"},
+    "F12": {"status": "conveyed", "note": "'Rollback: dead end - Its migration had dropped the old index - rebuild approx 6h' plus 'rollback dead-end . 106m' timeline segment"},
+    "F13": {"status": "conveyed", "note": "'Feature flag: the fix - Off at 17:05 - errors under 3% in ten minutes'; 90-second flip time, flag name, staging verification absent"},
+    "F14": {"status": "absent", "note": "Recovery mechanism missing: no manual VACUUM 17:12-17:50, no 17:53 SLO recovery, no 26-min stability window; only 'recovery . 74m' duration and '18:19 closed' endpoint shown"},
+    "F15": {"status": "conveyed", "note": "Caption 'Alerts watched errors, not latency; dashboards sampled 1/100 requests' plus '14:11 alert' tick and P0 '-> detection lag'; broken deploy marker omitted"},
+    "F16": {"status": "conveyed", "note": "'ONE P0 PER LEG . Q3 2026' lists all three P0s correctly mapped to legs; '+6 P1/P2 items' implies 9 total; owners and P1 specifics absent"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "The causal structure (trigger + two amplifiers, remove-any-leg counterfactual) is the visual centerpiece and lands fully at a glance — exactly what the brief says matters most",
+    "Proportional SVG timeline is quantitatively honest (segment widths match 9/68/106/74 min) and directly answers 'why 4h17m'",
+    "Zero distortions or contradictions across 16 facts; every number on the page checks out against key_facts.md",
+    "DB concepts glossed for the non-specialist audience ('dead tuples - stale row copies awaiting cleanup'; pgbouncer pool = '80 database connections')",
+    "Dedicated caveat chip preserves measurement caveats and the blameless framing; accessible (aria-labels, dark-mode palette)"
+  ],
+  "weaknesses": [
+    "Only T1 of four takeaways is visible above the fold; the detection-lag, rollback, and remediation stories all live below the glance line",
+    "Three facts wholly absent: latency impact magnitudes (F3), the canary blind spot (F6), and the recovery mechanism (F14)",
+    "Poster-level compression leaves an EM under-armed to 'defend the P0 priorities in planning': no owners, no average error rate, no misdiagnosis anchors, no pool-bump-reverted subplot",
+    "Broken deploy markers — a load-bearing piece of the misdiagnosis story (T2) — are omitted from the detection caption",
+    "Depth is exhausted in about 90 seconds; a motivated 2-3 minute reader has nothing further to dig into"
+  ],
+  "evaluator_notes": "Accuracy = 10 x max(0, 13 - 0)/16 = 8.1 (conveyed=13, absent=3, distorted=0, contradicted=0). Overall = 0.35x8.1 + 0.30x5.5 + 0.15x6.5 + 0.10x7.5 + 0.10x7.5 = 6.96 -> 7.0. Several 'conveyed' facts are heavily simplified (F2, F5, F8, F10, F13); the central claim of each lands correctly, which is what the status records, but the simplification cost is reflected in depth_comprehension. Visual encodings were verified against the SVG source: donut stroke-dasharray 31.2/68.8 matches the stat; timeline rect widths are proportional to the phase durations. Glance score judged strictly from the recorded pre-audit takeaway per rubric ordering."
+}

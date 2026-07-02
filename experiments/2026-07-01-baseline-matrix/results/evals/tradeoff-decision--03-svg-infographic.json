@@ -1,0 +1,49 @@
+{
+  "testcase": "tradeoff-decision",
+  "approach": "03-svg-infographic",
+  "rubric_version": 1,
+  "glance_takeaway": "This page is a technology-selection decision for an org called Fernwick choosing a vector-search solution among four candidates: Quiver (managed SaaS), Hearth (self-hosted OSS), pgnearest (Postgres extension), and Braid (embedded library). The bottom line is 'Hearth if the hire lands — otherwise Quiver': two of the four fail must-have requirements (pgnearest fails M1·M2, Braid fails M3), leaving Quiver and Hearth trading cost against operations. At 100M vectors Quiver costs 3.4x Hearth's infra ($23,000 vs $6,800/mo), benchmarks alone didn't decide it (Braid 0.71 filtered recall under the 0.90 floor; pgnearest 110 ms filtered latency over the 100 ms ceiling), and the cost ranking inverts with scale (Quiver is cheaper at 1M vectors).",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 6.0,
+    "depth_comprehension": 7.0,
+    "structure_nav": 7.5,
+    "visual_craft": 8.0,
+    "density_fit": 7.0,
+    "overall": 7.3
+  },
+  "fact_audit": {
+    "F1": {"status": "distorted", "note": "Partial: M1 ceiling 100 ms and M3 floor 0.90 shown as rule lines in the elimination charts; M2 named ('0.89 recall fails M2 too') but its 0.92 floor never stated; M4 (EU residency) and M5 ($2,500/mo cap) never appear, so the must-have set is incomplete."},
+    "F2": {"status": "distorted", "note": "Partial: '4.1M today' marked on the crossover timeline and 100M horizon implied by charts, but doubling-per-year growth, 10M as 12-month planning scale, and the 30%-and-growing filter share are absent."},
+    "F3": {"status": "absent", "note": "No mention of the bakeoff methodology (two-week June 2026 run, frozen 10M dataset, identical hardware, 48h log replay at 120 QPS, brute-force ground truth) anywhere on the page."},
+    "F4": {"status": "distorted", "note": "Partial: Braid '12 ms p95' (panel title) and pgnearest 95 ms unfiltered bar are shown, but Quiver 18 ms and Hearth 41 ms are absent, so the full latency ordering cannot be learned."},
+    "F5": {"status": "distorted", "note": "Partial: Braid 0.98 unfiltered and pgnearest '0.89 recall fails M2 too' are shown; Quiver 0.97 and Hearth 0.94 unfiltered recall are absent."},
+    "F6": {"status": "conveyed", "note": "Tile 'FAIL M1·M2' plus the 'pgnearest — filtered latency fails M1' chart (110 ms bar past the 100 ms ceiling) and fine print '0.89 recall fails M2 too'."},
+    "F7": {"status": "conveyed", "note": "'Braid — 12 ms p95, still out' panel: unfiltered 0.98 vs filtered @5% 0.71 against the M3 floor 0.90; tile 'FAIL M3'. ('No native filtered search' wording absent but the collapse and single-must-have failure land.)"},
+    "F8": {"status": "conveyed", "note": "Both tiles 'PASS'; Hearth tile note 'M3 at floor'; caveat strip 'Zero recall margin for Hearth (0.90 at the floor, 0.86 at 1%)'; Quiver-wins panel 'filtered-recall margin — 0.95 at 1% selectivity'."},
+    "F9": {"status": "conveyed", "note": "Cost chart 1M row: Quiver $180 vs Hearth $520 — Quiver cheapest at 1M lands with correct numbers (pgnearest $240 / Braid $210 omitted, but they are eliminated options)."},
+    "F10": {"status": "conveyed", "note": "Cost chart: 10M $1,900 vs $1,400; 100M $23,000 vs $6,800; hero '3.4x'. ($2,500 ceiling context and pgnearest/Braid 100M estimates omitted.)"},
+    "F11": {"status": "conveyed", "note": "Crossover timeline: 'infra crossover ≈3M', '4.1M today', 'labor-adjusted crossover ≈30M · ≈2029'; chart note 'Hearth ops adds ≈$2,800/mo (≈0.2 FTE)'."},
+    "F12": {"status": "conveyed", "note": "'operational simplicity — ≈0 FTE, vendor on-call' (Quiver); Hearth ≈0.2 FTE steady-state in chart note; ≥4-engineer on-call in the IF box; 'PLAT-7 approved, not filled' in the caveat. (First-quarter 0.5 FTE and 99.9% SLA omitted.)"},
+    "F13": {"status": "distorted", "note": "Partial: 'low lock-in · in-VPC ✓' for Hearth and the mandated Quiver exit plan imply the lock-in asymmetry, but the proprietary DSL, ~3 engineer-week exit cost, Quiver's permanent in-VPC unavailability, and the 2027 enterprise-contract risk are absent."},
+    "F14": {"status": "conveyed", "note": "'IF, not a winner' section: 'By 2026-10-01: PLAT-7 infra hire signed and started AND ≥4-engineer on-call committed in writing' → both hold: Hearth primary; either fails: Quiver '+ budgeted exit plan: adapter interface, quarterly export drills, re-evaluate at 30M or renewal'."},
+    "F15": {"status": "conveyed", "note": "Override banner: 'filtered traffic >60% or selectivity <2% → Quiver, regardless'; 'Full review 2027-01-15'; the 2026-10-01 checkpoint is the IF-box date; the no-margin reason is in the caveat strip."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Glance layer is exceptional: headline states the conditional recommendation verbatim, subhead gives the elimination/tradeoff structure, and the 3.4x hero figure carries the cost story — all four critical takeaways land above the fold.",
+    "Honest visual encoding throughout, verified against the SVG source: cost bars share one linear scale across all three volume groups ($180 = 0.78% of $23,000), threshold rule lines sit at true positions, and the crossover timeline uses a correctly computed log scale (3M at 24.9%, 4.1M at 31.4%, 30M at 72.9%).",
+    "The decision structure (IF box with date and AND-ed conditions, two outcome branches, warning-styled override trigger, review date) is rendered as an actual flow, making 'what would change your mind?' answerable at a glance.",
+    "Dedicated caveat strip preserves the source's three main uncertainties (Hearth's zero recall margin, unfilled PLAT-7 req, Quiver repricing risk moving the crossover to ≈20M) instead of overselling.",
+    "Accessible SVG (role=img with substantive aria-labels), dark-mode palette, direct labeling instead of legends where possible."
+  ],
+  "weaknesses": [
+    "Evidence base is thinned to only the eliminated options: Quiver's and Hearth's own latencies (18/41 ms) and unfiltered recalls (0.97/0.94) appear nowhere, so an engineer challenging the survivors' benchmark standing can't be answered from the page.",
+    "The must-have requirements are never listed as a set — M2's 0.92 floor, M4 (EU residency), and M5 ($2,500/mo cap) are invisible, weakening the 'eliminated by requirements, not taste' defense.",
+    "No bakeoff methodology at all (F3), so the credibility of every number rests on assertion.",
+    "Growth context is limited to '4.1M today' — the doubling-per-year rate that makes the 30M/2029 crossover meaningful is not stated.",
+    "Quiver's lock-in downside is only implied via Hearth's 'low lock-in' win and the exit-plan requirement; the DSL, exit cost, and residency unavailability are omitted."
+  ],
+  "evaluator_notes": "Fact audit: 9 conveyed, 5 distorted (all partial-coverage of compound facts, none misleading), 1 absent, 0 contradicted. Accuracy = 10 * max(0, 9 - 0) / 15 = 6.0. Overall = 0.35*6.0 + 0.30*8.5 + 0.15*7.0 + 0.10*7.5 + 0.10*8.0 = 7.25 -> 7.3. The page is a near-ideal executive/decision layer — the four takeaways are all legible above the fold and the conditional logic is genuinely diagrammed — but it trades away the supporting evidence (survivor benchmarks, must-have definitions, methodology) that the brief's engineer audience would demand, which caps accuracy and depth."
+}

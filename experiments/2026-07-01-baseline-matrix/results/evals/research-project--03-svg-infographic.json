@@ -1,0 +1,45 @@
+{
+  "testcase": "research-project",
+  "approach": "03-svg-infographic",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is a research summary titled 'murmur' about bioacoustics -- recognizing one bird species through cheap, physically-plausible audio noise/augmentation. The main message is that cheap 'reverb-flavoured' data augmentation partially works: it delivers a +5.9 point gain (val macro-F1 0.612 -> 0.671), but the lift lands on common species while the rare tail barely moves. The underlying bet was to hold a small CNN fixed and change only the augmentation, testing whether near-free reverb transforms beat a bigger backbone when data is scarce. An experiment ledger charts variants (baseline 0.612, +light reverb 0.641, +pitch/stretch 0.589 regression, +noise mix 0.643, full stack 0.671 best, heavy reverb 0.663).",
+  "scores": {
+    "glance_comprehension": 7,
+    "accuracy": 9.3,
+    "depth_comprehension": 8,
+    "structure_nav": 8,
+    "visual_craft": 7.5,
+    "density_fit": 8,
+    "overall": 8.1
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "'The bet': hold the small CNN fixed, move only augmentation; 'beat a bigger backbone when data is scarce, not compute?'"},
+    "F2": {"status": "conveyed", "note": "'Dataset: 6,200 clips, 34 species' in The Bet; clip length / 32 kHz / 128-mel features not shown but size is correct"},
+    "F3": {"status": "absent", "note": "No 70/15/15 split, no val/test clip counts anywhere on the page"},
+    "F4": {"status": "conveyed", "note": "'long-tailed (5 under 45 clips)' + per-species common/mid/rare/deep-tail labels; 480/11-under-80/median-120/52% figures absent but not distorted"},
+    "F5": {"status": "conveyed", "note": "Chart title 'validation macro-F1', hero cap 'val macro-F1', legend 'Seed noise ~ +/-0.006'"},
+    "F6": {"status": "conveyed", "note": "Ledger baseline point 0.612 with 'floor' legend swatch"},
+    "F7": {"status": "conveyed", "note": "'+light reverb 0.641'; chip 'Light IR reverb +0.029 first clear lift'; recipe 'RT60 0.3-0.6 s, p=0.5'"},
+    "F8": {"status": "conveyed", "note": "'+pitch / stretch 0.589 regression'; chip 'Pitch-shift / time-stretch 0.589 smears rare-class cues'"},
+    "F9": {"status": "conveyed", "note": "'+noise mix 0.643 null (+0.002)'; chip 'Noise-mix alone +0.002 useful only with SpecAugment'"},
+    "F10": {"status": "conveyed", "note": "'full stack 0.671 best'; recipe lists light reverb + noise mix + SpecAugment + balanced sampler"},
+    "F11": {"status": "conveyed", "note": "'heavy reverb 0.663 common-only'; recipe 'Heavy reverb OFF -- helped common only'"},
+    "F12": {"status": "conveyed", "note": "Chip 'smears rare-class cues'; recipe 'Pitch / stretch OFF -- regressed the tail' (the <50-clips anchoring detail not spelled out)"},
+    "F13": {"status": "conveyed", "note": "'+0.002' alongside legend 'Seed noise ~ +/-0.006' and chip 'useful only with SpecAugment' -- reader can read it as null-but-composes"},
+    "F14": {"status": "conveyed", "note": "'Current best recipe (0.671)' card: light reverb, noise mix SNR 5-20 dB, SpecAugment 2 freq/2 time, balanced sampler 0.5, pitch/stretch OFF, heavy reverb OFF"},
+    "F15": {"status": "conveyed", "note": "Per-species grouped bars: Robin +0.06, Cardinal +0.07, Song Sparrow +0.06, Wood Thrush +0.03, Kirtland's -0.01 -- all deltas match source exactly"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Honest, no-oversell framing: headline 'partially works', explicit 'Efficiency unproven' caveat that the bigger-backbone arm was never run (H2 asserted not shown), seed-noise band shown, null result labeled as null.",
+    "Exceptional fact fidelity: 14/15 facts conveyed with zero distortion; per-species deltas and all ledger values match the source exactly.",
+    "Clear top-down structure with a strong glance zone (hero + big +5.9 number) then progressively deeper detail; sectioned and easy to re-navigate."
+  ],
+  "weaknesses": [
+    "Train/val/test split (F3) is entirely absent, and dataset detail (5-s mono, 32 kHz, 128-mel, median/head-share imbalance stats) is dropped.",
+    "The ledger line chart uses a truncated y-axis (0.58-0.68) which visually amplifies small differences; mitigated by the labeled baseline line and seed-noise annotation but still a mild honesty caveat.",
+    "T4 (class-conditional augmentation as the next move) and the mechanistic 'why the regression' detail are below the fold, so they do not register at a glance."
+  ],
+  "evaluator_notes": "A genuinely strong, honest infographic that matches the brief's audience (a technical collaborator wanting a fast, non-overselling read). Accuracy is legitimately high (14/15 conveyed, no distortion or contradiction), which drives the overall above 8 despite harsh grading; the only real content gap is the split. Softer dimensions held at 7.5-8 -- craft is high but the truncated ledger axis keeps visual_craft from an 8. Glance conveys T1 fully and T2/T3 substantially via the legible ledger, but T4 is missed, so glance_comprehension is 7."
+}

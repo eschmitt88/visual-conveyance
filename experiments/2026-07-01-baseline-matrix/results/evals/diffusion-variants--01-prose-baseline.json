@@ -1,0 +1,49 @@
+{
+  "testcase": "diffusion-variants",
+  "approach": "01-prose-baseline",
+  "rubric_version": 1,
+  "glance_takeaway": "This page explains how diffusion-model image generators work: they learn to reverse a fixed process that gradually destroys images with noise, so every generated image starts from pure random noise rather than a stored photo. The many variants (DDIM, latent diffusion, distillation, flow matching) mostly exist to make generation cheaper/faster - cutting ~1000 steps down to as few as 1-4 - and settings like CFG (~7.5) trade prompt adherence against diversity and compute. It is a text-heavy explainer article; in ~10 seconds a reader gets the headline idea from the bolded lede but would not absorb the numeric details.",
+  "scores": {
+    "glance_comprehension": 5.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.0,
+    "visual_craft": 5.5,
+    "density_fit": 7.0,
+    "overall": 7.5
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "'Destroy carefully' section: fixed forward noising, learned reverse 'one small step', generation = 'sample a fresh image of pure random noise and apply the learned denoising step repeatedly'"},
+    "F2": {"status": "conveyed", "note": "'about T = 1000 steps in the original DDPM formulation, following a predefined noise schedule ... statistically indistinguishable from pure static'"},
+    "F3": {"status": "conveyed", "note": "'Three output targets are common and mathematically interchangeable': noise prediction (eps), score prediction ('gradient of the log-probability density'), velocity ('a defined mixture of image and noise'); prompt representation as extra input"},
+    "F4": {"status": "conveyed", "note": "'Training is remarkably simple': random timestep, 'add the corresponding noise in one shot (a closed-form formula)', 'plain mean-squared error', 'No adversarial game as in GANs'"},
+    "F5": {"status": "conveyed", "note": "'~1000 sequential forward passes per image, unparallelizable because each step depends on the previous one'; 'Read everything below as one long answer to ... how do we take fewer steps?'"},
+    "F6": {"status": "conveyed", "note": "DDIM section: 'same trained network, unchanged', 'deterministic' sampler, '20-50 steps ... typical practical range, with only modest quality loss'"},
+    "F7": {"status": "conveyed", "note": "'Determinism also makes noise-to-image a well-defined function, so you can invert an image back to its noise (useful for editing) and interpolate between images'"},
+    "F8": {"status": "conveyed", "note": "Score/ODE section: forward as SDE, 'random reverse-time SDE ... or a fully deterministic probability flow ODE; DDIM is essentially a discretization of that ODE', DPM-Solver '~10-20 steps with no retraining'"},
+    "F9": {"status": "conveyed", "note": "'The entire diffusion process ... runs in latent space' of a 'separately trained variational autoencoder (VAE)'; 'decode the final clean latent through the VAE decoder in one single pass'"},
+    "F10": {"status": "conveyed", "note": "'512 x 512 x 3 = 786,432 numbers ... downsamples 8x ... 64x64 latent with 4 channels = 16,384 numbers - roughly 48x fewer values ... made Stable-Diffusion-class models run on consumer GPUs'"},
+    "F11": {"status": "conveyed", "note": "'prompt is randomly dropped for ~10-20% of examples', 'runs the network twice' per step, formula 'guided = unconditional + s x (conditional - unconditional)', 'doubles the network evaluations per step'"},
+    "F12": {"status": "conveyed", "note": "'s = 1 means no guidance; s ~= 7.5 is a common default'; callout: 'pushed too far (roughly s > 12-15 in classic SD) produces oversaturated colors and burned-in artifacts', adherence-vs-diversity"},
+    "F13": {"status": "conveyed", "note": "Progressive distillation halving (1000 -> 500 -> ... -> 4), consistency models 'any noisy point on a trajectory maps directly to the same clean endpoint', 1-4 steps, 'trade some quality and diversity for speed'"},
+    "F14": {"status": "conveyed", "note": "'Flow matching trains a network to predict a velocity field'; rectified flow = straight lines; 'a reframing that generalizes, not a rival mechanism'; 'Stable Diffusion 3 and Flux-class models are trained this way'"},
+    "F15": {"status": "conveyed", "note": "'Two things people get wrong' callout: not from a photograph, images not stored in the model, memorization noted as 'real but exceptional ... not the mechanism', image-to-image called out as the explicit exception"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Perfect factual coverage: all 15 key facts conveyed with correct numbers (1000/20-50/10-20/1-4 steps, 48x, 786432 vs 16384, s~=7.5, 10-20% prompt drop) and no overselling",
+    "Bolded executive lede compresses the core mechanism and the why-variants story into the first paragraph, so the single most important takeaway (T1) survives a glance",
+    "Honest caveats throughout: memorization exception, VAE quality ceiling, distillation quality/diversity cost, CFG oversaturation beyond s>12-15",
+    "'Variants at a glance' table is the one real visual encoding and it earns its place - the step-count ladder is findable and comparable",
+    "Clean typography, working dark mode, callout boxes visually separate misconception-debunking from the main thread"
+  ],
+  "weaknesses": [
+    "Almost nothing is conveyed visually: no diagram of the forward/reverse process, no picture of the noising progression, no latent-space pipeline sketch - every concept must be read out of dense serif paragraphs",
+    "At a 10-second glance only the bold lede lands; T2's step ladder, T3's compression story, and T4's guidance mechanism are buried in an unbolded run-on sentence and long body paragraphs",
+    "The summary table arrives at the very bottom, after ~1800 words; a skimmer never reaches the page's best at-a-glance artifact",
+    "No table of contents or anchor links; wayfinding relies entirely on scrolling past uniform-looking h2 sections",
+    "Paragraphs routinely run 6-10 lines with multiple numeric claims each, taxing for the stated non-ML audience on a first pass"
+  ],
+  "evaluator_notes": "A very strong prose explainer and a weak visual presentation. Accuracy is a genuine 10: every fact F1-F15 is present, precise, and correctly hedged, which is rare. But the page communicates almost exclusively through reading effort; the glance channel carries only the bolded lede, and the only graphic device (the variants table) is placed last. Overall = 0.35*10.0 + 0.30*5.5 + 0.15*7.5 + 0.10*7.0 + 0.10*5.5 = 7.525 -> 7.5."
+}
