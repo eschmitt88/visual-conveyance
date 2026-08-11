@@ -1,0 +1,45 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "09-motion-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "This is an architecture map of 'meridian', a self-hosted read-later/RSS service with ~13,710 lines of backend Python. The core message is that data flows one way: an ingest pipeline (scheduler -> queue -> fetcher -> extractor -> dedup) writes into a single SQLite file owned solely by store/, and an HTTP API, a vanilla-JS web reader, and a CLI read it back out. It also flags hotspots -- extractor.py is the biggest/riskiest file, there is exactly one layering violation, the web reader has no tests -- and tells a newcomer their first change goes in pipeline/sources/ or api/routes.py, never store/ or queue/.",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 7.5,
+    "visual_craft": 8.5,
+    "density_fit": 8.0,
+    "overall": 8.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "All six packages appear as boxes (pipeline/, queue/, store/, api/, render/, cli/) plus 'web/ -- vanilla-JS reader ... no framework, no build step'."},
+    "F2": {"status": "conveyed", "note": "Top-row arrows scheduler -> queue -> fetcher -> extractor -> dedup -> store; store box: 'triggers keep the FTS index in sync'. Caption 2: 'schedule -> fetch -> extract -> dedup -> store'. Queue insertion is consistent extra detail, not a reordering."},
+    "F3": {"status": "conveyed", "note": "'writer.py . 610 LOC -- ALL writes live here', 'reader.py ... reads -> frozen dataclasses', rule 1 'only store/writer.py writes the DB'."},
+    "F4": {"status": "conveyed", "note": "'extractor.py -- pure ... no network . disk . DB . clock'; rule 2 'extractor is pure -- a property test replays 1,400 fixture pages in CI'."},
+    "F5": {"status": "conveyed", "note": "Red callout: 'extractor.py line 41 imports clean_html() from render/sanitize -- a sideways pipeline -> render edge (since v0.8) ... issue #214'."},
+    "F6": {"status": "conveyed", "note": "'layering: store/ imports nothing; nothing imports api/ or cli/' in the rules box."},
+    "F7": {"status": "conveyed", "note": "'1,140 LOC -- largest file in the repo . 14 site heuristics' on the extractor box."},
+    "F8": {"status": "conveyed", "note": "Subtitle '13,710 lines of backend Python'; header 'pipeline/ ... 4,180 LOC ... largest module'."},
+    "F9": {"status": "conveyed", "note": "Footer strip 'backend 13,710 LOC at 77% line coverage . frontend 0%'; store 91% cov, cli/ 41% cov, web/ '0 automated tests -- no JS harness at all'."},
+    "F10": {"status": "conveyed", "note": "'412 tests -- 348 unit + 64 integration . ~41 s' bottom strip."},
+    "F11": {"status": "conveyed", "note": "dedup.py box: '64-bit simhash . Hamming <= 3 => dup . ~7% of items dropped'."},
+    "F12": {"status": "conveyed", "note": "'add a source type -- the 4-file recipe' lists sources/base.py, sources/__init__.py, store/migrations/, cli/commands/add.py exactly."},
+    "F13": {"status": "conveyed", "note": "queue/ box: 'no broker . jobs table in SQLite . 8 workers . depth 30-60 . alert @ 500'; amber note 'jobs table = a table in the same SQLite file'."},
+    "F14": {"status": "conveyed", "note": "'GET /articles/{id} -- p50 28 ms (store 6 + template 14 + annotations 8)' with green store->render->api arrows."},
+    "F15": {"status": "conveyed", "note": "'schema.sql -- 9 tables + articles_fts (FTS5)' and 'triggers keep the FTS index in sync -- Python never writes it'; rule 3 'the index can never drift'."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "None functionally. Minor: the red warning text '1,140 LOC -- largest file in the repo' runs to the very edge of the extractor's red outline; a few dashed wires cross other edges in the mid-canvas, adding slight visual noise. No-JS fallback (static final frame + ordered caption list) and prefers-reduced-motion are handled correctly.",
+  "strengths": [
+    "Perfect fact audit: all 15 ground-truth facts are present and numerically exact, including the negative facts (layering violation, 0% frontend tests, 41% cli coverage) which are given prominent red treatment rather than sanded off.",
+    "The above-the-fold frame carries all four critical takeaways at once: headline/subtitle state the shape, red outlines mark the hotspot, the rules box states the invariants, and a bold bottom caption states exactly where first changes go.",
+    "Color legend is bound to meaning (write path / store hub / read path / caution) and used consistently across boxes, arrows, and annotations, so the one-way flow is readable without tracing every edge."
+  ],
+  "weaknesses": [
+    "Wayfinding within one large SVG canvas is weaker than sectioned prose: there are no headings to scan or anchor to, so re-finding a specific number means visually re-scanning the whole diagram; the step dots help only if the reader discovers the JS controls.",
+    "Very high text density at small (12-12.5 px) sizes above the fold; a 10-second glance yields the headline takeaways but the mid-canvas annotations (e.g. the amber jobs-table note, the p50 dequeue label) compete for attention.",
+    "The build-up animation is the approach's namesake feature but is invisible in the default final-frame state; a reader who never presses 'replay the build-up' gets no benefit from the 7-step narrative captions."
+  ],
+  "evaluator_notes": "Glance pass recorded before reading key_facts, per rubric. All four takeaways T1-T4 substantially landed from the glance alone (T4 partially: single-writer and layering were explicit in my takeaway; pure-extractor and trigger-FTS were not), hence 8.5 rather than 10. Accuracy is mechanically 10 x 15/15; no fact was distorted or contradicted -- the inserted queue/ stage in the pipeline row is consistent with F13 and does not alter F2's order. Overall = 0.35*10.0 + 0.30*8.5 + 0.15*8.5 + 0.10*7.5 + 0.10*8.5 = 8.925 -> 8.9. density_fit reported but excluded from overall per rubric."
+}

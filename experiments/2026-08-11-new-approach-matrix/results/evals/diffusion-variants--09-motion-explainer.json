@@ -1,0 +1,45 @@
+{
+  "testcase": "diffusion-variants",
+  "approach": "09-motion-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "This page explains how Stable-Diffusion-class image generators work: a fixed forward process destroys an image into pure noise over ~1000 small steps, and a learned network (U-Net/DiT trained to predict the added noise) reverses it one step at a time, so generation starts from fresh random noise and produces a new image that never existed. The main message is that the zoo of variants — DDIM, ODE solvers, flow matching, distillation, latent diffusion, CFG — mostly exists to answer one question: how do we take fewer steps (from ~1000 down to as few as 1-4), with latent diffusion making each step ~48x cheaper and CFG controlling the prompt's pull. It closes by rebutting two myths: no training images are stored, and generation starts from pure noise, not a real photo.",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.5,
+    "visual_craft": 6.0,
+    "density_fit": 6.5,
+    "overall": 8.5
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "'FORWARD — fixed noising, no learning' / 'REVERSE — learned · undo one small step at a time' / 'generation starts HERE — fresh random noise'"},
+    "F2": {"status": "conveyed", "note": "'predefined noise schedule · T = 1000 small steps'; 't = 1000 — pure noise (TV static)' ('Gaussian' itself not named, but meaning intact)"},
+    "F3": {"status": "conveyed", "note": "'input: noisy image + timestep t (+ prompt embedding) → output: the added noise ε' plus banner 'ε-, score- and velocity-prediction describe one learned quantity'"},
+    "F4": {"status": "conveyed", "note": "'trained by noise-guessing with plain MSE — stable & scalable; no GAN-style adversarial balance' (the one-shot closed-form noising / random-timestep detail is omitted)"},
+    "F5": {"status": "conveyed", "note": "'~1000 sequential full passes ≈ a minute per image (2020 GPU)'; 'steps can't be parallelized'; caption 3: 'the cost every variant attacks'"},
+    "F6": {"status": "conveyed", "note": "'DDIM 20-50 · same trained model; deterministic'; caption 4 notes 'trading some quality'"},
+    "F7": {"status": "conveyed", "note": "'deterministic (invert & interpolate)' — present and correct but extremely terse; mechanism (noise→image as well-defined function) left implicit"},
+    "F8": {"status": "conveyed", "note": "'ODE solvers (DPM-Solver++) 10-20 · sampling = solving an ODE → better numerics, no retraining'; banner: 'DDIM discretizes the probability-flow ODE' (reverse-SDE stochastic alternative not mentioned)"},
+    "F9": {"status": "conveyed", "note": "Latent panel: VAE encoder → 'the whole noise ↔ denoise loop runs in here' → 'VAE decoder — decode once'"},
+    "F10": {"status": "conveyed", "note": "'pixels: 512×512×3 = 786,432 numbers' → '8× per side' → 'latent: 64×64×4 = 16,384 · ≈48× fewer'; 'this is what put Stable-Diffusion-class models on consumer GPUs'"},
+    "F11": {"status": "conveyed", "note": "'guided = uncond + s · (cond − uncond)'; 'trained by dropping the prompt ~10-20% of the time (one net, both modes)'; 'each step runs the network twice (with / without prompt) — 2× the cost'"},
+    "F12": {"status": "conveyed", "note": "'s = 1: no guidance · s ≈ 7.5: common SD default'; 'higher s → follows prompt more … less diverse'; 'pushed past s ≈ 12-15 (classic SD): oversaturated, burned-in artifacts'"},
+    "F13": {"status": "conveyed", "note": "'distilled / consistency / LCM 1-4 · retrained for big jumps (student imitates teacher); fastest; slightly softer, less varied' (consistency any-point→endpoint detail omitted)"},
+    "F14": {"status": "conveyed", "note": "'rectified flow / flow matching … retrained: straight paths (SD3 & Flux)' + curved-vs-straight mini-diagram 'straight → fewer solver steps'; banner: 'flow matching (with Gaussian paths) recovers it … not competing technologies'"},
+    "F15": {"status": "conveyed", "note": "Banner: '✗ it collages a database — no training images are stored or consulted … (rare near-duplicates … heavily repeated training images)'; '✗ it denoises a real photo — text-to-image starts from pure synthetic noise; image-to-image / inpainting start from your image only when you supply one'"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "Not broken, but several text collisions/clipping in the crowded middle band of the static final frame: 'above ~50 returns diminish' runs under the LATENT DIFFUSION heading; 'the everyday steps slider' is clipped by the latent pixel-grid square; 'no retraining' collides with the curved/straight path labels ('curved (Gaussian noising)'); 'less varied' abuts 'the VAE only compresses'; the straight-path arrow nearly strikes through the '~20-30' figure. Body annotation fonts run 8.5-10px, near the legibility floor.",
+  "strengths": [
+    "Exceptional factual fidelity: all 15 key facts land, most verbatim with the ground truth's concrete numbers (1000/20-50/10-20/1-4 steps, 786,432 -> 16,384 = 48x, s = 7.5, 10-20% prompt dropout), and caveats are kept (ticks 'indicative, not to scale', distillation 'slightly softer, less varied', VAE 'slight ceiling', memorization exception).",
+    "The headline + subhead state the entire thesis ('destroy carefully, learn to rebuild' ... 'how do we take fewer steps?'), so the glance alone delivers the core mechanism and the reason the variant zoo exists.",
+    "Honest, purposeful encodings: tick-density rows for step counts, a real vector-extrapolation diagram for CFG, a to-scale-feeling compression diagram for latent space, plus a 7-step animated build-up with captions and a no-JS caption-list fallback."
+  ],
+  "weaknesses": [
+    "Text collisions and clipping where the variant-zoo column meets the latent-diffusion column degrade legibility exactly where the page is densest; several annotations are 8.5-10px.",
+    "Density is near poster-level for the brief's non-ML audience: score/velocity parameterization, 'invert & interpolate', and the ODE view are compressed to parentheticals a newcomer cannot unpack without the animation.",
+    "Everything lives in one SVG frame; without playing the build-up there is no reading order guidance beyond spatial layout, and there are no anchors for returning to a specific subsection."
+  ],
+  "evaluator_notes": "Motion-explainer whose default markup is the final frame; JS adds a 7-step build-up (dots, keyboard, reduced-motion support). full.png equals glance.png since the page is single-screen, so the deep read leaned on index.html. Accuracy is mechanically 10.0 (15/15 conveyed) — no distortions or contradictions found; F4/F7/F8/F13 are conveyed in compressed form with sub-clauses omitted (noted per fact). The page even adds correct extras ('~20-30' for rectified flow, DDIM as everyday steps slider). Main deductions are craft (overlap/clipping, tiny type) and density fit for the stated audience. Glance scored 8.5 (T1-T3 fully in the recorded takeaway, T4's diversity-tradeoff clause missing). Overall per rubric weights: 0.35*10.0 + 0.30*8.5 + 0.15*7.5 + 0.10*7.5 + 0.10*6.0 = 8.525 -> 8.5."
+}

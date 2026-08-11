@@ -1,0 +1,48 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "09-motion-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "An incident post-mortem for INC-1194, a 4h17m partial API outage on June 24, 2026. A search-query change (leading-wildcard pattern forcing full scans of a 274M-row table) triggered it, and two latent weaknesses — autovacuum debt (38.1M dead tuples) and jitterless retries exhausting a shared connection pool — amplified a one-endpoint regression into a platform-wide SEV-1, worsened by slow detection (~68 min; alerts watched error rate, not latency). Impact: peak ~31% requests failing, ~362k failed, 2,312 orgs, ~$41,300 SLA credits, no data lost; three P0 fixes land Q3 2026 (latency SLO alerts, pool-saturation alerts/isolation, jittered retries), one per failure leg — remove any one leg and it's a degradation, not an outage.",
+  "scores": {
+    "glance_comprehension": 7.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.5,
+    "visual_craft": 8.5,
+    "density_fit": 8.0,
+    "overall": 8.5
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Outage node: 'SEV-1 — partial API outage / 4 h 17 m / 2026-06-24, 14:02 → 18:19 UTC (257 min)'."},
+    "F2": {"status": "conveyed", "note": "'peak 31.2% / avg 19.1% of requests failing; ≈362,000 of ≈1.9M requests failed'; timeline pins peak at 15:47."},
+    "F3": {"status": "conveyed", "note": "'p99 420ms → 28.4s' in outage node; 30s timeout / killed-as-5xx mechanism in cause cards. p50 85ms→2.9s omitted (omission, not distortion)."},
+    "F4": {"status": "conveyed", "note": "'2,312 orgs (24.4% of active) affected; ≈$41,300 SLA credits; no data lost — writes queued; 37,400 webhooks replayed by 19:05'. 216 contracts omitted."},
+    "F5": {"status": "conveyed", "note": "Card 1: PR #8841, leading wildcard, org scoping dropped, seq scan of all 274M rows, 0.4ms → 24–31s. EXPLAIN cost and tuples-read omitted."},
+    "F6": {"status": "conveyed", "note": "'Canary was green — its 2M-row table scans in ~180 ms.'"},
+    "F7": {"status": "conveyed", "note": "Card 2: Jun 22 backfill, 38.1M dead tuples, 12.2% bloat, under ≈54.9M autovacuum trigger; bar chart with threshold marker. Heap 190→213GB omitted."},
+    "F8": {"status": "conveyed", "note": "'Scans crossed 30s timeout → ~57% killed as 5xx' + 'even ones the timeout killed held a pooled DB connection for up to 30s'. ~26s bloat-free estimate omitted."},
+    "F9": {"status": "conveyed", "note": "'pgbouncer pool = 80 shared server connections', 'pool full at 15:12', '80/80 · queue peak 1,437', 'every pooled endpoint fails'. 160+ demand and 15:58 timing omitted."},
+    "F10": {"status": "conveyed", "note": "'Retries (1s fixed, ×3, no jitter/budget) drove 3,200 → 15,020 rpm (4.7×)'; timeline: '16:20 pool bump 80→200 backfires; reverted 16:31', 'pool pinned … queue drained 17:18'."},
+    "F11": {"status": "conveyed", "note": "Timeline band 'network hypothesis · 50 min' (positioned 14:20–15:10 to scale) and '14:11 first alert → 15:19 DB identified: 68 min'. Cloud-provider-advisory anchor omitted."},
+    "F12": {"status": "conveyed", "note": "'15:40 rollback abandoned — index dropped; rebuild ≈6h'; step 6: 'Rollback fails — the migration dropped the old index'. 16:05→21:48 rebuild timing omitted."},
+    "F13": {"status": "conveyed", "note": "'17:05 flag off — errors fall in minutes'; step 7: 'The feature flag stops the bleeding at 17:05'. 16:35 staging verification, 90-second flip, Jun 26 re-enable omitted."},
+    "F14": {"status": "conveyed", "note": "'VACUUM 17:12–17:50 — 38.1M dead tuples removed', '17:53 all SLOs met', '18:19 closed — 4h17m total'."},
+    "F15": {"status": "conveyed", "note": "'14:07 search p99 > 20s — no latency alert exists' + footnote 'Alerts watched error rate only · latency panels sampled 1/100 requests · deploy marker broken since Jun 10'. 2%/5min threshold omitted."},
+    "F16": {"status": "conveyed", "note": "P0 panel: three Q3 2026 fixes each mapped to a failure leg, plus 'Plus 3 P1 / 3 P2 items, incl. autovacuum tuning for 50M+ row tables, unbundling destructive migrations, and query-plan checks in CI.' Named owners omitted."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Exceptional encoding honesty: the bottom timeline is genuinely to scale (~4.24 px/min — every tick position matches its timestamp), duration bands (network hypothesis, pool pinned, VACUUM) are positioned correctly, and the one not-to-scale bar is explicitly labeled '(bars not to scale)'.",
+    "The causal structure is the layout: three numbered cause cards converge via colored arrows into the outage node, with a legend binding color to meaning (trigger/debt/amplification/mitigation) and each P0 fix cross-referenced to its failure leg.",
+    "Audience-fit glosses exactly as the brief requires: one-line italic explanations of dead tuples, autovacuum, and pgbouncer pooling sit inside the relevant cards.",
+    "Robust progressive build: 8-step motion with captions doubling as a visible, clickable ordered list; no-JS fallback renders the complete final frame; prefers-reduced-motion honored; all 16 key facts survive into a single static view."
+  ],
+  "weaknesses": [
+    "The rollback-impossible / feature-flag takeaway (T3) is carried only by small timeline labels and step captions — it did not register in the 10-second glance, unlike the other three takeaways which own visual real estate.",
+    "SVG text runs as small as 9.5px; the timeline annotations and footnote caveats are hard to read without zooming, and the whole page being one SVG limits skimmable headings.",
+    "Some depth is shaved off: p50 latency, EXPLAIN cost, the misdiagnosis anchors (cloud advisory), the 90-second flag flip, and named remediation owners are all absent; the blameless framing is implicit rather than stated.",
+    "Below-the-fold content is just the step-caption list repeating the diagram — a reader wanting the fuller narrative (e.g. why the pool bump backfired) has nowhere to go."
+  ],
+  "evaluator_notes": "Accuracy is formulaic: 16/16 facts conveyed in their core, 0 distorted, 0 contradicted → 10.0. Composite facts (F3, F4, F5, F13, F16) each omit sub-details but nothing meaning-altering; omissions are noted per fact. Glance scored from the recorded takeaway only: T1, T4 fully landed, T2 mostly (lag + wrong instrument, misdiagnosis story implicit), T3 missed → 7.5. Overall = 0.35*10 + 0.30*7.5 + 0.15*7.5 + 0.10*7.5 + 0.10*8.5 = 8.475 → 8.5. The final animation frame is the complete page, so the glance view and full view coincide — a deliberate strength of this design (nothing essential is hidden behind interaction)."
+}

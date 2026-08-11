@@ -1,0 +1,43 @@
+{
+  "testcase": "tradeoff-decision",
+  "approach": "08-editorial-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "Fernwick is choosing a production vector-search engine from four candidates. Two (pgnearest and Braid) fail hard must-have gates outright; the real choice is between self-hosted Hearth and managed Quiver, and the recommendation is conditional rather than a flat winner: at a 2026-10-01 checkpoint, if the PLAT-7 infra hire is signed and a 4-engineer on-call rotation is committed, Hearth becomes primary (~$1,400/mo at 10M vectors, cheaper at scale, in-VPC, low lock-in); otherwise Quiver is the fallback ($1,900 at 10M, $23,000 at 100M, near-zero ops). There's also a standing override sending them to Quiver if filtered traffic passes 60% or facet selectivity drops below ~2%, because Hearth's filtered recall has no margin.",
+  "scores": {
+    "glance_comprehension": 7.5,
+    "accuracy": 9.3,
+    "depth_comprehension": 8.0,
+    "structure_nav": 8.0,
+    "visual_craft": 7.5,
+    "density_fit": 8.5,
+    "overall": 8.3
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Gate footnote in fig 1: 'M1 p95 <=100 ms incl. filtered . M2 recall@10 >=0.92 / M3 filtered recall >=0.90 . M4 EU residency . M5 <=$2,500/mo @10M'"},
+    "F2": {"status": "conveyed", "note": "'today . 4.1M' on cost chart; timeline 'now . 4.1M vectors', 'mid-2027 ~8M', 'mid-2028 ~16M', '100M . a 4-5 year horizon'; caption 'corpus keeps doubling yearly'; 'live 30% filtered mix' + S1 'filter share has grown every quarter' (this last phrase is partially clipped in rendering)"},
+    "F3": {"status": "conveyed", "note": "Fig 1 caption: 'frozen 10M-vector snapshot, 48 h of production queries replayed at 120 QPS with the live 30% filtered mix'; 'June 2026 bakeoff quotes' in fig 3 caption. Two-week duration, identical-hardware detail, and brute-force ground truth are omitted but nothing is misstated."},
+    "F4": {"status": "absent", "note": "Only Braid's 12 ms p95 appears (fig 2 caption); Quiver 18 ms, Hearth 41 ms, pgnearest 95 ms unfiltered latencies are nowhere on the page."},
+    "F5": {"status": "conveyed", "note": "pgnearest '0.89 (floor 0.92)' in fig 1, Braid 0.98 in fig 2 caption, and 'both survivors pass all five gates' establishes only pgnearest is below floor; Quiver 0.97 / Hearth 0.94 unfiltered values omitted."},
+    "F6": {"status": "conveyed", "note": "Fig 1: 'x M1 - 110 ms p95 filtered (limit 100)' and 'x M2 - recall@10 0.89 (floor 0.92)' on the pgnearest branch."},
+    "F7": {"status": "conveyed", "note": "Fig 1: 'x M3 - filtered recall 0.71 @5% sel. (floor 0.90) / structural: post-hoc filtering, index blind to metadata'; fig 2 caption: 'Braid topped the charts (12 ms p95, 0.98 recall@10) and still fell at the filter gate'."},
+    "F8": {"status": "conveyed", "note": "Fig 2 rows: Hearth '0.90 - at the floor', '0.86 - below floor' vs Quiver 0.95 @1%; annotation 'Hearth passes M3 with zero margin'."},
+    "F9": {"status": "conveyed", "note": "Cost chart: Quiver $180 at 1M is the lowest point, Hearth '$520 . 3-node HA floor'; pgnearest/Braid 1M costs omitted (already-eliminated options)."},
+    "F10": {"status": "conveyed", "note": "Fig 2 rows 4-5 and fig 3: $1,400 vs $1,900 @10M; $6,800 vs $23,000 @100M, '3.4x less'. Unvalidated estimates for eliminated options omitted."},
+    "F11": {"status": "conveyed", "note": "Chart markers 'infra crossover ~3M' (with 'today . 4.1M' past it) and 'labor-adjusted crossover ~30M . ~2029'; annotation '~0.2 FTE steady-state is ~$2,800/mo of loaded engineer time'."},
+    "F12": {"status": "conveyed", "note": "Fig 2 row 3: '~0 FTE . vendor on-call' vs '~0.2 FTE + >=4-eng rotation'; checkpoint box 'req approved . not yet filled' (PLAT-7). Omits 0.5 FTE first-quarter ramp and the 99.9% SLA figure."},
+    "F13": {"status": "conveyed", "note": "Fig 2 row 6: 'high . in-VPC never' vs 'low . in-VPC (check)'; fig 4 caption 'standing ~3-engineer-week migration budget'. Proprietary-DSL detail and 2027 enterprise-contract risk omitted."},
+    "F14": {"status": "conveyed", "note": "Fig 1 checkpoint box + branches ('both hold' -> Hearth primary, 'either fails' -> Quiver fallback, 'mandatory exit plan', 're-evaluate at 30M vectors or first renewal'); fig 4 caption names the SearchIndex adapter, quarterly export drill into a scratch Hearth cluster, and ~3-engineer-week budget."},
+    "F15": {"status": "conveyed", "note": "Fig 1 annotation 'Standing override: if filtered queries pass 60% of traffic, or facet selectivity drops below ~2%, it's Quiver even if the hire lands'; fig 4 timeline shows 2026-10-01 headcount checkpoint and 2027-01-15 full review."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "Minor text clipping in the rendered screenshots: fig 1's 'both hold' branch label is partially covered by the Hearth-primary box (reads 'both hol'), 're-evaluate at 30M vectors or first renewal' is truncated to 'renewa' at the figure edge, and fig 4's S1 trigger line is cut off at the right ('filter share has gro'). All content is intact in the HTML text; nothing is structurally broken.",
+  "strengths": [
+    "The glance view alone delivers the conditional recommendation, the elimination logic, and the standing override - the single fig-1 flow diagram encodes gate, checkpoint, both branches, and the flip trigger, so the hardest structural content lands in seconds.",
+    "Honest, well-caveated encodings: the cost chart labels its log axes, marks 'positions approximate, figures exact', explicitly excludes ops labor with a note, and the zero-margin filtered-recall caveat is called out twice."
+  ],
+  "weaknesses": [
+    "The raw benchmark table is dropped: survivor latencies (Quiver 18 ms, Hearth 41 ms) and unfiltered recall for the survivors never appear, so F4 is absent and a reader cannot answer 'how fast are the two finalists?'",
+    "Several SVG text labels overflow or collide at the rendered width ('both hold', 're-evaluate...renewal', the S1 trigger line), clipping exactly the kind of load-bearing marginal text this editorial style relies on."
+  ],
+  "evaluator_notes": "14/15 facts conveyed, 1 absent, 0 distorted, 0 contradicted -> accuracy = 10*14/15 = 9.3. Glance pass captured T2 fully, T1 substantially, and fragments of T3/T4 (Hearth cheaper at scale, Braid eliminated) without the inversion story or the 'fastest option fails' framing -> 7.5. The page answers both anticipated attacks from brief.md ('the SaaS is cheaper' via the crossover annotation; 'the library benchmarks best' via the fig 2 caption). Density fits the time-short technical audience; the recall@10/selectivity gloss serves non-experts. Overall = 0.35*9.3 + 0.30*7.5 + 0.15*8.0 + 0.10*8.0 + 0.10*7.5 = 8.3."
+}

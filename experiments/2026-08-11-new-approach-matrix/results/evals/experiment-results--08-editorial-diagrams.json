@@ -1,0 +1,43 @@
+{
+  "testcase": "experiment-results",
+  "approach": "08-editorial-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "This is a final readout of an onboarding-redesign A/B test ('Pathways', ONB-2026-014) with 184,204 signups over six weeks. The redesign did not win overall — the blended +0.8pp effect on trial-to-paid conversion is inconclusive (CI straddles zero) — because a big mobile-web win (+4.2pp, significant) and an iOS loss (−1.9pp, significant) cancel out, with Android flat. The recommendation is to ship it narrowly on mobile-web and fix iOS; there is also a hint that early weeks overstated the new version due to novelty decay.",
+  "scores": {
+    "glance_comprehension": 9.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.5,
+    "visual_craft": 7.5,
+    "density_fit": 8.5,
+    "overall": 9.1
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Forest plot label '+0.8pp' + figcaption defines trial-to-paid ('first payment succeeds within 14 days'); absolute rates 11.4%/12.2% are omitted but the delta and metric are correct."},
+    "F2": {"status": "conveyed", "note": "'+0.8pp · CI [−0.3, +1.9] · p = 0.16' with open marker legend 'straddles 0 — inconclusive' and annotation 'the honest overall verdict is can't tell'."},
+    "F3": {"status": "conveyed", "note": "Meta line '184,204 randomized · 13,249 trial starters'; forest plot 'n 6,602 / 6,647'; per-arm randomized counts not shown but SRM-clean note covers the 50/50 integrity."},
+    "F4": {"status": "conveyed", "note": "Figcaption: 'from an experiment powered only for ±1.55pp overall'."},
+    "F5": {"status": "conveyed", "note": "Meta 'platform subgroups pre-registered'; decision figcaption 'the single pre-registered subgroup'."},
+    "F6": {"status": "conveyed", "note": "'+4.2pp · CI [+2.1, +6.3] · p < 0.0001' in accent with filled marker; base rates 13.9%/18.1% omitted; Bonferroni survival implicit via p < 0.0001."},
+    "F7": {"status": "conveyed", "note": "'−1.9pp · CI [−3.6, −0.2] · p = 0.027'; decision figcaption states it does not survive Bonferroni (α = 0.0167) yet is credible via pre-registration + mechanism."},
+    "F8": {"status": "conveyed", "note": "'+0.1pp · CI [−1.7, +1.9] · p = 0.92' with open (inconclusive) marker."},
+    "F9": {"status": "conveyed", "note": "Standfirst 'the blended number hides both' + figcaption 'a strong win and a real loss averaging each other out, not a modest win everywhere'."},
+    "F10": {"status": "conveyed", "note": "Line chart labels +2.9, +1.5, +0.6, 0.0, −0.4, +0.1 for wk 1–6; heading 'Early weeks overstated B — novelty decay'."},
+    "F11": {"status": "conveyed", "note": "Annotation 'weeks 4–6 (exploratory pooled): mobile-web still +3.8pp, iOS still −2.2pp — the split outlives the novelty'; repeated in the decision table's Weeks 4–6 column."},
+    "F12": {"status": "conveyed", "note": "Decision figcaption: retention flat '+0.2pp, CI [−0.2, +0.6]' and '+12% support-ticket blip in weeks 1–2 resolved'; absolute 31.2%/31.4% omitted."},
+    "F13": {"status": "conveyed", "note": "Notes: 'time-to-first-lesson fell 38 s (CI [−45, −31])' and 'trial-start rate flat (7.17% vs 7.22%), so the trial-starter denominator is sound'; absolute 292s/254s omitted."},
+    "F14": {"status": "conveyed", "note": "Bar chart: iOS 8.1% → 12.7%, mobile-web 3.2% → 3.4%, Android 5.0% → 5.6%, with the OS-dialog mechanism annotation."},
+    "F15": {"status": "conveyed", "note": "Decision table: Ship mobile-web with 5% holdback; Do not ship iOS (fix experiment ONB-2026-019, prompt reverted to day-2 soft ask) or Android; notes say 'no sample-ratio mismatch' (SRM p-value itself omitted)."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "Forest-plot annotation clipped at the right SVG viewBox edge: 'overall verdict is \"can't tell,\" not \"B won\"' renders as '... not \"i' in both glance.png and full.png (text x=568 overruns the 832-unit viewBox). The weeks 4-6 annotation also runs close to the figure edge. Everything else renders cleanly.",
+  "strengths": [
+    "The forest plot's open-vs-filled marker encoding makes 'CI straddles zero' visually distinct from significant effects — exactly the uncertainty-at-a-glance requirement in the brief — and headline + standfirst land the split, the non-win, and the narrow decision within seconds.",
+    "Exceptional fact retention: all 15 key facts survive with correct numbers, direction, and significance status, including the hard-to-keep caveats (±1.55pp powering, Bonferroni hedge, exploratory funnel-data confound, 'don't cite the week-2 interim')."
+  ],
+  "weaknesses": [
+    "The most rhetorically important annotation on the page — the 'can't tell, not B won' callout on the forest plot — is truncated by the SVG viewBox, so its punchline is literally cut off.",
+    "Absolute conversion levels are never shown (11.4% vs 12.2%, mobile-web 13.9% -> 18.1%, retention 31.2%/31.4%), so a PM cannot gauge relative magnitude or recompute anything from base rates."
+  ],
+  "evaluator_notes": "Editorial single-column layout with three hand-built SVG figures (forest plot, decay line, grouped bars) and a decision table. Encodings are honest: consistent 40px-per-pp scale in the forest plot, zero lines marked, significance encoded by marker fill rather than color alone. Density is high but well matched to a stats-literate PM; jargon (Bonferroni, SRM) is glossed inline. Accuracy scored 10.0 by formula (15 conveyed, 0 distorted/contradicted); several facts omit absolute base rates, which is noted per-fact but does not constitute distortion. Visual craft held down by the clipped annotation, an avoidable layout bug in an otherwise disciplined page. Overall = 0.35*10.0 + 0.30*9.0 + 0.15*8.5 + 0.10*8.5 + 0.10*7.5 = 9.075 -> 9.1."
+}

@@ -1,0 +1,45 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "08-editorial-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "The page describes the architecture of a codebase called 'meridian': a one-way ingest pipeline (scheduler -> job queue -> fetcher -> extractor -> dedup -> store) that writes into a single 1.8 GB SQLite file, read back out only through a 31-endpoint HTTP API consumed by a vanilla-JS web reader and a CLI - about 13,710 lines of backend Python with no external broker, cache, or database server. The store/ module is highlighted as the only code touching SQLite, the extractor is flagged as the scary largest file (1,140 LOC, 14 site-specific heuristics), and articles flow one way with no backdoor reads; a second section promises import layering 'and the one break'.",
+  "scores": {
+    "glance_comprehension": 7.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.0,
+    "visual_craft": 7.5,
+    "density_fit": 8.5,
+    "overall": 8.4
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "All six packages appear as boxes across figs 1-2 (pipeline/, api/, cli/, queue/, render/, store/) plus 'vanilla-JS web reader' in the standfirst and 'web/ frontend 3,280 lines' in fig 3; 'no build step' is not stated but nothing contradicts it."},
+    "F2": {"status": "conveyed", "note": "Fig 1 write path: Scheduler -> Job queue -> Fetcher -> Extractor -> Dedup -> store/, with 'FTS5 index updated by SQLite triggers only' inside the store box."},
+    "F3": {"status": "conveyed", "note": "Store box: 'the only module that touches SQLite', 'writer.py = every write / reader.py = every read'."},
+    "F4": {"status": "conveyed", "note": "Extractor box 'pure · p50 45 ms'; fig 2 caption: 'The extractor is otherwise pure - bytes in, Article out, no I/O - enforced by replaying 1,400 fixture pages on every CI run.'"},
+    "F5": {"status": "conveyed", "note": "Fig 2 accent arrow + annotation: 'the one break (since v0.8): extractor.py:41 imports clean_html() from render/ ... fix = issue #214' (names render/ and the display-sanitizer rather than sanitize.py explicitly)."},
+    "F6": {"status": "conveyed", "note": "Fig 2: store/ at the bottom, 'imports stdlib + sqlite3 only'; header line 'nothing imports api/ or cli/'."},
+    "F7": {"status": "conveyed", "note": "Fig 1 annotation: 'the scary one - the repo's largest file: 1,140 LOC, 14 site-specific heuristics' pointing at Extractor (pipeline/extractor.py)."},
+    "F8": {"status": "conveyed", "note": "Standfirst: '13,710 lines of backend Python'; pipeline/ shown at 4,180 LOC in figs 2 and 3, visibly the largest module."},
+    "F9": {"status": "conveyed", "note": "Fig 3: 77% overall reference line, store/ 91%, cli/ 41%, web/ frontend 0% with caption 'no test harness at all'."},
+    "F10": {"status": "conveyed", "note": "Fig 3 header: 'line coverage by module · 412 tests = 348 unit + 64 integration · full suite ~41 s'."},
+    "F11": {"status": "conveyed", "note": "Dedup box: 'simhash · ~7% dropped'. The 64-bit width and Hamming-distance <= 3 threshold are omitted, but what is present is correct."},
+    "F12": {"status": "conveyed", "note": "Section 04 'Add a source type' row lists exactly pipeline/sources/base.py, pipeline/sources/__init__.py, store/migrations/, cli/commands/add.py (+ a fixture-backed test), and calls it 'the exact 4-file recipe'."},
+    "F13": {"status": "conveyed", "note": "Fig 2 queue/: 'jobs table · no Redis/Celery'; fig 1: 'queue/ · 8 workers'; standfirst 'no external broker'. Typical depth 30-60 and the 500-job alert threshold are omitted."},
+    "F14": {"status": "conveyed", "note": "Fig 1 read path store -> Render (sanitize · template · merge highlights) -> API, labeled 'READ PATH · p50 28 ms'."},
+    "F15": {"status": "conveyed", "note": "Store box: 'FTS5 index updated by SQLite triggers only' (schema.sql is not named)."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "Minor: in figure 02 the right-hand 'the one break' annotation text is drawn across the vertical api->store routing rail, so the line runs through the italic text; fig 03's reader.js annotation crowds the cli/ bar. Legible but slightly untidy. Everything else renders cleanly in both crops.",
+  "strengths": [
+    "Exceptional factual fidelity: all 15 ground-truth facts land, with exact numbers (LOC, coverage, timings, test counts) copied verbatim and negative facts (0% web tests, copy-pasted auth, xfail purity tests) kept intact",
+    "The above-the-fold system diagram nails the shape takeaway in one picture - one-way write path, store as the accented hub, read-only paths back out - with the scary-extractor annotation already visible at a glance",
+    "Purposeful use of a single accent color: reserved for the store hub, the layering violation, and the 0% coverage bar, so the eye goes exactly to the load-bearing exceptions"
+  ],
+  "weaknesses": [
+    "The 'where changes start' takeaway (T2) is entirely below the fold - the glance gives a newcomer no hint that their first change lands in pipeline/sources/ or api/routes.py",
+    "Annotation placement is sloppy in two figures (text overlapping a routing rail in fig 02, crowding the cli/ bar in fig 03)",
+    "Some source specifics are silently dropped (64-bit simhash / Hamming <= 3, queue depth 30-60 with alert at 500, schema.sql as the trigger home) - correct but thinner than the source"
+  ],
+  "evaluator_notes": "Accuracy is formulaic: 15/15 conveyed -> 10.0; F11 and F13 convey their cores correctly but omit sub-details, noted above rather than downgraded since nothing present is imprecise. Glance scored from the recorded takeaway only: T1 fully, T3 mostly (violation link not yet visible), T4 partially (single-writer store, no-backdoor reads), T2 absent -> 7.0. Bar chart geometry was verified against the SVG (4 px per percentage point, consistent across all bars and the 77% reference line) - the encoding is honest. Overall = 0.35*10.0 + 0.30*7.0 + 0.15*8.5 + 0.10*8.0 + 0.10*7.5 = 8.4."
+}

@@ -1,5 +1,5 @@
 {
-  "run": "2026-07-01-baseline-matrix",
+  "run": "2026-08-11-new-approach-matrix",
   "rubric_version": 1,
   "testcases": [
     "codebase-structure",
@@ -16,7 +16,9 @@
     "04-layered-dashboard",
     "05-interactive-explainer",
     "06-visual-metaphor",
-    "07-scrolly-slides"
+    "07-scrolly-slides",
+    "08-editorial-diagrams",
+    "09-motion-explainer"
   ],
   "cells": [
     {
@@ -33,6 +35,7 @@
         "overall": 7.9
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -51,6 +54,7 @@
         "overall": 6.4
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -69,6 +73,7 @@
         "overall": 7.1
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -87,6 +92,7 @@
         "overall": 8.9
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -105,6 +111,7 @@
         "overall": 8.3
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -123,6 +130,7 @@
         "overall": 8.4
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -141,6 +149,45 @@
         "overall": 8.2
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "codebase-structure",
+      "approach": "08-editorial-diagrams",
+      "path": "codebase-structure/08-editorial-diagrams/index.html",
+      "ai_scores": {
+        "glance_comprehension": 7.0,
+        "accuracy": 10.0,
+        "depth_comprehension": 8.5,
+        "structure_nav": 8.0,
+        "visual_craft": 7.5,
+        "density_fit": 8.5,
+        "overall": 8.4
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "codebase-structure",
+      "approach": "09-motion-explainer",
+      "path": "codebase-structure/09-motion-explainer/index.html",
+      "ai_scores": {
+        "glance_comprehension": 8.5,
+        "accuracy": 10.0,
+        "depth_comprehension": 8.5,
+        "structure_nav": 7.5,
+        "visual_craft": 8.5,
+        "density_fit": 8.0,
+        "overall": 8.9
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -159,6 +206,7 @@
         "overall": 7.5
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -177,6 +225,7 @@
         "overall": 7.8
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -195,6 +244,7 @@
         "overall": 7.1
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -213,6 +263,7 @@
         "overall": 8.9
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -231,6 +282,7 @@
         "overall": 8.6
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -249,6 +301,7 @@
         "overall": 8.6
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -267,6 +320,45 @@
         "overall": 7.7
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "diffusion-variants",
+      "approach": "08-editorial-diagrams",
+      "path": "diffusion-variants/08-editorial-diagrams/index.html",
+      "ai_scores": {
+        "glance_comprehension": 6.0,
+        "accuracy": 8.7,
+        "depth_comprehension": 7.5,
+        "structure_nav": 7.5,
+        "visual_craft": 8.0,
+        "density_fit": 7.5,
+        "overall": 7.5
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "diffusion-variants",
+      "approach": "09-motion-explainer",
+      "path": "diffusion-variants/09-motion-explainer/index.html",
+      "ai_scores": {
+        "glance_comprehension": 8.5,
+        "accuracy": 10.0,
+        "depth_comprehension": 7.5,
+        "structure_nav": 7.5,
+        "visual_craft": 6.0,
+        "density_fit": 6.5,
+        "overall": 8.5
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -285,6 +377,7 @@
         "overall": 8.1
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -303,6 +396,7 @@
         "overall": 7.9
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -321,6 +415,7 @@
         "overall": 7.7
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -339,6 +434,7 @@
         "overall": 9.4
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -357,6 +453,7 @@
         "overall": 9.0
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -375,6 +472,7 @@
         "overall": 9.2
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -393,6 +491,45 @@
         "overall": 8.9
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "08-editorial-diagrams",
+      "path": "experiment-results/08-editorial-diagrams/index.html",
+      "ai_scores": {
+        "glance_comprehension": 9.0,
+        "accuracy": 10.0,
+        "depth_comprehension": 8.5,
+        "structure_nav": 8.5,
+        "visual_craft": 7.5,
+        "density_fit": 8.5,
+        "overall": 9.1
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "09-motion-explainer",
+      "path": "experiment-results/09-motion-explainer/index.html",
+      "ai_scores": {
+        "glance_comprehension": 9.5,
+        "accuracy": 9.3,
+        "depth_comprehension": 8.0,
+        "structure_nav": 7.5,
+        "visual_craft": 8.5,
+        "density_fit": 8.0,
+        "overall": 8.9
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -411,6 +548,7 @@
         "overall": 8.6
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -429,6 +567,7 @@
         "overall": 7.6
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -447,6 +586,7 @@
         "overall": 7.0
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -465,6 +605,7 @@
         "overall": 9.1
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -483,6 +624,7 @@
         "overall": 8.9
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -501,6 +643,7 @@
         "overall": 8.3
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -519,6 +662,45 @@
         "overall": 8.2
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "incident-analysis",
+      "approach": "08-editorial-diagrams",
+      "path": "incident-analysis/08-editorial-diagrams/index.html",
+      "ai_scores": {
+        "glance_comprehension": 8.0,
+        "accuracy": 10.0,
+        "depth_comprehension": 8.5,
+        "structure_nav": 8.5,
+        "visual_craft": 8.5,
+        "density_fit": 8.5,
+        "overall": 8.9
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "incident-analysis",
+      "approach": "09-motion-explainer",
+      "path": "incident-analysis/09-motion-explainer/index.html",
+      "ai_scores": {
+        "glance_comprehension": 7.5,
+        "accuracy": 10.0,
+        "depth_comprehension": 7.5,
+        "structure_nav": 7.5,
+        "visual_craft": 8.5,
+        "density_fit": 8.0,
+        "overall": 8.5
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -537,6 +719,7 @@
         "overall": 8.0
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -555,6 +738,7 @@
         "overall": 7.3
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -573,6 +757,7 @@
         "overall": 8.1
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -591,6 +776,7 @@
         "overall": 8.6
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -609,6 +795,7 @@
         "overall": 8.7
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -627,6 +814,7 @@
         "overall": 8.2
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -645,6 +833,45 @@
         "overall": 7.9
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "research-project",
+      "approach": "08-editorial-diagrams",
+      "path": "research-project/08-editorial-diagrams/index.html",
+      "ai_scores": {
+        "glance_comprehension": 8.0,
+        "accuracy": 9.3,
+        "depth_comprehension": 8.5,
+        "structure_nav": 8.0,
+        "visual_craft": 8.5,
+        "density_fit": 9.0,
+        "overall": 8.6
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "research-project",
+      "approach": "09-motion-explainer",
+      "path": "research-project/09-motion-explainer/index.html",
+      "ai_scores": {
+        "glance_comprehension": 8.5,
+        "accuracy": 9.3,
+        "depth_comprehension": 7.5,
+        "structure_nav": 7.0,
+        "visual_craft": 6.5,
+        "density_fit": 8.0,
+        "overall": 8.3
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -663,6 +890,7 @@
         "overall": 7.6
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -681,6 +909,7 @@
         "overall": 6.8
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -699,6 +928,7 @@
         "overall": 7.3
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -717,6 +947,7 @@
         "overall": 9.2
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -735,6 +966,7 @@
         "overall": 8.9
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -753,6 +985,7 @@
         "overall": 7.9
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -771,6 +1004,45 @@
         "overall": 8.5
       },
       "ai_evaluated": true,
+      "eval_run": "2026-07-01-baseline-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "08-editorial-diagrams",
+      "path": "tradeoff-decision/08-editorial-diagrams/index.html",
+      "ai_scores": {
+        "glance_comprehension": 7.5,
+        "accuracy": 9.3,
+        "depth_comprehension": 8.0,
+        "structure_nav": 8.0,
+        "visual_craft": 7.5,
+        "density_fit": 8.5,
+        "overall": 8.3
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "09-motion-explainer",
+      "path": "tradeoff-decision/09-motion-explainer/index.html",
+      "ai_scores": {
+        "glance_comprehension": 7.5,
+        "accuracy": 8.0,
+        "depth_comprehension": 7.5,
+        "structure_nav": 8.0,
+        "visual_craft": 7.0,
+        "density_fit": 8.0,
+        "overall": 7.7
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-11-new-approach-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null

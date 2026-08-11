@@ -1,0 +1,46 @@
+{
+  "testcase": "research-project",
+  "approach": "09-motion-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "A research project called 'murmur' ran six experiments (March-June 2026) testing whether near-free, physically-plausible reverb-flavoured audio augmentations beat spending the same budget on a bigger backbone for a small bird-call classifier (6,200 clips, 34 long-tailed species). Macro-F1 rose from a 0.612 no-aug baseline to 0.671 best (+0.059) with a reverb+noise+SpecAugment stack, while pitch/time stretch hurt (0.589); gains concentrate in common/mid species and the deep tail barely moves (Kirtland's Warbler -0.01). Verdict: partially supported - the 'cheaper than a bigger backbone' claim is asserted but untested, and next steps are class-conditional augmentation, a sampler-vs-aug ablation, and a backbone-fairness arm.",
+  "scores": {
+    "glance_comprehension": 8.5,
+    "accuracy": 9.3,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.0,
+    "visual_craft": 6.5,
+    "density_fit": 8.0,
+    "overall": 8.3
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Headline + framing: 'the bet is that physically-plausible augmentation beats spending the same budget on a bigger backbone'."},
+    "F2": {"status": "conveyed", "note": "'6,200 clips across 34 long-tailed species' in framing; clip format (5 s mono 32 kHz) and 128-mel features are absent."},
+    "F3": {"status": "absent", "note": "No mention of the 70/15/15 split or ~930 val/test clips anywhere on the page."},
+    "F4": {"status": "conveyed", "note": "'American Robin · common · 480 clips' and '11 species have <80 clips'; median ~120 and 8-species-52% details absent."},
+    "F5": {"status": "conveyed", "note": "'macro-F1 = unweighted mean F1 over all 34 species - the rare tail counts equally' plus 'seed noise ~ +/-0.006' band."},
+    "F6": {"status": "conveyed", "note": "Chart point '0.612 / 01 no-aug baseline' dated 2026-03-08, with dashed baseline reference line."},
+    "F7": {"status": "conveyed", "note": "'02 + light reverb 0.641' on chart (03-24); step list adds 'impulse-response reverb... +0.029'."},
+    "F8": {"status": "conveyed", "note": "'0.589 · 03 + pitch/time stretch' below the baseline line, dated 04-11; 'only +/-2 semitones tested'. Stretch range 0.9-1.1x absent."},
+    "F9": {"status": "conveyed", "note": "'0.643 · 04 + noise-mix (null)'; caption: 'only +0.002 over reverb alone - null, inside +/-0.006 seed noise'. SNR 5-20 dB range absent."},
+    "F10": {"status": "conveyed", "note": "Gold point '0.671 * best (+0.059)' (05-20); step 5 caption names reverb + noise mix + SpecAugment + partial balanced sampler."},
+    "F11": {"status": "conveyed", "note": "'0.663 · 06 heavy reverb / helps common classes only' (06-14); step 6: 'blurs short rare-class calls'. RT60 0.8-1.5 s detail absent."},
+    "F12": {"status": "conveyed", "note": "Step 3 caption: 'warping smears the spectral cues rare classes depend on'; the <50-real-clips anchoring detail is absent."},
+    "F13": {"status": "conveyed", "note": "Null reading stated exactly (+0.002, inside +/-0.006); the 'kept because it composes with SpecAugment' rationale is only implicit via the stack step."},
+    "F14": {"status": "conveyed", "note": "Recipe composition (small CNN control, reverb + noise + SpecAugment + partial sampler; pitch/heavy-reverb colored 'hurts -> cut back') is clear, but every setting (p=0.5, RT60 0.3-0.6 s, 5-20 dB, mask counts, sampler 0.5) is absent."},
+    "F15": {"status": "conveyed", "note": "Right panel gives all five species with exact baseline->best values incl. Kirtland's Warbler 0.34->0.33 (-0.01), plus 'decomposition: ~4.5 of the +5.9 points come from common & mid tiers'."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "In the default (final-frame) view, the step-7 panel title 'Where the +0.059 lives...' overlaps the gold '0.671 * best (+0.059)' label, garbling the headline number's annotation; left-chart annotations and the right panel's species labels nearly touch ('helps common classes only' vs 'Northern Cardinal' row). Prev/next control glyphs (U+23EE/23ED) render as tofu boxes. X-axis spaces the six experiment dates equally despite unequal intervals (minor; dates are labeled).",
+  "strengths": [
+    "Above-the-fold completeness: all four takeaways (partial support, the pitch/stretch regression, the stack + class-dependent reverb strength, class-conditional next step) are legible in a single glance frame, with the verdict box restating them.",
+    "Honest, verified encoding: chart positions match the data linearly on both panels; a seed-noise band, dashed baseline, and consistent color semantics (helps/hurts/null/best) make the dip, the null, and the regression visually explicit rather than smoothed over.",
+    "Caveats are foregrounded, not buried: 'H2 asserted, not shown', the sampler/augmentation confound, 'only +/-2 semitones tested', and the null-inside-noise reading all appear on the page.",
+    "Graceful degradation: with JS off the stepped captions fall back to a static ordered list, so the narrative survives as plain text."
+  ],
+  "weaknesses": [
+    "Text collision in the default final frame corrupts the label on the single most important number (0.671 best), and control glyphs render as missing-font boxes - avoidable static-layout QA misses.",
+    "The best recipe is named but not specified: no p=0.5, RT60 range, SNR range, mask counts, or sampler ratio anywhere, and dataset prep (split, clip format, features) is entirely absent - thin for a collaborator who wants to reproduce or extend.",
+    "Everything lives in one dense SVG scene; beyond the step-jump buttons there is no sectioning to relocate details, and content not in the scene simply does not exist on the page."
+  ],
+  "evaluator_notes": "Accuracy: 14 conveyed, 1 absent (F3), 0 distorted, 0 contradicted -> 10*14/15 = 9.3. Glance scored from recorded takeaway: T1, T2, T4 fully landed; T3 half (stack yes, class-dependent reverb strength no) -> 8.5. Overall = 0.35*9.3 + 0.30*8.5 + 0.15*7.5 + 0.10*7.0 + 0.10*6.5 = 8.3. The motion/stepper is additive but the page is judged mostly on its final frame, which is what glance.png and full.png show; the overlap bug exists precisely because the final frame stacks step-5 and step-7 annotations that were presumably designed to be read sequentially. Density fits the brief's technical-collaborator audience well; caveat fidelity is a clear true."
+}

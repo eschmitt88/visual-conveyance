@@ -1,0 +1,45 @@
+{
+  "testcase": "experiment-results",
+  "approach": "09-motion-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "This page is the final readout of a six-week onboarding A/B test ('Pathways', ~184,204 randomized signups). The headline message: the blended overall result is not significant, but the real story is a platform split — mobile-web credibly wins (+4.2pp), iOS credibly loses (-1.9pp, with the loss concentrated at a step-3 permission-prompt drop-off), Android is null — plus a novelty decay of the early effect over the six weeks. The verdict is narrow: ship mobile-web only (with a 5% holdback), do not ship iOS (fix and re-test), hold Android.",
+  "scores": {
+    "glance_comprehension": 9.5,
+    "accuracy": 9.3,
+    "depth_comprehension": 8.0,
+    "structure_nav": 7.5,
+    "visual_craft": 8.5,
+    "density_fit": 8.0,
+    "overall": 8.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Forest plot title 'Trial-to-paid conversion — Δ (B − A)' + 'Overall +0.8pp'; absolute rates 11.4%/12.2% are not shown, only the delta"},
+    "F2": {"status": "conveyed", "note": "'+0.8pp · CI [−0.3, +1.9] · p = 0.16' with boxed 'NOT SIGNIFICANT — read as \"can't tell\", not \"B won\"'"},
+    "F3": {"status": "conveyed", "note": "Header: 'Six weeks, 184,204 randomized signups'; per-arm split and the 13,249 trial-starter denominator are absent"},
+    "F4": {"status": "conveyed", "note": "'not powered to confirm effects < ≈1.55pp' under the overall row"},
+    "F5": {"status": "conveyed", "note": "'Pre-registered platform subgroups' on the plot; caption 2: 'Platform was the one pre-registered subgroup'"},
+    "F6": {"status": "conveyed", "note": "'Mobile-web +4.2pp · CI [+2.1, +6.3] · p < 0.0001'; caption 3: 'Mobile-web survives [Bonferroni] easily'; base rates 13.9%→18.1% absent"},
+    "F7": {"status": "conveyed", "note": "'iOS −1.9pp · CI [−3.6, −0.2] · p = 0.027' plus step-3 caveat 'does not survive Bonferroni (α = 0.0167) — pre-registered + mechanism ⇒ credible signal, not proof'"},
+    "F8": {"status": "conveyed", "note": "'Android +0.1pp · CI [−1.7, +1.9] · p = 0.92' drawn as straddles-zero style"},
+    "F9": {"status": "conveyed", "note": "'the blend averages a win with a loss'; caption 2: 'opposite effects partially cancel'"},
+    "F10": {"status": "conveyed", "note": "Weekly decay line labeled +2.9 (wk1) and +0.1 (wk6); plotted points pixel-check to +2.9/+1.5/+0.6/0.0/−0.4/+0.1; 'Early snapshots materially overstated B' and week-2 interim note"},
+    "F11": {"status": "conveyed", "note": "Ghost intervals on the forest plot: 'wks 4–6: still +3.8' (mobile-web) and 'wks 4–6: −2.2' (iOS); caption 5: 'The platform split is not novelty'"},
+    "F12": {"status": "conveyed", "note": "Guardrail panel: '7-day retention: flat — pass', '+0.2pp · CI [−0.2, +0.6]', 'tickets +12% wks 1–2, then normal'; absolute 31.2%/31.4% absent"},
+    "F13": {"status": "absent", "note": "Time-to-first-lesson −38s and the flat trial-start rate (unbiased denominator) appear nowhere on the page"},
+    "F14": {"status": "conveyed", "note": "Step-3 drop-off bars: iOS 8.1%→12.7% (highlighted), mobile-web 3.2%→3.4%, Android 5.0%→5.6%; 'the loss concentrates exactly at the changed step'"},
+    "F15": {"status": "conveyed", "note": "Verdict cards: MOBILE-WEB — SHIP (5% holdback), iOS — DO NOT SHIP ('fix & re-test: revert prompt to day-2 ask, ONB-2026-019'), ANDROID — HOLD; SRM/diagnostics-clean note absent"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none — static render shows the final frame by design (script sets first paint to step 8/8), so no-JS readers and screenshots see the complete diagram; animation is progressive enhancement",
+  "strengths": [
+    "All four required takeaways land from the glance alone: the above-the-fold view IS the whole page, with the not-significant verdict boxed inline next to the overall CI so the +0.8pp cannot be misread as a win",
+    "Exemplary caveat fidelity: Bonferroni failure on iOS framed as 'credible signal, not proof', underpowering note, weekly-CI caution, superseded week-2 interim, and the late-window iOS CI crossing zero are all visible",
+    "Honest, verified visual encoding: CI dash convention separates 'straddles 0' from credible effects, and the decay-line geometry matches the stated weekly values exactly"
+  ],
+  "weaknesses": [
+    "F13 (time-to-first-lesson −38s secondary win and the flat trial-start rate that certifies an unbiased denominator) is entirely omitted",
+    "No absolute conversion levels anywhere — only deltas; a PM cannot see that +4.2pp sits on a 13.9% base, nor the 13,249 trial-starter denominator or SRM check",
+    "Dense single-frame final state with 10.5px annotation text; in JS mode only one caption is visible at a time, so re-finding a specific caption's argument requires stepping through the deck"
+  ],
+  "evaluator_notes": "A single 1200x640 SVG that builds in 8 steps (forest plot -> platform morph -> Bonferroni caveat -> novelty decay -> late-window ghosts -> step-3 mechanism -> guardrail -> verdict), with per-step captions and keyboard/dot navigation. The storyboard order mirrors the argument structure of the brief almost one-to-one, and the design guards the brief's stated failure mode ('B won overall') three separate ways: the boxed NOT SIGNIFICANT callout, the dashed straddles-zero encoding, and the header sentence. Accuracy 10*14/15 = 9.3 (one absent, none distorted or contradicted). Overall = 0.35*9.3 + 0.30*9.5 + 0.15*8.0 + 0.10*7.5 + 0.10*8.5 = 8.9. Scored blind to the approach spec."
+}

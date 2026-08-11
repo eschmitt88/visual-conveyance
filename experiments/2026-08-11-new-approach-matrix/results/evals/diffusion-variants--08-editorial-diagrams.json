@@ -1,0 +1,45 @@
+{
+  "testcase": "diffusion-variants",
+  "approach": "08-editorial-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "This page explains how diffusion models generate images: every image starts as pure random noise, and a trained network reverses a fixed ~1000-step noising process one small step at a time — the forward noising involves no learning, only the reverse denoiser is trained, and the output is a brand-new image (training images aren't stored or consulted). The main message is that nearly all diffusion variants (DDPM and successors) exist to make those ~1000 slow steps fewer or cheaper — there's a quality-vs-speed 'steps slider'.",
+  "scores": {
+    "glance_comprehension": 6.0,
+    "accuracy": 8.7,
+    "depth_comprehension": 7.5,
+    "structure_nav": 7.5,
+    "visual_craft": 8.0,
+    "density_fit": 7.5,
+    "overall": 7.5
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Section 1 diagram + standfirst: 'Forward — fixed noising, no learning' / 'Reverse — learned denoising, one small step at a time' starting from pure noise."},
+    "F2": {"status": "conveyed", "note": "'T = 1000 steps · a predefined noise schedule'; caption: 'destroys a real image into pure Gaussian noise over about 1,000 steps'; t=1000 box labeled 'pure noise (TV static)'."},
+    "F3": {"status": "absent", "note": "Only the ε target appears ('a neural network predicts the added noise'); inputs (noisy image + timestep + prompt) never stated, and score/velocity parameterizations unnamed — caption 2's 'interconvertible training targets' is too oblique to teach this."},
+    "F4": {"status": "conveyed", "note": "Caption 1: 'trained only to undo one small step, by guessing the added noise under a simple mean-squared error' — though the random-timestep/closed-form noising and no-GAN contrast are omitted."},
+    "F5": {"status": "conveyed", "note": "Steps chart: 'DDPM (original) ~1000 · excellent quality · impractically slow'; standfirst: 'nearly every variant exists to make those steps fewer or cheaper'; sequential chaining implied by 'chaining those small steps backwards', not stated as non-parallelizable."},
+    "F6": {"status": "conveyed", "note": "'DDIM 20–50 · deterministic · the everyday range'; caption 2: 'DDIM reuses the unchanged DDPM network with fewer, deterministic steps'."},
+    "F7": {"status": "absent", "note": "Inversion and interpolation enabled by DDIM's determinism are nowhere on the page."},
+    "F8": {"status": "conveyed", "note": "'ODE solvers 10–20 · no retraining (DPM-Solver++)' conveys the practical claim; the SDE/probability-flow-ODE framing and DDIM-as-ODE-discretization are omitted."},
+    "F9": {"status": "conveyed", "note": "Section 3 pipeline: VAE encoder → 'denoising loop runs here' in latent space → VAE decoder 'one single pass'; caption: 'separately trained autoencoder'."},
+    "F10": {"status": "conveyed", "note": "Exact numbers on the diagram: '512×512×3, 786,432 numbers' → '64×64×4 = 16,384 · ≈48× fewer values'; caption: 'what put Stable-Diffusion-class models on consumer GPUs'."},
+    "F11": {"status": "conveyed", "note": "Formula 'guided = unconditional + s × (conditional − unconditional)' shown; caption 4: 'runs the network twice… doubles the true per-step cost; training randomly drops the prompt for ~10–20% of examples'."},
+    "F12": {"status": "conveyed", "note": "Number line: 's = 1 · no guidance', 's ≈ 7.5 common default', 's ≳ 12–15 · oversaturated colors, burned-in artifacts'; tradeoff labels low-s diversity vs high-s adherence."},
+    "F13": {"status": "conveyed", "note": "'Distilled / consistency 1–4 · fastest · mild quality & diversity cost'; caption 2: 'retrained to take big jumps' — the any-point-to-endpoint consistency mapping is not explained."},
+    "F14": {"status": "conveyed", "note": "'Rectified flow / flow matching ~20–30 · straight paths · SD3 / Flux'; caption 2: 'not competing technologies but one framework' — velocity-field prediction itself is not stated."},
+    "F15": {"status": "conveyed", "note": "Margin note: 'Generation starts here, from pure random noise — never from a photo (image-to-image is the explicit exception)'; caption 1: 'no training images are stored or consulted (rare near-duplication… exceptional failure mode, not the mechanism)'."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Quantitatively honest diagrams: the steps chart is a true log-scale axis with bars positioned exactly at their stated ranges (verified 20-50, 10-20, 1-4 against pixel coordinates), and the CFG number line places s=0/1/7.5/12-15 at correct linear positions",
+    "Very high fact density with precision — 13 of 15 ground-truth facts land, including exact latent-diffusion numbers (786,432 → 16,384, ≈48×) and the full CFG formula with drop rate and 2× cost",
+    "Caveats faithfully carried: memorization exception, img2img exception, VAE quality ceiling, quality/diversity cost of distillation, high-s artifact regime"
+  ],
+  "weaknesses": [
+    "Above-the-fold glance carries only the core mechanism (T1) — the steps-ladder chart, latent diffusion, and guidance (T2 details, T3, T4) all sit below the fold, capping glance comprehension",
+    "Training-side detail is thin: the three interconvertible parameterizations (ε/score/velocity), network inputs, closed-form one-shot noising, and the GAN contrast are absent (F3), as is DDIM invertibility/interpolation (F7)",
+    "Long captions do heavy lifting; several load-bearing facts (MSE objective, prompt-drop rate) live only in small muted caption text a skimmer may skip"
+  ],
+  "evaluator_notes": "Pass ordering respected: glance_takeaway recorded from glance.png alone before reading key_facts.md. Accuracy = 10 × 13/15 = 8.7 (2 absent, 0 distorted, 0 contradicted). Overall = 0.35×8.7 + 0.30×6.0 + 0.15×7.5 + 0.10×7.5 + 0.10×8.0 = 7.5. Page is well matched to the brief's non-ML technical audience: every brief goal (mechanism, step-cost variants, latent diffusion, guidance) has a dedicated section with concrete numbers. Dark-mode CSS variables present; full.png renders cleanly with no broken elements."
+}

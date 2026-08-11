@@ -1,0 +1,47 @@
+{
+  "testcase": "tradeoff-decision",
+  "approach": "09-motion-explainer",
+  "rubric_version": 1,
+  "glance_takeaway": "Fernwick is choosing a vector-search engine for semantic product search (4.1M vectors doubling yearly, 120 QPS). Four candidates were benchmarked; two (pgnearest, Braid) fail must-have requirements and are crossed out, leaving Quiver (managed SaaS, ~zero ops but pricier/locked-in) versus Hearth (self-hosted OSS, cheaper long-run but needs engineers). There's no outright winner - the recommendation is an IF/THEN: if a platform hire signs by the 2026-10-01 checkpoint, go Hearth (self-hosted); otherwise Quiver with a mandatory exit plan, and a red 'override' warns that heavy filtered traffic or very low selectivity flips the decision to Quiver regardless.",
+  "scores": {
+    "glance_comprehension": 7.5,
+    "accuracy": 8.0,
+    "depth_comprehension": 7.5,
+    "structure_nav": 8.0,
+    "visual_craft": 7.0,
+    "density_fit": 8.0,
+    "overall": 7.7
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Top gate strip: 'M1 p95 <=100 ms at 10M incl. 30% filtered / M2 recall@10 >=0.92 / M3 filtered recall >=0.90 at 5% selectivity / M4 EU data residency / M5 <=$2,500/mo at ~10M vectors' - all five, correct."},
+    "F2": {"status": "conveyed", "note": "Header: '4.1M vectors doubling yearly, 120 QPS peak, 30% of queries filtered'; M5 line notes '~10M vectors (12-month scale)'; chart axis to 100M with 'corpus has doubled every year'; override box: 'Filter share is trending up.'"},
+    "F3": {"status": "distorted", "note": "Partial: 'two-week bakeoff at 10M vectors' is stated, but the methodology (June 2026, frozen dataset, identical hardware, 48-hour log replay at 120 QPS, brute-force ground truth) is absent; a reader learns the bakeoff existed but not why it is trustworthy."},
+    "F4": {"status": "distorted", "note": "Partial: page reports filtered p95 (Quiver 22, Hearth 48, pgnearest 110) instead of the unfiltered figures (18/41/95); only Braid's 12 ms and 'Braid is fastest' + 'both clear M1 with room' survive; correctly labeled so not contradictory, but the F4 numbers are not on the page."},
+    "F5": {"status": "distorted", "note": "Partial: Braid 0.98 and pgnearest 0.89 (fails M2) appear; survivors' unfiltered recall (Quiver 0.97, Hearth 0.94) is absent - page gives their filtered recall instead."},
+    "F6": {"status": "conveyed", "note": "pgnearest card: '110 ms filtered p95 - fails M1 (<=100 ms)' and 'recall@10 0.89 - fails M2 (>=0.92); an index ceiling, not tuning', with red strikethrough and 'x M1 M2' badge."},
+    "F7": {"status": "conveyed", "note": "Braid card: '12 ms p95, recall 0.98 - best raw numbers in the bakeoff', 'post-hoc filter recall 0.71 @5% - fails M3 (>=0.90)', 'structural, not tunable - the index ignores metadata'."},
+    "F8": {"status": "conveyed", "note": "Both cards carry PASS badges; Hearth: 'recall 0.90 @5% - at the M3 floor', '0.86 @1% sel.'; Quiver: 'recall 0.96 @5%, 0.95 @1% sel.' (0.96 at 5% vs key_facts' 0.95-at-1% claim is consistent)."},
+    "F9": {"status": "conveyed", "note": "Chart: Quiver '$180' at 1M vs Hearth '$520 HA floor (covers to ~5M)'; script step 5: 'Quiver cheapest at 1M'. Eliminated options' 1M prices ($240/$210) omitted - minor, they are out of the race by then."},
+    "F10": {"status": "conveyed", "note": "Chart labels: '$1,400' vs '$1,900' at 10M with 'M5 cap $2,500 @10M' dashed line; at 100M '$6,800 - 3.4x cheaper' vs '$23,000 (Enterprise tier >50M)'. pgnearest/Braid 100M estimates absent (already eliminated)."},
+    "F11": {"status": "conveyed", "note": "'infra crossover ~3M - behind us' marker; dashed 'Hearth + ops labor (~$2,800/mo, ~0.2 FTE)' curve with 'labor-adjusted crossover ~30M vectors ~ 2029'. Log-scale positions check out."},
+    "F12": {"status": "conveyed", "note": "Quiver: '~0 FTE ops (vendor on-call, 99.9% SLA)'; Hearth: '~0.2 FTE + >=4-eng on-call'; IF box: 'PLAT-7 infra hire has signed and started (req approved today - not yet filled)'. Only the ~0.5 FTE first-quarter ramp is omitted."},
+    "F13": {"status": "conveyed", "note": "Quiver card: 'lock-in high / in-VPC: never'; tradeoff box: '(in-VPC likely needed for 2027 enterprise contracts)'; Hearth 'low lock-in'; exit plan carries 'standing ~3 engineer-week migration budget'. Proprietary DSL not named explicitly but implied by the SearchIndex-adapter bullet."},
+    "F14": {"status": "conveyed", "note": "Green recommendation box reproduces the full conditional: IF PLAT-7 signed+started and >=4-eng on-call committed by 2026-10-01 -> Hearth primary; ELSE Quiver with SearchIndex adapter, quarterly JSONL export drill into a scratch Hearth, ~3 engineer-week budget, re-evaluate at 30M or first renewal."},
+    "F15": {"status": "conveyed", "note": "Red 'Standing override - S1' box: filtered >60% or selectivity <2% -> Quiver even if the hire lands, 'Hearth's 0.90 filtered recall has no margin'; timeline shows 2026-10-01 headcount checkpoint and 2027-01-15 full review."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "Minor label collisions in the rendered frame: chart legend text is clipped by the right-hand panel ('self-hosted, infra [only]' and '(~$2,80[0/mo...]' cut off); the 'x M1 M2' badge overlaps the pgnearest subtitle; the '$1,900' label collides with the M5-cap dashed line; 'today: 4.1M' crowds the '$ / month (log)' axis label. Nothing is broken, but several annotations require squinting.",
+  "strengths": [
+    "The conditional structure - the hardest part of this test case - is fully explicit and visually segregated: green IF/THEN box, red standing-override box, and a dated checkpoint timeline; a reader can answer 'what would change your mind?' without re-reading.",
+    "Elimination logic is unmistakable: red strikethroughs with per-must-have failure badges (x M1 M2, x M3) make 'out on requirements, not taste' legible even at a glance.",
+    "The cost chart is honest and complete: log-log with correct positional encoding, both crossovers marked (~3M infra 'behind us', ~30M labor-adjusted ~2029), the M5 cap drawn in, and the renewal-risk caveat footnoted.",
+    "Graceful degradation: the final frame is the no-JS default, so the static screenshot carries the entire argument, and the 8-step script doubles as a readable narrative fallback."
+  ],
+  "weaknesses": [
+    "Bakeoff methodology is nearly absent (48-hour log replay, frozen dataset, identical hardware, brute-force ground truth) - the reader must take the numbers on faith (F3).",
+    "The page substitutes filtered p95/recall for the unfiltered benchmark table, so three of the four F4 latencies and two of the four F5 recall values never appear (F4, F5 distorted).",
+    "Label crowding in the chart center: clipped legend, overlapping annotations, and a badge covering card text - small but repeated legibility taxes on an otherwise dense single screen.",
+    "The 'benchmarks would pick the wrong option' lesson (T4) lives mostly in the Braid card fine print and script step 3; it does not surface at glance strength the way the IF/THEN does."
+  ],
+  "evaluator_notes": "Motion/build-up page whose default (JS-off) state is the finished final frame, so glance == full screenshot. Fact audit: 12 conveyed, 3 distorted, 0 contradicted -> accuracy = 10*12/15 = 8.0. Glance pass landed T1 and T2 completely (including the standing override), T3 partially (direction of the cost inversion but not the crossovers), T4 only as 'two eliminated on must-haves'. Overall = 0.35*8.0 + 0.30*7.5 + 0.15*7.5 + 0.10*8.0 + 0.10*7.0 = 7.7."
+}

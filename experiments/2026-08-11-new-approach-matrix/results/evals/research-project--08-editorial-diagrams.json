@@ -1,0 +1,45 @@
+{
+  "testcase": "research-project",
+  "approach": "08-editorial-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is about a research project called 'murmur' testing whether near-free, natural-reverb-flavoured audio augmentation can beat spending on a bigger backbone, for classifying 6,200 clips across 34 long-tailed bird species. Its main message: the hypothesis is only partially supported — the best augmentation stack lifts validation macro-F1 from 0.612 to 0.671 (+5.9 points) at negligible compute, but the gain concentrates in common species and barely reaches the rare tail. A run of six experiments shows pitch/time-stretch actually fell below the no-augmentation floor, and the noise-mix step's +0.002 was within seed noise (±0.006), i.e. a null.",
+  "scores": {
+    "glance_comprehension": 8.0,
+    "accuracy": 9.3,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.0,
+    "visual_craft": 8.5,
+    "density_fit": 9.0,
+    "overall": 8.6
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Subtitle: 'Can near-free, natural-reverb-flavoured audio augmentation beat spending on a bigger backbone — on 6,200 clips across 34 long-tailed bird species?'"},
+    "F2": {"status": "conveyed", "note": "6,200 clips / 34 species in subtitle; 'log-mel 128' in fixed-control box. Clip format (5 s mono, 32 kHz) omitted, but the load-bearing numbers land."},
+    "F3": {"status": "absent", "note": "Only a fragment appears — footer note '~930-clip test split stays untouched until the recipe freezes'. 70/15/15, stratification, and ~930 val clips are not on the page."},
+    "F4": {"status": "conveyed", "note": "Long-tailed in subtitle; dumbbell rows give the shape: 'American Robin 480 clips · common' down to 'Kirtland's Warbler 41 clips · deep tail'. Distribution stats (11 < 80, median ~120, 8 species = 52%) omitted."},
+    "F5": {"status": "conveyed", "note": "'validation macro-F1' axis label and throughout; 'Seed-to-seed variability is ≈ ±0.006' in fig 1 caption and the null annotation."},
+    "F6": {"status": "conveyed", "note": "'baseline · no aug 0.612' at Mar 08; dashed baseline reference line."},
+    "F7": {"status": "conveyed", "note": "'light reverb 0.641' at Mar 24; 'p 0.5 · RT60 0.3–0.6 s' in the stack box."},
+    "F8": {"status": "conveyed", "note": "'+ pitch/stretch 0.589' at Apr 11, plotted below the dashed baseline; caption: 'added ±2-semitone pitch-shift and 0.9–1.1× time-stretch ... fell below the no-augmentation floor'."},
+    "F9": {"status": "conveyed", "note": "'+ noise mix 0.643' at Apr 29 with annotation '+0.002 over reverb-only — inside seed noise (±0.006)'; caption: 'exp-04 reverted it and added SNR-controlled noise beds'; 'SNR 5–20 dB' in stack box."},
+    "F10": {"status": "conveyed", "note": "'full stack 0.671 · best' at May 20; result box '0.671 ... +0.059 vs floor'; all four stack components drawn (reverb, noise mix, SpecAugment, class-balanced sampler)."},
+    "F11": {"status": "conveyed", "note": "'heavy reverb 0.663' at Jun 14, below best; left-out box 'RT60 0.8–1.5 s · p 0.7 → 0.663 / helped common classes only'."},
+    "F12": {"status": "conveyed", "note": "Annotation: 'pitch/time warping smears the spectral cues the rare tail depends on — below the floor'. The <50-real-clips anchoring detail is omitted."},
+    "F13": {"status": "conveyed", "note": "'noise mixing was null alone; it pays only in composition'; caption: 'the noise mixing that was null on its own becomes useful once SpecAugment is present'."},
+    "F14": {"status": "conveyed", "note": "Stack diagram carries the full config: light IR reverb p 0.5 / RT60 0.3–0.6 s, noise mix SNR 5–20 dB, SpecAugment 2+2 masks, class-balanced sampler 0.5, fixed small CNN + log-mel 128, with pitch/stretch and heavy reverb explicitly in a 'left out' panel."},
+    "F15": {"status": "conveyed", "note": "Dumbbell chart: verified positions encode 0.79→0.85, 0.76→0.83, 0.68→0.74, 0.51→0.54, 0.34→0.33 with printed deltas (+0.06, +0.07, +0.06, +0.03, −0.01); caption: '≈4.5 of the 5.9 aggregate points in the common and mid tiers'."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Exceptional caveat fidelity: the null result, seed noise (±0.006), the exp-03 regression, the deep-tail −0.01, and even 'the cheaper-than-a-bigger-backbone half of the bet (H2) is still asserted, not shown' are all explicit — the page actively refuses to oversell.",
+    "The standfirst compresses the honest verdict (0.612→0.671, gain concentrated in common species, two augmentations removed) so nearly all required takeaways land above the fold.",
+    "Visual encodings are honest and load-bearing: SVG coordinates were checked against stated values and match exactly in both charts; annotations explain mechanism (why the dip, why the null) rather than decorate."
+  ],
+  "weaknesses": [
+    "The 70/15/15 stratified split (F3) is effectively absent — only the ~930-clip test-split fragment survives in a footnote.",
+    "Dataset texture is thinned: clip format (5 s mono, 32 kHz) and the imbalance statistics (11 species < 80 clips, median ~120, top-8 = 52%) are dropped, so a collaborator can't gauge how deep the tail problem is beyond five example species.",
+    "Fig 1's x-axis spaces six dated experiments evenly despite uneven calendar gaps (16 to 25 days), a mild ordinal-vs-time dishonesty; and the 'one thing changed per step' semantics of '+ noise mix' depends on reading the caption."
+  ],
+  "evaluator_notes": "Pass order respected: glance_takeaway was recorded from glance.png alone before key_facts.md was opened. Fact audit: 14 conveyed, 1 absent (F3), 0 distorted, 0 contradicted → accuracy = 10 × 14/15 = 9.3. Glance: T1 and T2 landed fully, T3 mostly (stack + heavy-reverb-loses, without the head-vs-tail direction), T4 not at all → 8.0. Overall = 0.35×9.3 + 0.30×8.0 + 0.15×8.5 + 0.10×8.0 + 0.10×8.5 = 8.58 → 8.6. Density fits the brief's technical-collaborator audience well (reported only). This page is unusually strong for a harsh rubric because the source's uncertainty is treated as first-class content."
+}

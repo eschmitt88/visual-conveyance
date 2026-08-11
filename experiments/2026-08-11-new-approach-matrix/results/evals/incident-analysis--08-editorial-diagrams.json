@@ -1,0 +1,46 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "08-editorial-diagrams",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is a postmortem of INC-1194, a SEV-1 partial outage of ledgerline's invoicing API on 2026-06-24 lasting 4h17m. Its main message is that the outage had three interacting causes, not one: a rewritten search query (PR #8841, leading-wildcard LIKE, unscoped) triggered full-table scans over 274.2M rows, which combined with two latent weaknesses — autovacuum debt from a June 22 backfill (38.1M dead tuples) and a jitterless retry policy — to exhaust the connection pool and kill ~57% of searches; remove any one leg and June 24 is a slow endpoint, not an outage. Impact: 2,312 of 9,480 orgs, ~$41,300 SLA credits, no data lost; a wrong network theory cost 68 minutes, rollback was impossible, and a feature flag ended it.",
+  "scores": {
+    "glance_comprehension": 8.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.5,
+    "visual_craft": 8.5,
+    "density_fit": 8.5,
+    "overall": 8.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Meta line 'SEV-1 partial API outage · 2026-06-24 · 14:02–18:19 UTC' + h1 'Anatomy of a 4h17m outage'."},
+    "F2": {"status": "conveyed", "note": "Stat strip: '19.1% avg · 31.2% peak (15:47)' and '≈362,000 of ≈1.9 M'."},
+    "F3": {"status": "conveyed", "note": "Stat strip: 'p99 latency (completed reqs; timeouts count as errors) 420 ms → 28.4 s'; p50 (85 ms → 2.9 s) is omitted but nothing stated is wrong."},
+    "F4": {"status": "conveyed", "note": "Stat strip: '2,312 of 9,480 active (24.4%)', '≈$41,300 · 216 contracts', 'none · 37,400 webhooks replayed by 19:05'."},
+    "F5": {"status": "conveyed", "note": "Diagram node + caption: PR #8841 leading-wildcard LIKE, org-scoping moved out of SQL, every search scanned all 274.2M rows, 0.4 ms → 24–31 s; EXPLAIN cost 8.44→6.2M and 312.3M tuples/scan not given."},
+    "F6": {"status": "conveyed", "note": "Caption: 'the canary table holds ~2M rows, ran the same scan in ~180 ms, and stayed green'; node: 'canary green (2 M rows)'."},
+    "F7": {"status": "conveyed", "note": "Amplifier node '38.1 M dead tuples, 12.2% bloat · +23 GB, LATENT · JUN 22 BACKFILL' + caption: trigger threshold ≈54.9M so autovacuum never ran; dead tuples glossed for non-DB readers."},
+    "F8": {"status": "conveyed", "note": "Caption: bloat 'stretched 24–31 s scans past the 30 s timeout, and ~57% of searches died as errors'; retry-loop node '80 conns held 30 s each' carries the connection-hold half; the ~26 s bloat-free counterfactual is not stated."},
+    "F9": {"status": "conveyed", "note": "'Pool exhausted 80/80 connections busy, saturated at 15:12', 'wait queue peak 1,437', caption names the shared pgbouncer pool and the endpoints (invoice creation, PDF rendering, webhook dispatch) queuing behind scans 15:12–17:18."},
+    "F10": {"status": "conveyed", "note": "Retry-loop diagram: '1 s fixed · 3 attempts · no jitter · no budget', 'Traffic ×4.7, 3,200 → 15,020 rpm', 'extra load, zero extra successes'; caption covers the 16:20 pool bump to 200 backfiring and 16:31 revert."},
+    "F11": {"status": "conveyed", "note": "Timeline: hatched 'network hypothesis · 50 min' segment, '68 MIN: ALERT → DIAGNOSIS' bracket from 14:11 first alert to 15:19 database identified; caption names the coincident cloud-provider packet-loss advisory. Standfirst loosely says the network theory 'cost 68 minutes' (it was 50 of the 68), but the diagram is precise."},
+    "F12": {"status": "conveyed", "note": "Caption: 'Rollback died at 15:40 because migration 0412 had already dropped the covering index the old query needed... rebuild ≈6 h — started 16:05 as insurance, done 21:48, after close', with a one-line covering-index gloss."},
+    "F13": {"status": "conveyed", "note": "'17:05 · FLAG OFF' accent marker on the timeline; caption: 'the 90-second flag flip at 17:05 is what stopped the bleeding; search ran exact-match-only until... June 26'. Flag name and 16:35 staging verification omitted."},
+    "F14": {"status": "conveyed", "note": "Timeline ticks: '17:12–17:50 VACUUM', '17:53 SLOs met', 'stable · 26 min', '18:19 closed'."},
+    "F15": {"status": "conveyed", "note": "Caption: 'The only alert watched error rate — search p99 had exploded at 14:07, four minutes before the 5xx alert'; annotation: deploy marker broken since June 10, latency panels sampled 1 in 100; 14:11 first alert on timeline. Exact 5xx>2%/5min threshold omitted."},
+    "F16": {"status": "conveyed", "note": "Action table 'nine scheduled items, three P0' with #, targeted leg, owner, due quarter; all three Q3-2026 P0s match (Priya N. latency SLO alerts, Marcus T. pgbouncer saturation + isolation, Dana K. retries with backoff/jitter/budgets); P1s include migration reversibility, autovacuum tuning >50M rows, CI query-plan checks."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "The above-the-fold causal diagram carries the hardest takeaway (T1, trigger + two latent amplifiers, 'remove any one leg') completely and honestly, with the no-single-root-cause annotation built into the figure itself.",
+    "Fact fidelity is essentially perfect: all 16 facts land, numbers match source exactly, and the timeline is drawn to true scale (4 px/min — segment widths verified against stated durations).",
+    "Every DB-specific term the brief flags (dead tuples, autovacuum, covering index, pgbouncer) gets the required one-line gloss inline, so the non-specialist EM audience is never stranded."
+  ],
+  "weaknesses": [
+    "T4 (layered, scheduled, blameless remediation) is invisible at a glance — the action table and blameless endnote live at the very bottom, and only the word 'blameless' appears above the fold.",
+    "The standfirst slightly conflates the 68-minute alert-to-diagnosis span with the 50-minute network theory ('a wrong network theory cost 68 minutes'); the timeline corrects it, but a headline-only reader keeps the looser version.",
+    "p50 latency impact (85 ms → 2.9 s) and a few evidentiary numbers (EXPLAIN cost, 160+ demanded connections, flag name) are dropped, and the 10.5px mono annotations in the SVGs sit at the edge of comfortable legibility."
+  ],
+  "evaluator_notes": "Editorial magazine-style page with three hand-built SVGs (causal chain, scaled timeline, retry feedback loop), a stat strip, and an owner/quarter action table. The glance pass landed T1, T2's headline, and T3; T4 did not land, hence 8.0. Accuracy is formulaic: 16/16 conveyed, no distortions or contradictions. Timeline geometry was checked against the source durations and is proportionally honest; the hatched misdiagnosis segment and accented 17:05 flag-off are effective emphasis, not decoration. Dark-mode palette is defined via CSS variables and mirrors the light theme. Deductions elsewhere: bottom-loaded remediation, standfirst's 68-min shorthand, omitted p50/secondary evidence, and small annotation type. Overall = 0.35*10.0 + 0.30*8.0 + 0.15*8.5 + 0.10*8.5 + 0.10*8.5 = 8.875 -> 8.9."
+}

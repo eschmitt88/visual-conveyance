@@ -1,1 +1,106 @@
-{}
+{
+  "n_cells": 12,
+  "rubric_version": 1,
+  "approach_ranking_by_overall": [
+    "08-editorial-diagrams",
+    "09-motion-explainer"
+  ],
+  "by_approach": {
+    "08-editorial-diagrams": {
+      "overall": 8.47,
+      "glance_comprehension": 7.58,
+      "accuracy": 9.55,
+      "depth_comprehension": 8.25,
+      "structure_nav": 8.08,
+      "visual_craft": 7.92,
+      "density_fit": 8.42,
+      "n": 6
+    },
+    "09-motion-explainer": {
+      "overall": 8.47,
+      "glance_comprehension": 8.33,
+      "accuracy": 9.43,
+      "depth_comprehension": 7.75,
+      "structure_nav": 7.5,
+      "visual_craft": 7.5,
+      "density_fit": 7.75,
+      "n": 6
+    }
+  },
+  "by_testcase": {
+    "codebase-structure": {
+      "overall": 8.65,
+      "glance_comprehension": 7.75,
+      "accuracy": 10.0,
+      "depth_comprehension": 8.5,
+      "structure_nav": 7.75,
+      "visual_craft": 8.0,
+      "density_fit": 8.25,
+      "n": 2
+    },
+    "diffusion-variants": {
+      "overall": 8.0,
+      "glance_comprehension": 7.25,
+      "accuracy": 9.35,
+      "depth_comprehension": 7.5,
+      "structure_nav": 7.5,
+      "visual_craft": 7.0,
+      "density_fit": 7.0,
+      "n": 2
+    },
+    "experiment-results": {
+      "overall": 9.0,
+      "glance_comprehension": 9.25,
+      "accuracy": 9.65,
+      "depth_comprehension": 8.25,
+      "structure_nav": 8.0,
+      "visual_craft": 8.0,
+      "density_fit": 8.25,
+      "n": 2
+    },
+    "incident-analysis": {
+      "overall": 8.7,
+      "glance_comprehension": 7.75,
+      "accuracy": 10.0,
+      "depth_comprehension": 8.0,
+      "structure_nav": 8.0,
+      "visual_craft": 8.5,
+      "density_fit": 8.25,
+      "n": 2
+    },
+    "research-project": {
+      "overall": 8.45,
+      "glance_comprehension": 8.25,
+      "accuracy": 9.3,
+      "depth_comprehension": 8.0,
+      "structure_nav": 7.5,
+      "visual_craft": 7.5,
+      "density_fit": 8.5,
+      "n": 2
+    },
+    "tradeoff-decision": {
+      "overall": 8.0,
+      "glance_comprehension": 7.5,
+      "accuracy": 8.65,
+      "depth_comprehension": 7.75,
+      "structure_nav": 8.0,
+      "visual_craft": 7.25,
+      "density_fit": 8.25,
+      "n": 2
+    }
+  },
+  "cells": {
+    "codebase-structure--08-editorial-diagrams": 8.4,
+    "codebase-structure--09-motion-explainer": 8.9,
+    "diffusion-variants--08-editorial-diagrams": 7.5,
+    "diffusion-variants--09-motion-explainer": 8.5,
+    "experiment-results--08-editorial-diagrams": 9.1,
+    "experiment-results--09-motion-explainer": 8.9,
+    "incident-analysis--08-editorial-diagrams": 8.9,
+    "incident-analysis--09-motion-explainer": 8.5,
+    "research-project--08-editorial-diagrams": 8.6,
+    "research-project--09-motion-explainer": 8.3,
+    "tradeoff-decision--08-editorial-diagrams": 8.3,
+    "tradeoff-decision--09-motion-explainer": 7.7
+  }
+}
