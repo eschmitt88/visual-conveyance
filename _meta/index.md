@@ -27,6 +27,7 @@ and `/new-experiment`.
 ## Active experiments
 
 - [[experiments/2026-07-01-baseline-matrix]] — 7 approaches × 6 testcases; AI eval done (dashboard 9.02 leads), awaiting human ratings
+- [[experiments/2026-08-11-new-approach-matrix]] — approaches 08–09 × 6 testcases (12 cells); generation in progress
 
 ## Open questions
 

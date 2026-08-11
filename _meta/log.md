@@ -18,3 +18,4 @@ skills; read by `/lint`.
 2026-08-11 17:42 ingest raw/repos/cathrynlavery-diagram-design.md
 2026-08-11 17:42 ingest raw/repos/3b1b-manim.md
 2026-08-11 17:43 add approaches 08-editorial-diagrams + 09-motion-explainer (ADR 0002)
+2026-08-11 21:05 new-experiment new-approach-matrix
