@@ -21,6 +21,8 @@ and `/new-experiment`.
 - [[literature/papers/while2024glanceable]] — CHI '24 glanceability thresholds: donut ~300ms / bar ~500ms / radial ~2.2s, element-count budget, age heterogeneity (rel 4)
 - [[literature/papers/dibia2023lida]] — LIDA: canonical four-stage LLM visualization pipeline, VER + SEVQ metrics, grounding-context ablation (rel 4)
 - [[literature/posts/googleresearch2025generativeui]] — Google Generative UI: production bespoke-interactive-page generation, preference evals, accuracy + glance gaps = our niche (rel 5)
+- [[literature/repos/cathrynlavery-diagram-design]] — diagram-design skill: editorial SVG design system (one accent, 4px grid, density 4/10), 27 types, same artifact contract as ours; basis of approach 08 (rel 5)
+- [[literature/repos/3b1b-manim]] — manim/3b1b: explanatory-animation grammar (sequential revelation, morph transforms, persistent scene); grammar ported to static contract in approach 09 (rel 4)
 
 ## Active experiments
 
