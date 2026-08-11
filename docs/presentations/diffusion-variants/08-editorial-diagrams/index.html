@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion models and their variants</title>
+<style>
+  :root{
+    --paper:#faf6ee;
+    --ink:#1c1915;
+    --muted:#6e6759;
+    --accent:#c2410c;
+    --hairline:#ddd5c7;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#191613;
+      --ink:#e9e4da;
+      --muted:#9a9284;
+      --accent:#e8632c;
+      --hairline:#3a352c;
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{background:var(--paper)}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;
+  }
+  .page{max-width:1008px;margin:0 auto;padding:36px 24px 24px}
+  header h1{
+    font-family:Georgia,'Times New Roman',serif;
+    font-weight:400;font-size:36px;line-height:1.15;letter-spacing:-.01em;
+  }
+  .standfirst{
+    font-family:Georgia,'Times New Roman',serif;font-style:italic;
+    font-size:19px;color:var(--muted);margin-top:8px;max-width:64ch;
+  }
+  section{margin-top:28px;border-top:1px solid var(--hairline);padding-top:16px}
+  h2{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+  h2 .num{color:var(--muted);font-weight:400;margin-right:8px}
+  figure{margin-top:8px}
+  .scroll{overflow-x:auto}
+  .scroll svg{display:block;width:100%;min-width:760px;height:auto}
+  figcaption{
+    font-size:14px;color:var(--muted);max-width:78ch;margin-top:4px;
+  }
+  svg text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  svg .sans{font-size:15px;font-weight:500;fill:var(--ink)}
+  svg .sansmuted{font-size:13px;fill:var(--muted)}
+  svg .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;fill:var(--muted)}
+  svg .monoink{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;fill:var(--ink)}
+  svg .note{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;fill:var(--ink)}
+  svg .acc{fill:var(--accent)}
+  svg .accsans{font-size:15px;font-weight:600;fill:var(--accent)}
+  svg .accmono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;fill:var(--accent)}
+  footer{margin-top:32px;border-top:1px solid var(--hairline);padding-top:8px}
+  footer small{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11px;color:var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Diffusion models and their variants</h1>
+  <p class="standfirst">Every generated image begins as pure random noise; a trained
+  network reverses a fixed noising process step by step &mdash; and nearly every
+  variant exists to make those steps fewer or cheaper.</p>
+</header>
+
+<!-- ============ 1 · OVERVIEW ============ -->
+<section>
+  <h2><span class="num">1</span>One mechanism, run backwards</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 960 368" role="img" aria-label="Overview: a fixed forward noising process destroys an image over 1000 steps; a learned reverse process denoises pure random noise into a new image">
+      <defs>
+        <marker id="ah1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="var(--ink)"/></marker>
+        <marker id="ah1a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="var(--accent)"/></marker>
+      </defs>
+
+      <!-- forward label -->
+      <text class="sans" x="64" y="56">Forward &mdash; fixed noising, no learning</text>
+      <text class="mono" x="64" y="76">T = 1000 steps &middot; a predefined noise schedule</text>
+
+      <!-- editorial annotation (margin note) -->
+      <text class="note" text-anchor="end" x="936" y="40">Generation starts here, from pure random noise &mdash;</text>
+      <text class="note" text-anchor="end" x="936" y="60">never from a photo (image-to-image is the explicit exception).</text>
+      <path d="M 824 68 C 812 88, 800 104, 792 124" fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 4"/>
+
+      <!-- forward arrow -->
+      <line x1="64" y1="96" x2="828" y2="96" stroke="var(--ink)" stroke-width="1" marker-end="url(#ah1)"/>
+
+      <!-- stage boxes -->
+      <!-- t=0 clean image -->
+      <rect x="64" y="128" width="96" height="96" rx="8" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <circle cx="132" cy="152" r="8" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <polyline points="72,208 104,164 124,192 136,176 152,208" fill="none" stroke="var(--ink)" stroke-width="1"/>
+
+      <text class="mono" x="224" y="180" text-anchor="middle">+ noise</text>
+
+      <!-- t≈200 slightly grainy -->
+      <rect x="288" y="128" width="96" height="96" rx="8" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <circle cx="356" cy="152" r="8" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <polyline points="296,208 328,164 348,192 360,176 376,208" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <g fill="var(--ink)">
+        <circle cx="304" cy="140" r="2"/><circle cx="344" cy="148" r="2"/><circle cx="368" cy="136" r="2"/>
+        <circle cx="316" cy="180" r="2"/><circle cx="356" cy="196" r="2"/>
+      </g>
+
+      <text class="mono" x="448" y="180" text-anchor="middle">+ noise</text>
+
+      <!-- t≈600 coarse shapes -->
+      <rect x="512" y="128" width="96" height="96" rx="8" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <circle cx="580" cy="152" r="8" fill="none" stroke="var(--muted)" stroke-width="1"/>
+      <ellipse cx="560" cy="188" rx="32" ry="16" fill="none" stroke="var(--muted)" stroke-width="1"/>
+      <g fill="var(--ink)">
+        <circle cx="520" cy="136" r="2"/><circle cx="548" cy="132" r="2"/><circle cx="572" cy="144" r="2"/>
+        <circle cx="592" cy="136" r="2"/><circle cx="528" cy="164" r="2"/><circle cx="556" cy="160" r="2"/>
+        <circle cx="588" cy="168" r="2"/><circle cx="520" cy="192" r="2"/><circle cx="568" cy="200" r="2"/>
+        <circle cx="592" cy="196" r="2"/><circle cx="540" cy="212" r="2"/><circle cx="576" cy="216" r="2"/>
+      </g>
+
+      <text class="mono" x="672" y="180" text-anchor="middle">+ noise</text>
+
+      <!-- t=1000 pure noise (accent focal 2) -->
+      <rect x="736" y="128" width="96" height="96" rx="8" fill="none" stroke="var(--accent)" stroke-width="1"/>
+      <g fill="var(--ink)">
+        <circle cx="748" cy="136" r="2"/><circle cx="764" cy="132" r="2"/><circle cx="784" cy="140" r="2"/>
+        <circle cx="804" cy="132" r="2"/><circle cx="820" cy="144" r="2"/><circle cx="752" cy="156" r="2"/>
+        <circle cx="772" cy="160" r="2"/><circle cx="796" cy="152" r="2"/><circle cx="816" cy="164" r="2"/>
+        <circle cx="748" cy="176" r="2"/><circle cx="768" cy="180" r="2"/><circle cx="788" cy="172" r="2"/>
+        <circle cx="808" cy="184" r="2"/><circle cx="824" cy="176" r="2"/><circle cx="756" cy="196" r="2"/>
+        <circle cx="776" cy="200" r="2"/><circle cx="800" cy="196" r="2"/><circle cx="820" cy="204" r="2"/>
+        <circle cx="748" cy="212" r="2"/><circle cx="784" cy="212" r="2"/><circle cx="808" cy="212" r="2"/>
+        <circle cx="764" cy="216" r="2"/>
+      </g>
+
+      <!-- stage labels -->
+      <text class="sansmuted" x="112" y="248" text-anchor="middle">real image</text>
+      <text class="mono" x="112" y="268" text-anchor="middle">t = 0</text>
+      <text class="sansmuted" x="336" y="248" text-anchor="middle">slightly grainy</text>
+      <text class="mono" x="336" y="268" text-anchor="middle">t &#8776; 200</text>
+      <text class="sansmuted" x="560" y="248" text-anchor="middle">coarse shapes only</text>
+      <text class="mono" x="560" y="268" text-anchor="middle">t &#8776; 600</text>
+      <text class="sansmuted" x="784" y="248" text-anchor="middle">pure noise (TV static)</text>
+      <text class="mono" x="784" y="268" text-anchor="middle">t = 1000</text>
+
+      <!-- reverse arrow (accent focal 1) -->
+      <line x1="832" y1="296" x2="72" y2="296" stroke="var(--accent)" stroke-width="1" marker-end="url(#ah1a)"/>
+      <text class="accsans" x="64" y="328">Reverse &mdash; learned denoising, one small step at a time</text>
+      <text class="mono" x="64" y="348">a neural network predicts the added noise &middot; t = 1000 &#8594; 0 &middot; a new image that never existed</text>
+    </svg>
+    </div>
+    <figcaption>The forward pass is fixed &mdash; no learning &mdash; and gradually
+    destroys a real image into pure Gaussian noise over about 1,000 steps; the network
+    is trained only to undo one small step, by guessing the added noise under a simple
+    mean-squared error (removing all noise in one jump would be nearly impossible).
+    Chaining those small steps backwards from fresh random noise produces a brand-new
+    image &mdash; no training images are stored or consulted (rare near-duplication of
+    images repeated many times in training is a real but exceptional failure mode, not
+    the mechanism).</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 2 · VARIANTS / STEPS ============ -->
+<section>
+  <h2><span class="num">2</span>Why variants exist: the &ldquo;steps&rdquo; slider</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 960 400" role="img" aria-label="Chart of typical sampling steps by variant family, from DDPM at about 1000 steps down to distilled and consistency models at 1 to 4 steps">
+      <!-- gridlines -->
+      <g stroke="var(--hairline)" stroke-width="1" stroke-dasharray="2 6">
+        <line x1="280" y1="56" x2="280" y2="312"/>
+        <line x1="480" y1="56" x2="480" y2="312"/>
+        <line x1="680" y1="56" x2="680" y2="312"/>
+        <line x1="880" y1="56" x2="880" y2="312"/>
+      </g>
+
+      <!-- row 1: DDPM -->
+      <text class="sans" x="248" y="84" text-anchor="end">DDPM (original)</text>
+      <rect x="872" y="72" width="16" height="16" fill="var(--ink)"/>
+      <text class="mono" x="856" y="84" text-anchor="end">~1000 &middot; excellent quality &middot; impractically slow</text>
+
+      <!-- row 2: DDIM -->
+      <text class="sans" x="248" y="132" text-anchor="end">DDIM</text>
+      <rect x="540" y="120" width="80" height="16" fill="var(--hairline)" stroke="var(--ink)" stroke-width="1"/>
+      <text class="mono" x="632" y="132">20&ndash;50 &middot; deterministic &middot; the everyday range</text>
+
+      <!-- row 3: ODE solvers -->
+      <text class="sans" x="248" y="180" text-anchor="end">ODE solvers</text>
+      <rect x="480" y="168" width="60" height="16" fill="var(--hairline)" stroke="var(--ink)" stroke-width="1"/>
+      <text class="mono" x="552" y="180">10&ndash;20 &middot; no retraining (DPM-Solver++)</text>
+
+      <!-- row 4: rectified flow -->
+      <text class="sans" x="248" y="228" text-anchor="end">Rectified flow / flow matching</text>
+      <rect x="540" y="216" width="36" height="16" fill="var(--hairline)" stroke="var(--ink)" stroke-width="1"/>
+      <text class="mono" x="588" y="228">~20&ndash;30 &middot; straight paths &middot; SD3 / Flux</text>
+
+      <!-- row 5: distilled (accent focal) -->
+      <text class="sans" x="248" y="276" text-anchor="end">Distilled / consistency</text>
+      <rect x="280" y="264" width="120" height="16" fill="var(--accent)"/>
+      <text class="accmono" x="412" y="276">1&ndash;4 &middot; fastest &middot; mild quality &amp; diversity cost</text>
+
+      <!-- axis -->
+      <line x1="280" y1="312" x2="880" y2="312" stroke="var(--ink)" stroke-width="1"/>
+      <g stroke="var(--ink)" stroke-width="1">
+        <line x1="280" y1="312" x2="280" y2="320"/>
+        <line x1="480" y1="312" x2="480" y2="320"/>
+        <line x1="680" y1="312" x2="680" y2="320"/>
+        <line x1="880" y1="312" x2="880" y2="320"/>
+      </g>
+      <text class="mono" x="280" y="336" text-anchor="middle">1</text>
+      <text class="mono" x="480" y="336" text-anchor="middle">10</text>
+      <text class="mono" x="680" y="336" text-anchor="middle">100</text>
+      <text class="mono" x="880" y="336" text-anchor="middle">1000 steps</text>
+
+      <!-- editorial annotation -->
+      <text class="note" x="400" y="364">Below ~10 steps, undistilled models degrade visibly &mdash;</text>
+      <text class="note" x="400" y="384">and guidance (below) doubles the network runs at every step.</text>
+      <path d="M 388 372 C 356 368, 344 352, 420 336" fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 4"/>
+    </svg>
+    </div>
+    <figcaption>These are not competing technologies but one framework &mdash;
+    interconvertible training targets with different samplers, paths, and step sizes:
+    DDIM reuses the unchanged DDPM network with fewer, deterministic steps (the
+    &ldquo;steps&rdquo; slider defaulting to ~30 in image tools is exactly this dial),
+    while distilled and consistency models are retrained to take big jumps. Above ~50
+    steps returns diminish rapidly &mdash; more steps refine the same trajectory, they
+    do not search over more images.</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 3 · LATENT DIFFUSION ============ -->
+<section>
+  <h2><span class="num">3</span>Latent diffusion: run it in compressed space</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 960 296" role="img" aria-label="Architecture: a VAE encoder compresses the image into a small latent space where the diffusion loop runs; a VAE decoder produces the full-resolution image in one pass">
+      <defs>
+        <marker id="ah3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="var(--ink)"/></marker>
+        <marker id="ah3a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="var(--accent)"/></marker>
+      </defs>
+
+      <!-- pixel image -->
+      <rect x="32" y="96" width="112" height="112" rx="8" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <circle cx="100" cy="124" r="8" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <polyline points="40,192 64,152 80,176 92,164 136,192" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <text class="sansmuted" x="88" y="232" text-anchor="middle">pixel image</text>
+      <text class="mono" x="88" y="252" text-anchor="middle">512&#215;512&#215;3</text>
+      <text class="mono" x="88" y="272" text-anchor="middle">786,432 numbers</text>
+
+      <line x1="144" y1="152" x2="176" y2="152" stroke="var(--ink)" stroke-width="1" marker-end="url(#ah3)"/>
+
+      <!-- VAE encoder (narrowing) -->
+      <polygon points="184,120 184,184 280,168 280,136" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <text class="sansmuted" x="232" y="144" text-anchor="middle">VAE</text>
+      <text class="sansmuted" x="232" y="164" text-anchor="middle">encoder</text>
+
+      <line x1="280" y1="152" x2="312" y2="152" stroke="var(--ink)" stroke-width="1" marker-end="url(#ah3)"/>
+
+      <!-- latent space container -->
+      <rect x="320" y="48" width="304" height="224" rx="8" fill="none" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 4"/>
+      <text class="sans" x="336" y="76">latent space</text>
+      <text class="mono" x="336" y="96">64&#215;64&#215;4 = 16,384 &middot; &#8776;48&#215; fewer values</text>
+
+      <rect x="352" y="136" width="48" height="48" rx="4" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <text class="mono" x="376" y="208" text-anchor="middle">64&#215;64&#215;4</text>
+      <line x1="408" y1="160" x2="440" y2="160" stroke="var(--ink)" stroke-width="1" marker-end="url(#ah3)"/>
+
+      <!-- diffusion loop (accent focal) -->
+      <path d="M 496 120 A 40 40 0 1 1 456 160" fill="none" stroke="var(--accent)" stroke-width="1" marker-end="url(#ah3a)"/>
+      <text class="accsans" x="496" y="232" text-anchor="middle">denoising loop runs here</text>
+      <text class="mono" x="496" y="252" text-anchor="middle">every step &#8776;48&#215; cheaper than pixels</text>
+
+      <line x1="624" y1="152" x2="656" y2="152" stroke="var(--ink)" stroke-width="1" marker-end="url(#ah3)"/>
+
+      <!-- VAE decoder (widening) -->
+      <polygon points="664,136 664,168 760,184 760,120" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <text class="sansmuted" x="712" y="144" text-anchor="middle">VAE</text>
+      <text class="sansmuted" x="712" y="164" text-anchor="middle">decoder</text>
+      <text class="mono" x="712" y="208" text-anchor="middle">one single pass</text>
+
+      <line x1="760" y1="152" x2="792" y2="152" stroke="var(--ink)" stroke-width="1" marker-end="url(#ah3)"/>
+
+      <!-- full-resolution image -->
+      <rect x="800" y="96" width="112" height="112" rx="8" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <circle cx="868" cy="124" r="8" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <polyline points="808,192 832,152 848,176 860,164 904,192" fill="none" stroke="var(--ink)" stroke-width="1"/>
+      <text class="sansmuted" x="856" y="232" text-anchor="middle">full-resolution image</text>
+      <text class="mono" x="856" y="252" text-anchor="middle">512&#215;512&#215;3</text>
+    </svg>
+    </div>
+    <figcaption>A separately trained autoencoder (VAE &mdash; an encoder&ndash;decoder
+    pair) compresses 512&#215;512&#215;3 pixels into a 64&#215;64&#215;4 latent, and the
+    entire diffusion process &mdash; noising, training, sampling &mdash; runs there;
+    this (2022) is what put Stable-Diffusion-class models on consumer GPUs. The VAE
+    only compresses and decompresses &mdash; the diffusion loop does the generating
+    &mdash; at the cost of a slight quality ceiling from the perceptual compression
+    (historically fine text and small faces; much improved in newer VAEs).</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 4 · CFG ============ -->
+<section>
+  <h2><span class="num">4</span>Classifier-free guidance: what the CFG scale does</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 960 272" role="img" aria-label="Number line of the guidance scale s: unconditional at 0, conditional at 1, common default near 7.5, artifact regime beyond roughly 12 to 15">
+      <defs>
+        <marker id="ah4" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="var(--ink)"/></marker>
+      </defs>
+
+      <text class="monoink" x="480" y="40" text-anchor="middle" style="font-size:16px">guided = unconditional + s &#215; (conditional &#8722; unconditional)</text>
+      <text class="sansmuted" x="480" y="68" text-anchor="middle">(conditional &#8722; unconditional) is the direction the prompt pulls; s exaggerates it</text>
+
+      <!-- artifact regime band -->
+      <rect x="600" y="156" width="280" height="24" fill="var(--hairline)"/>
+
+      <!-- axis: solid to s=1, dashed extrapolation beyond -->
+      <line x1="120" y1="168" x2="160" y2="168" stroke="var(--ink)" stroke-width="1"/>
+      <line x1="160" y1="168" x2="872" y2="168" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 4" marker-end="url(#ah4)"/>
+      <text class="mono" x="240" y="152">extrapolation</text>
+
+      <!-- points -->
+      <circle cx="120" cy="168" r="4" fill="var(--ink)"/>
+      <circle cx="160" cy="168" r="4" fill="var(--ink)"/>
+      <circle cx="420" cy="168" r="6" fill="var(--accent)"/>
+
+      <!-- labels -->
+      <text class="mono" x="120" y="116" text-anchor="middle">s = 0</text>
+      <text class="sansmuted" x="120" y="140" text-anchor="middle">unconditional (no prompt)</text>
+      <text class="sansmuted" x="160" y="196" text-anchor="middle">conditional (with prompt)</text>
+      <text class="mono" x="160" y="216" text-anchor="middle">s = 1 &middot; no guidance</text>
+      <text class="accmono" x="420" y="116" text-anchor="middle">s &#8776; 7.5</text>
+      <text class="accsans" x="420" y="140" text-anchor="middle">common default</text>
+      <text class="mono" x="740" y="208" text-anchor="middle">s &#8819; 12&ndash;15 &middot; oversaturated colors, burned-in artifacts</text>
+
+      <!-- tradeoff direction labels -->
+      <text class="sansmuted" x="120" y="248">low s &middot; more diverse, follows the prompt loosely</text>
+      <text class="sansmuted" x="880" y="248" text-anchor="end">high s &middot; closer prompt adherence, less diversity</text>
+    </svg>
+    </div>
+    <figcaption>Each sampling step runs the network twice &mdash; once with the prompt,
+    once without &mdash; and extrapolates along their difference (which is why CFG
+    doubles the true per-step cost); training randomly drops the prompt for ~10&ndash;20%
+    of examples so one network learns both jobs. The scale s trades diversity and
+    naturalness for prompt adherence &mdash; it is an adherence knob with an artifact
+    regime at high values, not a quality knob.</figcaption>
+  </figure>
+</section>
+
+<footer><small>diffusion-variants &middot; editorial-diagrams &middot; v1 &middot; 2026-08-11</small></footer>
+
+</div>
+</body>
+</html>

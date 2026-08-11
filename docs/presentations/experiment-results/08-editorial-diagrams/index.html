@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pathways readout: a split decision, not a win</title>
+<style>
+  :root {
+    --paper: #faf7f1;
+    --ink: #211d16;
+    --muted: #716a5c;
+    --accent: #bd3d0e;
+    --hairline: #e6e0d4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #191712;
+      --ink: #e9e4d8;
+      --muted: #9a927f;
+      --accent: #ff7a48;
+      --hairline: #33302a;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+  }
+  .page { max-width: 896px; margin: 0 auto; padding: 40px 24px 24px; }
+  h1 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 36px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em;
+  }
+  .standfirst {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 19px; line-height: 1.45; margin-top: 12px; max-width: 704px;
+  }
+  .meta {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px; color: var(--muted); margin-top: 16px;
+    padding-bottom: 16px; border-bottom: 1px solid var(--hairline);
+  }
+  section { margin-top: 40px; }
+  h2 { font-size: 19px; font-weight: 650; letter-spacing: -0.005em; }
+  figure { margin-top: 12px; }
+  .fig { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 704px; }
+  figcaption {
+    font-size: 13.5px; color: var(--muted); max-width: 704px; margin-top: 8px;
+  }
+  /* SVG text roles */
+  .t-name { font: 600 14px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: var(--ink); }
+  .t-mono { font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--ink); }
+  .t-mono-m { font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--muted); }
+  .t-ann { font: italic 15px "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; fill: var(--ink); }
+  .hair { stroke: var(--hairline); stroke-width: 1; }
+  .zero { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 4; }
+  .leader { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; fill: none; }
+  .ci-open { stroke: var(--muted); stroke-width: 2; }
+  .ci-ink { stroke: var(--ink); stroke-width: 2; }
+  .ci-acc { stroke: var(--accent); stroke-width: 2; }
+  .mk-open { fill: var(--paper); stroke: var(--muted); stroke-width: 1; }
+  .mk-ink { fill: var(--ink); }
+  .mk-acc { fill: var(--accent); }
+  .line-ink { fill: none; stroke: var(--ink); stroke-width: 2; }
+  .bar-a { fill: var(--hairline); }
+  .bar-b { fill: var(--ink); }
+  .bar-acc { fill: var(--accent); }
+  .fill-acc { fill: var(--accent); }
+  /* Decision table */
+  table { border-collapse: collapse; width: 100%; min-width: 704px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 12px 8px 0; vertical-align: top; border-bottom: 1px solid var(--hairline); }
+  th { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  td.num { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; white-space: nowrap; }
+  .verdict { font-weight: 650; }
+  .verdict.ship { color: var(--accent); }
+  .notes {
+    font-size: 13.5px; color: var(--muted); max-width: 704px; margin-top: 32px;
+    padding-top: 16px; border-top: 1px solid var(--hairline);
+  }
+  footer { margin-top: 40px; }
+  footer small {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px; color: var(--muted);
+  }
+  @media (max-width: 480px) {
+    .page { padding: 24px 16px 16px; }
+    h1 { font-size: 28px; }
+    .standfirst { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Pathways readout: a split decision, not&nbsp;a&nbsp;win</h1>
+  <p class="standfirst">Six weeks and 184,204 signups: the redesigned onboarding did not win
+  overall — it won big on mobile-web, lost on iOS, and the blended number hides both.
+  Ship narrow, fix iOS.</p>
+  <p class="meta">ONB-2026-014 · 2026-05-04 → 2026-06-14 · 184,204 randomized ·
+  13,249 trial starters · platform subgroups pre-registered · final readout</p>
+</header>
+
+<section>
+  <h2>The story is a platform split, not an overall win</h2>
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 832 344" role="img" aria-label="Forest plot of conversion effects with 95 percent confidence intervals: overall inconclusive, mobile-web strongly positive, iOS negative, Android null">
+      <!-- legend -->
+      <rect x="8" y="36" width="8" height="8" class="mk-open"/>
+      <text x="24" y="44" class="t-mono-m">straddles 0 — inconclusive</text>
+      <rect x="208" y="36" width="8" height="8" class="mk-ink"/>
+      <text x="224" y="44" class="t-mono-m">excludes 0 — significant</text>
+      <!-- gridlines: 40px per 1pp, zero at x=360 -->
+      <line x1="200" y1="76" x2="200" y2="312" class="hair"/>
+      <line x1="280" y1="76" x2="280" y2="312" class="hair"/>
+      <line x1="440" y1="76" x2="440" y2="312" class="hair"/>
+      <line x1="520" y1="76" x2="520" y2="312" class="hair"/>
+      <line x1="600" y1="76" x2="600" y2="312" class="hair"/>
+      <line x1="360" y1="76" x2="360" y2="312" class="zero"/>
+      <text x="200" y="332" class="t-mono-m" text-anchor="middle">−4</text>
+      <text x="280" y="332" class="t-mono-m" text-anchor="middle">−2</text>
+      <text x="360" y="332" class="t-mono-m" text-anchor="middle">0 — no effect</text>
+      <text x="440" y="332" class="t-mono-m" text-anchor="middle">+2</text>
+      <text x="520" y="332" class="t-mono-m" text-anchor="middle">+4</text>
+      <text x="600" y="332" class="t-mono-m" text-anchor="middle">+6</text>
+      <!-- annotation: the overall verdict -->
+      <text x="568" y="48" class="t-ann">CI straddles zero — the honest</text>
+      <text x="568" y="68" class="t-ann">overall verdict is “can’t tell,” not “B won”</text>
+      <path d="M 560 60 Q 480 56 424 92" class="leader"/>
+      <!-- Row 1: Overall (est +0.8 → 392; CI −0.3 → 348, +1.9 → 436) -->
+      <text x="8" y="84" class="t-name">Overall (blended)</text>
+      <text x="8" y="116" class="t-mono-m">n 6,602 / 6,647</text>
+      <text x="824" y="84" class="t-mono" text-anchor="end">+0.8pp · CI [−0.3, +1.9] · p = 0.16</text>
+      <line x1="348" y1="100" x2="436" y2="100" class="ci-open"/>
+      <line x1="348" y1="92" x2="348" y2="108" class="ci-open"/>
+      <line x1="436" y1="92" x2="436" y2="108" class="ci-open"/>
+      <rect x="388" y="96" width="8" height="8" class="mk-open"/>
+      <!-- Row 2: Mobile-web (est +4.2 → 528; CI +2.1 → 444, +6.3 → 612) -->
+      <text x="8" y="148" class="t-name">Mobile-web</text>
+      <text x="8" y="180" class="t-mono-m">n 2,341 / 2,367</text>
+      <text x="824" y="148" class="t-mono" text-anchor="end">+4.2pp · CI [+2.1, +6.3] · p &lt; 0.0001</text>
+      <line x1="444" y1="164" x2="612" y2="164" class="ci-acc"/>
+      <line x1="444" y1="156" x2="444" y2="172" class="ci-acc"/>
+      <line x1="612" y1="156" x2="612" y2="172" class="ci-acc"/>
+      <rect x="524" y="160" width="8" height="8" class="mk-acc"/>
+      <!-- Row 3: iOS (est −1.9 → 284; CI −3.6 → 216, −0.2 → 352) -->
+      <text x="8" y="212" class="t-name">iOS</text>
+      <text x="8" y="244" class="t-mono-m">n 2,528 / 2,541</text>
+      <text x="824" y="212" class="t-mono" text-anchor="end">−1.9pp · CI [−3.6, −0.2] · p = 0.027</text>
+      <line x1="216" y1="228" x2="352" y2="228" class="ci-ink"/>
+      <line x1="216" y1="220" x2="216" y2="236" class="ci-ink"/>
+      <line x1="352" y1="220" x2="352" y2="236" class="ci-ink"/>
+      <rect x="280" y="224" width="8" height="8" class="mk-ink"/>
+      <!-- Row 4: Android (est +0.1 → 364; CI −1.7 → 292, +1.9 → 436) -->
+      <text x="8" y="276" class="t-name">Android</text>
+      <text x="8" y="308" class="t-mono-m">n 1,733 / 1,739</text>
+      <text x="824" y="276" class="t-mono" text-anchor="end">+0.1pp · CI [−1.7, +1.9] · p = 0.92</text>
+      <line x1="292" y1="292" x2="436" y2="292" class="ci-open"/>
+      <line x1="292" y1="284" x2="292" y2="300" class="ci-open"/>
+      <line x1="436" y1="284" x2="436" y2="300" class="ci-open"/>
+      <rect x="360" y="288" width="8" height="8" class="mk-open"/>
+    </svg>
+    </div>
+    <figcaption>Change in trial-to-paid conversion (share of trial starters whose
+    first payment succeeds within 14 days), B − A, in percentage points (pp), with
+    95% CIs. The blended +0.8pp — from an experiment powered only for ±1.55pp
+    overall — is a strong win and a real loss averaging each other out, not a
+    modest win everywhere.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Early weeks overstated B — novelty decay</h2>
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 832 296" role="img" aria-label="Line chart of the weekly overall conversion delta, decaying from plus 2.9 points in week 1 to plus 0.1 in week 6">
+      <!-- zero line at y=200; 40px per 1pp -->
+      <line x1="64" y1="200" x2="688" y2="200" class="zero"/>
+      <text x="700" y="204" class="t-mono-m">0</text>
+      <!-- annotation a: interim readout -->
+      <text x="176" y="48" class="t-ann">a week-2 interim (+2.2pp, nominally significant)</text>
+      <text x="176" y="68" class="t-ann">circulated — superseded by this readout; don’t cite it</text>
+      <path d="M 168 60 Q 176 104 204 132" class="leader"/>
+      <!-- annotation b: late-window persistence -->
+      <text x="424" y="96" class="t-ann">weeks 4–6 (exploratory pooled): mobile-web still +3.8pp,</text>
+      <text x="424" y="116" class="t-ann">iOS still −2.2pp — the split outlives the novelty</text>
+      <path d="M 440 124 Q 452 168 480 200" class="leader"/>
+      <!-- series: (96,84)(208,140)(320,176)(432,200)(544,216)(656,196) -->
+      <polyline points="96,84 208,140 320,176 432,200 544,216 656,196" class="line-ink"/>
+      <rect x="92" y="80" width="8" height="8" class="mk-ink"/>
+      <rect x="204" y="136" width="8" height="8" class="mk-ink"/>
+      <rect x="316" y="172" width="8" height="8" class="mk-ink"/>
+      <rect x="428" y="196" width="8" height="8" class="mk-ink"/>
+      <rect x="540" y="212" width="8" height="8" class="mk-ink"/>
+      <rect x="652" y="192" width="8" height="8" class="mk-acc"/>
+      <text x="96" y="64" class="t-mono" text-anchor="middle">+2.9</text>
+      <text x="208" y="120" class="t-mono" text-anchor="middle">+1.5</text>
+      <text x="320" y="156" class="t-mono" text-anchor="middle">+0.6</text>
+      <text x="432" y="224" class="t-mono" text-anchor="middle">0.0</text>
+      <text x="544" y="240" class="t-mono" text-anchor="middle">−0.4</text>
+      <text x="656" y="220" class="t-mono fill-acc" text-anchor="middle">+0.1</text>
+      <text x="96" y="264" class="t-mono-m" text-anchor="middle">wk 1</text>
+      <text x="208" y="264" class="t-mono-m" text-anchor="middle">wk 2</text>
+      <text x="320" y="264" class="t-mono-m" text-anchor="middle">wk 3</text>
+      <text x="432" y="264" class="t-mono-m" text-anchor="middle">wk 4</text>
+      <text x="544" y="264" class="t-mono-m" text-anchor="middle">wk 5</text>
+      <text x="656" y="264" class="t-mono-m" text-anchor="middle">wk 6</text>
+    </svg>
+    </div>
+    <figcaption>Weekly overall Δ (B − A, pp, all platforms) fell from +2.9pp to
+    +0.1pp; weekly 95% CIs are ≈ ±2.7pp, so the decaying pattern is the signal,
+    not any single week. Consistent with a novelty effect — but the mobile-web
+    gain persists after it washes out, so it is not novelty alone.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Why iOS lost: the step-3 permission prompt</h2>
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 832 272" role="img" aria-label="Bar chart of onboarding step 3 drop-off by platform: iOS rises from 8.1 to 12.7 percent under B; mobile-web and Android barely move">
+      <!-- legend -->
+      <rect x="200" y="12" width="8" height="8" class="bar-a"/>
+      <text x="216" y="20" class="t-mono-m">A — current flow</text>
+      <rect x="352" y="12" width="8" height="8" class="bar-b"/>
+      <text x="368" y="20" class="t-mono-m">B — Pathways</text>
+      <!-- annotation -->
+      <text x="824" y="20" class="t-ann" text-anchor="end">Pathways moves the notification ask to step 3 —</text>
+      <text x="824" y="40" class="t-ann" text-anchor="end">on iOS that fires the OS permission dialog</text>
+      <path d="M 776 48 Q 760 72 716 84" class="leader"/>
+      <!-- baseline at x=200; 40px per 1pp -->
+      <line x1="200" y1="56" x2="200" y2="252" class="hair"/>
+      <!-- iOS: A 8.1 → 324, B 12.7 → 508 -->
+      <text x="8" y="88" class="t-name">iOS</text>
+      <text x="192" y="76" class="t-mono-m" text-anchor="end">A</text>
+      <rect x="200" y="64" width="324" height="16" class="bar-a"/>
+      <text x="532" y="76" class="t-mono">8.1%</text>
+      <text x="192" y="100" class="t-mono-m" text-anchor="end">B</text>
+      <rect x="200" y="88" width="508" height="16" class="bar-acc"/>
+      <text x="716" y="100" class="t-mono">12.7%</text>
+      <!-- Mobile-web: A 3.2 → 128, B 3.4 → 136 -->
+      <text x="8" y="160" class="t-name">Mobile-web</text>
+      <text x="192" y="148" class="t-mono-m" text-anchor="end">A</text>
+      <rect x="200" y="136" width="128" height="16" class="bar-a"/>
+      <text x="336" y="148" class="t-mono">3.2%</text>
+      <text x="192" y="172" class="t-mono-m" text-anchor="end">B</text>
+      <rect x="200" y="160" width="136" height="16" class="bar-b"/>
+      <text x="344" y="172" class="t-mono">3.4%</text>
+      <!-- Android: A 5.0 → 200, B 5.6 → 224 -->
+      <text x="8" y="232" class="t-name">Android</text>
+      <text x="192" y="220" class="t-mono-m" text-anchor="end">A</text>
+      <rect x="200" y="208" width="200" height="16" class="bar-a"/>
+      <text x="408" y="220" class="t-mono">5.0%</text>
+      <text x="192" y="244" class="t-mono-m" text-anchor="end">B</text>
+      <rect x="200" y="232" width="224" height="16" class="bar-b"/>
+      <text x="432" y="244" class="t-mono">5.6%</text>
+    </svg>
+    </div>
+    <figcaption>Share of users reaching onboarding step 3 who abandon there
+    (funnel data, exploratory; ≈31k iOS users per arm reached the step). iOS users
+    in B who dismissed the dialog converted at 7.9% vs 10.4% for accepters —
+    suggestive, but confounded by user intent; not causal evidence on its own.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Decision: ship mobile-web only, fix iOS</h2>
+  <figure>
+    <div class="fig">
+    <table>
+      <thead>
+        <tr><th>Platform</th><th>Full-run Δ</th><th>Weeks 4–6</th><th>Decision</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Mobile-web</td>
+          <td class="num">+4.2pp [+2.1, +6.3]</td>
+          <td class="num">+3.8pp</td>
+          <td><span class="verdict ship">Ship</span> — target 2026-07-06, with a 5% holdback for 8 weeks to confirm the effect and watch for drift</td>
+        </tr>
+        <tr>
+          <td>iOS</td>
+          <td class="num">−1.9pp [−3.6, −0.2]</td>
+          <td class="num">−2.2pp</td>
+          <td><span class="verdict">Do not ship</span> — run fix experiment ONB-2026-019: permission prompt reverted to the day-2 soft ask, plus a pre-permission explainer arm; ≈8 weeks</td>
+        </tr>
+        <tr>
+          <td>Android</td>
+          <td class="num">+0.1pp [−1.7, +1.9]</td>
+          <td class="num">—</td>
+          <td><span class="verdict">Do not ship</span> — null result; revisit after the iOS fix experiment settles the prompt question (Android shares the flow)</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <figcaption>Guardrail held: 7-day retention flat (+0.2pp, CI [−0.2, +0.6]) on
+    all 184k randomized users, and a +12% support-ticket blip in weeks 1–2
+    resolved after a copy fix. One hedge: iOS p = 0.027 does not survive the
+    Bonferroni correction (α = 0.0167) — but as the single pre-registered
+    subgroup with a coherent mechanism it is a credible signal that warrants the
+    fix experiment, short of proof.</figcaption>
+  </figure>
+</section>
+
+<p class="notes">Also measured: median time-to-first-lesson fell 38 s
+(CI [−45, −31]) — the shorter flow works mechanically, but this did not move
+blended conversion or retention. Diagnostics clean: no sample-ratio mismatch,
+no cross-arm contamination, trial-start rate flat (7.17% vs 7.22%), so the
+trial-starter denominator is sound.</p>
+
+<footer><small>experiment-results · editorial-diagrams · v1 · 2026-08-11</small></footer>
+
+</div>
+</body>
+</html>

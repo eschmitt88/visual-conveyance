@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion models and their variants</title>
+<style>
+  :root{
+    --bg:#0e0e16; --canvas:#14142a; --ink:#e9e9f2; --dim:#b8bdd4; --faint:#8b90aa;
+    --blue:#58c4dd; --yellow:#ffd166; --green:#6fe0a8; --pink:#ff79c6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.45;padding:18px 14px 8px}
+  .wrap{max-width:1170px;margin:0 auto}
+  header h1{font-size:22px;font-weight:650;letter-spacing:.2px}
+  header p.frame{font-size:14px;color:var(--dim);margin-top:2px;max-width:72em}
+  .legend{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:7px;font-size:12px;color:var(--dim)}
+  .legend span{white-space:nowrap}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .scenewrap{margin-top:10px;overflow-x:auto;background:var(--canvas);
+    border:1px solid #2b2b4a;border-radius:10px}
+  #scene{display:block;width:100%;min-width:960px;height:auto}
+  /* ---- step machinery: default markup = final frame; offN pushes step N to hidden ---- */
+  #scene .s1,#scene .s2,#scene .s3,#scene .s4,#scene .s5,#scene .s6,#scene .s7{
+    transition:opacity .55s ease,transform .6s ease,stroke-dashoffset .85s ease}
+  #scene .d1{transition-delay:.18s}#scene .d2{transition-delay:.36s}
+  #scene .d3{transition-delay:.54s}#scene .d4{transition-delay:.7s}
+  svg.off1 .s1,svg.off2 .s2,svg.off3 .s3,svg.off4 .s4,
+  svg.off5 .s5,svg.off6 .s6,svg.off7 .s7{opacity:0}
+  svg.off1 .draw.s1,svg.off2 .draw.s2{stroke-dashoffset:100}
+  svg.off3 .rise.s3,svg.off4 .rise.s4,svg.off5 .rise.s5,
+  svg.off6 .rise.s6,svg.off7 .rise.s7{transform:translateY(10px)}
+  #scene .ghost{transition:opacity .55s ease,transform .85s ease .5s;
+    transform-box:view-box;transform-origin:0 0;
+    transform:translate(479.24px,235.14px) scale(.3043)}
+  svg.m-off .ghost{transform:none}
+  @media (prefers-reduced-motion: reduce){
+    #scene .s1,#scene .s2,#scene .s3,#scene .s4,#scene .s5,#scene .s6,#scene .s7,#scene .ghost{
+      transition:none !important}}
+  /* ---- caption + controls (JS builds/uses these; hidden without JS) ---- */
+  #capbar{margin-top:10px}
+  #cap{font-size:15px;color:var(--ink);min-height:1.5em;text-align:center}
+  .controls{display:flex;align-items:center;justify-content:center;gap:8px;
+    flex-wrap:wrap;margin-top:8px}
+  .controls button{background:#1c1c34;color:var(--ink);border:1px solid #3a3a5e;
+    border-radius:7px;font-size:14px;padding:5px 12px;cursor:pointer}
+  .controls button:hover{border-color:var(--blue)}
+  #bPlay{color:var(--yellow);font-weight:600}
+  .dots{display:flex;gap:7px;margin:0 6px}
+  .dot{width:12px;height:12px;padding:0;border-radius:50%;border:1px solid #4a4f6a;
+    background:#1c1c34;cursor:pointer}
+  .dot.done{background:var(--green);border-color:var(--green)}
+  .dot.cur{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--yellow)}
+  .kbd{font-size:11.5px;color:var(--faint);text-align:center;margin-top:6px}
+  body:not(.js) #capbar{display:none}
+  /* no-JS fallback: captions as a visible ordered list; JS collapses it */
+  #caplist{margin:12px 0 0 1.4em;font-size:13.5px;color:var(--dim)}
+  #caplist li{margin-top:3px}
+  body.js #caplist{display:none}
+  footer{margin-top:16px;font-size:11px;color:#5b5f78;text-align:center}
+  @media (max-width:700px){
+    header h1{font-size:19px} #cap{font-size:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Diffusion models: destroy carefully, learn to rebuild</h1>
+  <p class="frame">How Stable-Diffusion-class image generators turn pure random noise into
+  brand-new images — and why the variant zoo (DDIM, ODE solvers, latent diffusion, CFG,
+  flow matching, distillation) mostly exists to answer one question: <em>how do we take fewer steps?</em></p>
+  <div class="legend">
+    <span><i style="background:var(--blue)"></i>fixed forward noising</span>
+    <span><i style="background:var(--yellow)"></i>learned denoising network</span>
+    <span><i style="background:var(--green)"></i>sampling cost &amp; speed</span>
+    <span><i style="background:var(--pink)"></i>prompt guidance</span>
+  </div>
+</header>
+
+<div class="scenewrap">
+<svg id="scene" viewBox="0 0 1200 612" role="img"
+     aria-label="One diagram: a fixed forward process noises an image over 1000 steps; a learned network reverses it from pure noise; variants cut the step count; latent diffusion compresses the space; classifier-free guidance steers with the prompt.">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7fb2e5"/><stop offset="1" stop-color="#cfe3f5"/>
+    </linearGradient>
+    <g id="pic">
+      <rect width="100" height="100" fill="url(#sky)"/>
+      <circle cx="70" cy="28" r="13" fill="#ffd166"/>
+      <path d="M0 100 32 52 56 100Z" fill="#41618f"/>
+      <path d="M40 100 74 44 100 100Z" fill="#2f4a73"/>
+    </g>
+    <filter id="stat" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="1 1"/></feComponentTransfer>
+    </filter>
+    <filter id="blur3"><feGaussianBlur stdDeviation="3"/></filter>
+    <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="1.1" fill="#58c4dd" opacity=".45"/>
+    </pattern>
+  </defs>
+
+  <!-- ================= STEP 1 · forward (fixed) ================= -->
+  <text class="s1" x="600" y="14" text-anchor="middle" font-size="12" fill="#58c4dd" font-weight="600">FORWARD — fixed noising, no learning · predefined noise schedule · T = 1000 small steps</text>
+  <line class="s1 draw" x1="130" y1="26" x2="1046" y2="26" stroke="#58c4dd" stroke-width="2" pathLength="100" stroke-dasharray="100"/>
+  <polygon class="s1 d3" points="1046,21 1058,26 1046,31" fill="#58c4dd"/>
+
+  <g class="s1" transform="translate(120 38)">
+    <use href="#pic"/><rect width="100" height="100" fill="none" stroke="#4a4f6a"/>
+  </g>
+  <g class="s1 d1" transform="translate(380 38)">
+    <use href="#pic"/><rect width="100" height="100" fill="#000" filter="url(#stat)" opacity=".38"/>
+    <rect width="100" height="100" fill="none" stroke="#4a4f6a"/>
+  </g>
+  <g class="s1 d2" transform="translate(640 38)">
+    <use href="#pic" filter="url(#blur3)"/><rect width="100" height="100" fill="#000" filter="url(#stat)" opacity=".78"/>
+    <rect width="100" height="100" fill="none" stroke="#4a4f6a"/>
+  </g>
+  <g class="s1 d3" transform="translate(900 38)">
+    <rect width="100" height="100" fill="#000" filter="url(#stat)"/>
+    <rect width="100" height="100" fill="none" stroke="#4a4f6a"/>
+  </g>
+  <text class="s1"    x="170" y="153" text-anchor="middle" font-size="11.5" fill="#c0c4da">real image · t = 0</text>
+  <text class="s1 d1" x="430" y="153" text-anchor="middle" font-size="11.5" fill="#c0c4da">t = 200 — slightly grainy</text>
+  <text class="s1 d2" x="690" y="153" text-anchor="middle" font-size="11.5" fill="#c0c4da">t = 600 — only coarse shapes</text>
+  <text class="s1 d3" x="950" y="153" text-anchor="middle" font-size="11.5" fill="#c0c4da">t = 1000 — pure noise (TV static)</text>
+
+  <!-- ================= STEP 2 · reverse (learned) ================= -->
+  <text class="s2 d1" x="950" y="167" text-anchor="middle" font-size="10.5" fill="#58c4dd">generation starts HERE — fresh random noise</text>
+  <text class="s2 d3" x="170" y="167" text-anchor="middle" font-size="10.5" fill="#ffd166">…and ends here: a NEW image, never existed</text>
+  <line class="s2 draw" x1="1046" y1="182" x2="134" y2="182" stroke="#ffd166" stroke-width="2" pathLength="100" stroke-dasharray="100"/>
+  <polygon class="s2 d3" points="134,177 122,182 134,187" fill="#ffd166"/>
+  <text class="s2 d1" x="600" y="198" text-anchor="middle" font-size="12" fill="#ffd166" font-weight="600">REVERSE — learned · undo one small step at a time · t = 1000 → 999 → … → 0</text>
+  <g class="s2 d2">
+    <rect x="250" y="206" width="570" height="46" rx="8" fill="#1b1b33" stroke="#8a7433"/>
+    <text x="535" y="219" text-anchor="middle" font-size="11" fill="#e9e9f2">the network — a U-Net (convolutional encoder-decoder) or DiT (diffusion transformer)</text>
+    <text x="535" y="231" text-anchor="middle" font-size="11" fill="#c0c4da">input: noisy image + timestep t (+ prompt embedding) → output: the added noise ε</text>
+    <text x="535" y="243" text-anchor="middle" font-size="11" fill="#c0c4da">trained by noise-guessing with plain MSE — stable &amp; scalable; no GAN-style adversarial balance</text>
+  </g>
+
+  <!-- ================= STEP 3 · the cost ================= -->
+  <g class="s3 rise">
+    <rect x="908" y="202" width="204" height="50" rx="8" fill="#15251d" stroke="#3f7a5c"/>
+    <text x="1010" y="216" text-anchor="middle" font-size="10.5" fill="#c0c4da">sampling walks the whole chain:</text>
+    <text x="1010" y="230" text-anchor="middle" font-size="11" fill="#6fe0a8" font-weight="600">~1000 sequential full passes</text>
+    <text x="1010" y="244" text-anchor="middle" font-size="10.5" fill="#6fe0a8">≈ a minute per image (2020 GPU)</text>
+  </g>
+  <text class="s3 rise" x="40" y="274" font-size="12.5" fill="#6fe0a8" font-weight="700">FEWER STEPS — the variant zoo <tspan font-size="9.5" fill="#8b90aa" font-weight="400">(tick rows indicative, not to scale)</tspan></text>
+  <g class="s3 rise d1">
+    <text x="44" y="304" font-size="12" fill="#e9e9f2">DDPM (ancestral)</text>
+    <text x="436" y="304" text-anchor="end" font-size="12" fill="#6fe0a8" font-weight="600">~1000</text>
+    <line x1="44" y1="313" x2="300" y2="313" stroke="#6fe0a8" stroke-width="9" stroke-dasharray="1 1.6" opacity=".85"/>
+    <text x="44" y="329" font-size="10" fill="#8b90aa">original; excellent quality, impractically slow — steps can’t be parallelized</text>
+  </g>
+
+  <!-- ================= STEP 4 · fewer steps ================= -->
+  <text class="s4 rise d4" x="44" y="288" font-size="10" fill="#8b90aa">rules of thumb: below ~10 steps undistilled models degrade · above ~50 returns diminish</text>
+  <g class="s4 rise">
+    <text x="44" y="342" font-size="12" fill="#e9e9f2">DDIM</text>
+    <text x="436" y="342" text-anchor="end" font-size="12" fill="#6fe0a8" font-weight="600">20-50</text>
+    <line x1="44" y1="351" x2="300" y2="351" stroke="#6fe0a8" stroke-width="9" stroke-dasharray="1.5 6" opacity=".85"/>
+    <text x="44" y="367" font-size="10" fill="#8b90aa">same trained model; deterministic (invert &amp; interpolate); the everyday “steps” slider</text>
+  </g>
+  <g class="s4 rise d1">
+    <text x="44" y="380" font-size="12" fill="#e9e9f2">ODE solvers (DPM-Solver++)</text>
+    <text x="436" y="380" text-anchor="end" font-size="12" fill="#6fe0a8" font-weight="600">10-20</text>
+    <line x1="44" y1="389" x2="300" y2="389" stroke="#6fe0a8" stroke-width="9" stroke-dasharray="1.5 15.5" opacity=".85"/>
+    <text x="44" y="405" font-size="10" fill="#8b90aa">sampling = solving an ODE → better numerics, no retraining</text>
+  </g>
+  <g class="s4 rise d2">
+    <text x="44" y="418" font-size="12" fill="#e9e9f2">rectified flow / flow matching</text>
+    <text x="436" y="418" text-anchor="end" font-size="12" fill="#6fe0a8" font-weight="600">~20-30</text>
+    <line x1="44" y1="427" x2="300" y2="427" stroke="#6fe0a8" stroke-width="9" stroke-dasharray="1.5 9" opacity=".85"/>
+    <text x="44" y="441" font-size="10" fill="#8b90aa">retrained: straight paths (SD3 &amp; Flux); fewer viable</text>
+    <path d="M320 424 C 348 406, 396 406, 424 424" fill="none" stroke="#8b90aa" stroke-width="1.5" stroke-dasharray="3 3"/>
+    <text x="372" y="403" text-anchor="middle" font-size="8.5" fill="#8b90aa">curved (Gaussian noising)</text>
+    <line x1="320" y1="428" x2="424" y2="414" stroke="#6fe0a8" stroke-width="1.8"/>
+    <text x="372" y="440" text-anchor="middle" font-size="8.5" fill="#6fe0a8">straight → fewer solver steps</text>
+  </g>
+  <g class="s4 rise d3">
+    <text x="44" y="456" font-size="12" fill="#e9e9f2">distilled / consistency / LCM</text>
+    <text x="436" y="456" text-anchor="end" font-size="12" fill="#6fe0a8" font-weight="600">1-4</text>
+    <line x1="44" y1="465" x2="300" y2="465" stroke="#6fe0a8" stroke-width="9" stroke-dasharray="3 90" opacity=".85"/>
+    <text x="44" y="481" font-size="10" fill="#8b90aa">retrained for big jumps (student imitates teacher); fastest; slightly softer, less varied</text>
+  </g>
+
+  <!-- ================= STEP 5 · latent diffusion ================= -->
+  <g class="s5 rise">
+    <text x="452" y="274" font-size="12.5" fill="#e9e9f2" font-weight="700">LATENT DIFFUSION — compress, then diffuse</text>
+    <rect x="456" y="292" width="92" height="92" fill="#1d2b46" stroke="#58c4dd"/>
+    <rect x="456" y="292" width="92" height="92" fill="url(#grid)"/>
+    <text x="502" y="398" text-anchor="middle" font-size="10.5" fill="#c0c4da">pixels: 512×512×3</text>
+    <text x="502" y="410" text-anchor="middle" font-size="10.5" fill="#c0c4da">= 786,432 numbers</text>
+  </g>
+  <g class="s5 rise d1">
+    <line x1="552" y1="338" x2="608" y2="338" stroke="#9aa0c0" stroke-width="1.5"/>
+    <polygon points="608,334 616,338 608,342" fill="#9aa0c0"/>
+    <text x="582" y="327" text-anchor="middle" font-size="9.5" fill="#9aa0c0">VAE encoder</text>
+    <text x="582" y="351" text-anchor="middle" font-size="9.5" fill="#9aa0c0">8× per side</text>
+    <rect x="618" y="324" width="28" height="28" fill="#2a3960" stroke="#58c4dd" stroke-width="1.5"/>
+    <text x="632" y="372" text-anchor="middle" font-size="10.5" fill="#c0c4da">latent: 64×64×4</text>
+    <text x="632" y="384" text-anchor="middle" font-size="10.5" fill="#c0c4da">= 16,384 · ≈48× fewer</text>
+  </g>
+  <rect class="s5 ghost" x="456" y="292" width="92" height="92" fill="none"
+        stroke="#58c4dd" stroke-dasharray="4 3" opacity=".9"/>
+  <g class="s5 rise d2">
+    <circle cx="632" cy="338" r="25" fill="none" stroke="#ffd166" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <polygon points="0,-3.5 7,0 0,3.5" transform="translate(632,313)" fill="#ffd166"/>
+    <text x="668" y="312" font-size="10" fill="#ffd166">the whole noise ↔ denoise</text>
+    <text x="668" y="324" font-size="10" fill="#ffd166">loop runs in here —</text>
+    <text x="668" y="336" font-size="10" fill="#ffd166">each step ≈ 48× cheaper</text>
+  </g>
+  <g class="s5 rise d3">
+    <line x1="646" y1="356" x2="726" y2="416" stroke="#9aa0c0" stroke-width="1.5"/>
+    <polygon points="0,-4 8,0 0,4" transform="translate(726,416) rotate(37)" fill="#9aa0c0"/>
+    <text x="676" y="446" text-anchor="middle" font-size="9.5" fill="#9aa0c0">VAE decoder — decode once</text>
+    <g transform="translate(736 398) scale(.52)"><use href="#pic"/><rect width="100" height="100" fill="none" stroke="#4a4f6a" stroke-width="2"/></g>
+    <text x="452" y="464" font-size="10" fill="#c0c4da">→ this is what put Stable-Diffusion-class models on consumer GPUs</text>
+    <text x="452" y="478" font-size="10" fill="#8b90aa">the VAE only compresses — the diffusion model generates</text>
+    <text x="452" y="490" font-size="10" fill="#8b90aa">slight ceiling: fine text, small faces (better in newer VAEs)</text>
+  </g>
+
+  <!-- ================= STEP 6 · classifier-free guidance ================= -->
+  <g class="s6 rise">
+    <text x="812" y="274" font-size="12.5" fill="#ff79c6" font-weight="700">CLASSIFIER-FREE GUIDANCE (CFG)</text>
+    <text x="812" y="288" font-size="9.8" fill="#8b90aa">the prompt enters as text-encoder embeddings (CLIP / T5)</text>
+    <text x="988" y="312" text-anchor="middle" font-size="13" fill="#ffd7ee" font-family="ui-monospace,Menlo,Consolas,monospace">guided = uncond + s · (cond − uncond)</text>
+    <text x="988" y="328" text-anchor="middle" font-size="10" fill="#c0c4da">s = 1: no guidance · s ≈ 7.5: common SD default</text>
+  </g>
+  <g class="s6 rise d1">
+    <circle cx="856" cy="424" r="2.5" fill="#e9e9f2"/>
+    <line x1="856" y1="424" x2="942" y2="393" stroke="#9aa0c0" stroke-width="1.8"/>
+    <polygon points="0,-4 8,0 0,4" transform="translate(942,393) rotate(-19.6)" fill="#9aa0c0"/>
+    <text x="948" y="407" font-size="9.5" fill="#9aa0c0">uncond (no prompt)</text>
+    <line x1="856" y1="424" x2="972" y2="364" stroke="#ff79c6" stroke-width="1.4"/>
+    <polygon points="0,-4 8,0 0,4" transform="translate(972,364) rotate(-27.3)" fill="#ff79c6"/>
+    <text x="968" y="356" text-anchor="end" font-size="9.5" fill="#ff79c6">cond (with prompt)</text>
+    <line x1="946" y1="392" x2="976" y2="362" stroke="#9aa0c0" stroke-width="1" stroke-dasharray="3 3"/>
+  </g>
+  <g class="s6 rise d2">
+    <line x1="856" y1="424" x2="1002" y2="334" stroke="#ff79c6" stroke-width="3"/>
+    <polygon points="0,-5 10,0 0,5" transform="translate(1006,332) rotate(-31.5)" fill="#ff79c6"/>
+    <text x="1052" y="332" font-size="10" fill="#ff79c6" font-weight="600">guided</text>
+    <text x="1052" y="344" font-size="9.5" fill="#ff79c6">s × the prompt’s pull</text>
+  </g>
+  <g class="s6 rise d3">
+    <text x="812" y="446" font-size="9.8" fill="#c0c4da">trained by dropping the prompt ~10-20% of the time (one net, both modes)</text>
+    <text x="812" y="460" font-size="9.8" fill="#c0c4da">each step runs the network twice (with / without prompt) — 2× the cost</text>
+    <text x="812" y="474" font-size="9.8" fill="#8b90aa">higher s → follows prompt more, looks more “typical”, less diverse</text>
+    <text x="812" y="488" font-size="9.8" fill="#8b90aa">pushed past s ≈ 12-15 (classic SD): oversaturated, burned-in artifacts</text>
+  </g>
+
+  <!-- ================= STEP 7 · one framework ================= -->
+  <g class="s7 rise">
+    <rect x="36" y="504" width="1128" height="100" rx="10" fill="#171732" stroke="#3a3a5e"/>
+    <text x="56" y="526" font-size="12.5" fill="#e9e9f2" font-weight="700">ONE FRAMEWORK, MANY DIALS</text>
+    <text x="56" y="546" font-size="10.5" fill="#c0c4da">ε-, score- and velocity-prediction describe one learned quantity; DDIM discretizes the probability-flow ODE; flow matching (with Gaussian paths) recovers it.</text>
+    <text x="56" y="561" font-size="10.5" fill="#c0c4da">the variants are different samplers, paths and spaces for the same mechanism — not competing technologies.</text>
+    <text x="56" y="580" font-size="10.5" fill="#e9e9f2">✗ “it collages a database” — no training images are stored or consulted; weights hold statistics <tspan fill="#8b90aa">(rare near-duplicates occur only for heavily repeated training images)</tspan></text>
+    <text x="56" y="596" font-size="10.5" fill="#e9e9f2">✗ “it denoises a real photo” — text-to-image starts from pure synthetic noise; image-to-image / inpainting start from your image only when you supply one</text>
+  </g>
+</svg>
+</div>
+
+<div id="capbar">
+  <p id="cap"></p>
+  <div class="controls">
+    <button id="bPrev" aria-label="step back">‹ back</button>
+    <button id="bPlay">▶ replay the build-up</button>
+    <button id="bNext" aria-label="step forward">next ›</button>
+    <div class="dots" id="dots" role="group" aria-label="steps"></div>
+  </div>
+  <p class="kbd">space = play / pause · ← → = step</p>
+</div>
+
+<ol id="caplist">
+  <li>A fixed forward process gradually noises a real image — after T = 1000 small steps, nothing survives.</li>
+  <li>A network learns to undo one small step; chaining them turns pure random noise into a brand-new image.</li>
+  <li>Naive DDPM sampling: ~1000 sequential network passes per image — the cost every variant attacks.</li>
+  <li>DDIM, ODE solvers, rectified flow and distillation cut steps from 1000 toward 1-4, trading some quality.</li>
+  <li>Latent diffusion runs everything in VAE-compressed space — roughly 48× fewer numbers — with a slight compression ceiling.</li>
+  <li>Guidance runs the network twice per step, exaggerating the prompt’s pull; s ≈ 7.5 trades diversity for adherence.</li>
+  <li>One framework, many samplers: generation always starts from pure noise, and no training images are stored.</li>
+</ol>
+
+<footer>diffusion-variants · motion-explainer · v1 · 2026-08-11</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  document.body.classList.add("js");
+  var svg = document.getElementById("scene");
+  var cap = document.getElementById("cap");
+  var dotsWrap = document.getElementById("dots");
+  var bPlay = document.getElementById("bPlay");
+  var N = 7;
+  var caps = Array.prototype.map.call(
+    document.querySelectorAll("#caplist li"),
+    function(li){ return li.textContent.trim(); });
+  var names = ["Forward: destroy","Reverse: rebuild","The cost","Fewer steps",
+               "Latent space","Guidance","One framework"];
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var STEP_MS = reduced ? 1500 : 2600;
+  var cur = N, timer = null, dots = [];
+
+  for (var i = 1; i <= N; i++) (function(n){
+    var b = document.createElement("button");
+    b.className = "dot";
+    b.title = n + ". " + names[n-1];
+    b.setAttribute("aria-label", b.title);
+    b.addEventListener("click", function(){ stop(); go(n); });
+    dotsWrap.appendChild(b);
+    dots.push(b);
+  })(i);
+
+  function go(n){
+    cur = Math.max(0, Math.min(N, n));
+    for (var i = 1; i <= N; i++) svg.classList.toggle("off" + i, i > cur);
+    svg.classList.toggle("m-off", cur < 5);
+    cap.textContent = cur ? cur + " / " + N + " — " + caps[cur-1]
+                          : "Blank canvas — building up…";
+    dots.forEach(function(d, i){
+      d.classList.toggle("done", i + 1 <= cur);
+      d.classList.toggle("cur",  i + 1 === cur);
+    });
+    syncBtn();
+  }
+  function tick(){
+    go(cur + 1);
+    if (cur >= N) { timer = null; syncBtn(); }
+    else timer = setTimeout(tick, STEP_MS);
+  }
+  function play(){
+    if (timer) { stop(); return; }
+    if (cur >= N) { go(0); timer = setTimeout(tick, 700); }
+    else timer = setTimeout(tick, 300);
+    syncBtn();
+  }
+  function stop(){
+    if (timer) { clearTimeout(timer); timer = null; }
+    syncBtn();
+  }
+  function stepBy(d){ stop(); go(cur + d); }
+  function syncBtn(){
+    bPlay.textContent = timer ? "⏸ pause"
+      : (cur >= N ? "▶ replay the build-up" : "▶ play");
+  }
+
+  bPlay.addEventListener("click", play);
+  document.getElementById("bPrev").addEventListener("click", function(){ stepBy(-1); });
+  document.getElementById("bNext").addEventListener("click", function(){ stepBy(1); });
+  document.addEventListener("keydown", function(e){
+    if (e.key === " ")            { e.preventDefault(); play(); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); stepBy(1); }
+    else if (e.key === "ArrowLeft")  { e.preventDefault(); stepBy(-1); }
+  });
+
+  go(N); /* first paint = final frame */
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INC-1194 — anatomy of the June 24 outage</title>
+<style>
+  :root{
+    --bg:#0d0f15; --panel:#14161f; --edge:#232736;
+    --ink:#e9ecf2; --mut:#9aa3b2; --dim:#6a7183;
+    --y:#f6d35c; --o:#f0913d; --r:#f4645c; --b:#58c4dd;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    line-height:1.45}
+  .wrap{max-width:1240px;margin:0 auto;padding:18px 16px 28px}
+  h1{font-size:1.3rem;margin:0 0 4px;font-weight:700}
+  .frame{color:var(--mut);margin:0 0 12px;font-size:.93rem;max-width:75rem}
+  .scenewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--edge);border-radius:12px}
+  .scenewrap svg{display:block;min-width:1080px;width:100%;height:auto}
+
+  /* --- SVG typography / palette --- */
+  svg text{fill:var(--ink);font-family:inherit}
+  .t{fill:var(--ink)} .m{fill:var(--mut)} .d{fill:var(--dim)}
+  .y{fill:var(--y)} .o{fill:var(--o)} .r{fill:var(--r)} .b{fill:var(--b)}
+  .s9{font-size:9.5px}.s10{font-size:10.5px}.s11{font-size:11px}.s115{font-size:11.5px}
+  .s12{font-size:12px}.s13{font-size:13px}.s15{font-size:15px}.big{font-size:30px}
+  .bold{font-weight:700}.it{font-style:italic}
+  .card{fill:#1a1d29;rx:8}
+  .tick{stroke-width:1.6}
+  .guide{stroke:#2b3040;stroke-width:1;stroke-dasharray:2 3}
+
+  /* --- build machinery (only active with JS) --- */
+  .js [data-step]{transition:opacity .6s ease,transform .6s ease}
+  .js [data-step]:not(.on){opacity:0;transform:translateY(8px);transition:none;pointer-events:none}
+  .js .grow{transform:scaleX(1);transform-origin:left center;transform-box:fill-box;
+    transition:transform .75s ease .5s}
+  .js [data-step]:not(.on) .grow{transform:scaleX(0);transition:none}
+  .js path.draw{stroke-dasharray:1 1;stroke-dashoffset:0;transition:stroke-dashoffset .7s ease .15s}
+  .js [data-step]:not(.on) path.draw{stroke-dashoffset:1;transition:none}
+  .js .late{transition:opacity .35s ease .8s}
+  .js [data-step]:not(.on) .late{opacity:0;transition:none}
+  @media (prefers-reduced-motion: reduce){
+    .js [data-step],.js .grow,.js path.draw,.js .late{transition:none !important}
+  }
+
+  /* --- caption + controls --- */
+  #caption{min-height:1.5em;font-size:1.02rem;margin:.75rem .1rem .45rem;color:var(--ink)}
+  #caption .n{color:var(--dim);font-variant-numeric:tabular-nums;margin-right:.5em}
+  .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .controls button{background:#1a1f2c;color:var(--ink);border:1px solid #2c3245;
+    border-radius:7px;padding:6px 12px;font-size:.9rem;cursor:pointer}
+  .controls button:hover{border-color:#4a5470}
+  .controls button#play{border-color:var(--b);color:var(--b);font-weight:600}
+  .dots{display:flex;gap:6px;margin-left:6px}
+  .dots button{width:22px;height:22px;padding:0;border-radius:50%;font-size:.68rem;
+    color:var(--mut);line-height:1}
+  .dots button.active{background:var(--b);color:#0d0f15;border-color:var(--b);font-weight:700}
+  .dots button.done{color:var(--ink);border-color:#4a5470}
+  .kbd{color:var(--dim);font-size:.78rem;margin-left:auto}
+  .nojs-note{display:none}
+
+  /* --- step list (captions as visible ordered list; nav with JS) --- */
+  ol.steps{margin:14px 0 0;padding-left:1.6em;color:var(--mut);font-size:.9rem;max-width:70rem}
+  ol.steps li{margin:3px 0;border-radius:6px;padding:2px 6px 2px 2px}
+  .js ol.steps li{cursor:pointer}
+  .js ol.steps li:hover{color:var(--ink)}
+  ol.steps li.active{color:var(--ink);background:#1a2030}
+  footer{color:var(--dim);font-size:.74rem;margin-top:20px}
+  @media (max-width:600px){
+    h1{font-size:1.06rem}
+    .frame{font-size:.86rem}
+    .kbd{display:none}
+  }
+</style>
+
+<div class="wrap">
+  <h1>INC-1194 — anatomy of the June&nbsp;24 outage</h1>
+  <p class="frame">On June 24, 2026 a rewritten search query met two latent weaknesses —
+    autovacuum debt and jitterless retries — and slow detection stretched a one-endpoint
+    regression into a 4&nbsp;h&nbsp;17&nbsp;m platform-wide partial outage; this is how, and what changes.</p>
+
+  <div class="scenewrap">
+  <svg viewBox="0 0 1200 720" role="img"
+       aria-label="Causal diagram of the June 24 ledgerline outage: three cause cards (query regression trigger, autovacuum-debt amplifier, retry-storm amplifier) converge into a 4-hour-17-minute outage node; a timeline below shows the 68-minute detection lag, the failed rollback, and recovery via feature flag; three P0 fixes on the right each target one failure leg.">
+
+    <!-- ===== furniture: legend (colors bound to meanings) ===== -->
+    <g>
+      <rect x="470" y="38" width="10" height="10" rx="2" fill="var(--y)"/>
+      <text x="486" y="47" class="s11 m">trigger — the query change</text>
+      <rect x="470" y="60" width="10" height="10" rx="2" fill="var(--o)"/>
+      <text x="486" y="69" class="s11 m">latent debt — table bloat</text>
+      <rect x="644" y="38" width="10" height="10" rx="2" fill="var(--r)"/>
+      <text x="660" y="47" class="s11 m">amplification &amp; impact</text>
+      <rect x="644" y="60" width="10" height="10" rx="2" fill="var(--b)"/>
+      <text x="660" y="69" class="s11 m">mitigation &amp; fixes</text>
+    </g>
+
+    <!-- ===== step 1: trigger — query regression ===== -->
+    <g data-step="1" class="on">
+      <rect x="20" y="28" width="320" height="150" rx="8" class="card" stroke="var(--y)" stroke-width="1.4"/>
+      <text x="32" y="50" class="s13 bold y">&#9312; Trigger — search query regression</text>
+      <text x="32" y="68" class="s115">Deploy 14:02 &#183; PR #8841 ships contains-search:</text>
+      <text x="32" y="83" class="s115">the pattern gains a leading wildcard ('%&#8230;') — a</text>
+      <text x="32" y="98" class="s115">B-tree index has nothing to anchor on — and org</text>
+      <text x="32" y="113" class="s115">scoping left the SQL. The planner's only option:</text>
+      <text x="32" y="128" class="s115">a seq scan of all 274&#8202;M rows, for every search.</text>
+      <text x="32" y="142" class="s10 m">before: 0.4 ms</text>
+      <rect x="120" y="134" width="2.5" height="9" fill="var(--y)"/>
+      <text x="135" y="142" class="s9 d">(bars not to scale)</text>
+      <text x="32" y="158" class="s10 m">after:</text>
+      <rect x="120" y="150" width="150" height="9" fill="var(--y)" class="grow"/>
+      <text x="278" y="158" class="s11 bold y late">24–31 s</text>
+      <text x="32" y="174" class="s10 it m">Canary was green — its 2&#8202;M-row table scans in ~180 ms.</text>
+    </g>
+
+    <!-- ===== step 2: amplifier — autovacuum debt ===== -->
+    <g data-step="2" class="on">
+      <rect x="20" y="192" width="320" height="150" rx="8" class="card" stroke="var(--o)" stroke-width="1.4"/>
+      <text x="32" y="214" class="s13 bold o">&#9313; Amplifier — autovacuum debt (bloat)</text>
+      <text x="32" y="232" class="s115">Jun 22's backfill left 38.1&#8202;M dead tuples: 12.2%</text>
+      <text x="32" y="247" class="s115">bloat, under autovacuum's &#8776;54.9&#8202;M trigger for a</text>
+      <text x="32" y="262" class="s115">table this size — so no cleanup ever ran.</text>
+      <text x="32" y="276" class="s10 it m">(dead tuple = stale row copy left by an UPDATE;</text>
+      <text x="32" y="289" class="s10 it m">autovacuum is the janitor that reclaims them)</text>
+      <rect x="32" y="296" width="276" height="9" fill="#262b3a"/>
+      <rect x="32" y="296" width="192" height="9" fill="var(--o)" class="grow"/>
+      <line x1="308" y1="292" x2="308" y2="309" stroke="var(--mut)" stroke-width="1.5"/>
+      <text x="32" y="320" class="s10 o late">38.1&#8202;M dead</text>
+      <text x="308" y="320" class="s10 m late" text-anchor="end">trigger &#8776;54.9&#8202;M — not crossed</text>
+      <text x="32" y="336" class="s115">Scans crossed 30&#8202;s timeout &#8594; ~57% killed as 5xx.</text>
+    </g>
+
+    <!-- ===== step 3: amplifier — retries + pool ===== -->
+    <g data-step="3" class="on">
+      <rect x="20" y="356" width="320" height="150" rx="8" class="card" stroke="var(--r)" stroke-width="1.4"/>
+      <text x="32" y="378" class="s13 bold r">&#9314; Amplifier — retries + pool exhaustion</text>
+      <text x="32" y="396" class="s115">Each scan — even ones the timeout killed —</text>
+      <text x="32" y="411" class="s115">held a pooled DB connection for up to 30&#8202;s.</text>
+      <text x="32" y="425" class="s10 it m">(pgbouncer pool = 80 shared server connections;</text>
+      <text x="32" y="438" class="s10 it m">when all are busy, every request queues)</text>
+      <text x="32" y="454" class="s115">Retries (1&#8202;s fixed, &#215;3, no jitter/budget) drove</text>
+      <text x="32" y="469" class="s115">3,200 &#8594; 15,020 rpm (4.7&#215;); pool full at 15:12.</text>
+      <rect x="32" y="477" width="276" height="9" fill="#262b3a"/>
+      <rect x="32" y="477" width="276" height="9" fill="var(--r)" class="grow"/>
+      <text x="32" y="499" class="s10 r late">80/80 &#183; queue peak 1,437</text>
+      <text x="308" y="499" class="s10 m late" text-anchor="end">every pooled endpoint fails</text>
+    </g>
+
+    <!-- ===== step 4: convergence + outage node ===== -->
+    <g data-step="4" class="on">
+      <path class="draw" pathLength="1" d="M348,103 C400,103 412,185 452,205" fill="none" stroke="var(--y)" stroke-width="2.5"/>
+      <polygon class="late" points="456,207 444,203 447,212" fill="var(--y)"/>
+      <path class="draw" pathLength="1" d="M348,267 C390,267 410,266 452,265" fill="none" stroke="var(--o)" stroke-width="2.5"/>
+      <polygon class="late" points="456,265 445,260 445,270" fill="var(--o)"/>
+      <path class="draw" pathLength="1" d="M348,431 C400,431 412,345 452,325" fill="none" stroke="var(--r)" stroke-width="2.5"/>
+      <polygon class="late" points="456,323 444,327 447,318" fill="var(--r)"/>
+
+      <rect x="460" y="155" width="320" height="220" rx="10" fill="#221520" stroke="var(--r)" stroke-width="2"/>
+      <text x="620" y="182" class="s15 bold r" text-anchor="middle">SEV-1 — partial API outage</text>
+      <text x="620" y="216" class="big bold t" text-anchor="middle">4 h 17 m</text>
+      <text x="620" y="236" class="s11 m" text-anchor="middle">2026-06-24, 14:02 &#8594; 18:19 UTC (257 min)</text>
+      <text x="620" y="260" class="s12 t" text-anchor="middle">peak 31.2% / avg 19.1% of requests failing</text>
+      <text x="620" y="280" class="s12 t" text-anchor="middle">&#8776;362,000 of &#8776;1.9&#8202;M requests failed</text>
+      <text x="620" y="300" class="s12 t" text-anchor="middle">2,312 orgs (24.4% of active) affected</text>
+      <text x="620" y="320" class="s12 t" text-anchor="middle">&#8776;$41,300 SLA credits &#183; p99 420&#8202;ms &#8594; 28.4&#8202;s</text>
+      <text x="620" y="342" class="s10 it m" text-anchor="middle">no data lost — writes queued; 37,400 webhooks</text>
+      <text x="620" y="355" class="s10 it m" text-anchor="middle">replayed by 19:05 &#183; replica-served + auth endpoints</text>
+      <text x="620" y="368" class="s10 it m" text-anchor="middle">stayed healthy, capping the blast radius</text>
+      <text x="620" y="397" class="s115 it" fill="#cdd3e0" text-anchor="middle">Remove any one leg &#8594; a degradation, not an outage; remediation targets all three.</text>
+    </g>
+
+    <!-- ===== step 5: timeline — detection lag ===== -->
+    <g data-step="5" class="on">
+      <text x="60" y="532" class="s10 d">Timeline — all times UTC, Jun 24 2026</text>
+      <line x1="60" y1="615" x2="1150" y2="615" stroke="#3a4054" stroke-width="1.5"/>
+      <line x1="60" y1="566" x2="60" y2="606" class="guide"/>
+      <line x1="81" y1="550" x2="81" y2="606" class="guide"/>
+      <line x1="60" y1="607" x2="60" y2="623" class="tick" stroke="var(--y)"/>
+      <line x1="81" y1="607" x2="81" y2="623" class="tick" stroke="var(--mut)"/>
+      <line x1="98" y1="607" x2="98" y2="623" class="tick" stroke="var(--mut)"/>
+      <line x1="387" y1="607" x2="387" y2="623" class="tick" stroke="var(--ink)"/>
+      <line x1="387" y1="582" x2="387" y2="606" class="guide"/>
+      <text x="60" y="561" class="s11 y">14:02 deploy</text>
+      <text x="81" y="545" class="s11 m">14:07 search p99 &gt; 20&#8202;s — no latency alert exists</text>
+      <rect x="136" y="585" width="212" height="20" fill="var(--r)" opacity="0.16"/>
+      <text x="242" y="599" class="s10 r" text-anchor="middle">network hypothesis &#183; 50 min</text>
+      <text x="390" y="577" class="s11 t">15:19 DB identified — IC pivots</text>
+      <path d="M98 639 v8 M387 639 v8 M98 647 H387" fill="none" stroke="var(--mut)" stroke-width="1.2"/>
+      <text x="242" y="663" class="s10 m" text-anchor="middle">14:11 first alert &#8594; 15:19 DB identified: 68 min</text>
+      <text x="98" y="679" class="s10 it d">Alerts watched error rate only &#183; latency panels sampled 1/100 requests &#183; deploy marker broken since Jun 10</text>
+    </g>
+
+    <!-- ===== step 6: escalation + dead ends ===== -->
+    <g data-step="6" class="on">
+      <line x1="476" y1="550" x2="476" y2="606" class="guide"/>
+      <line x1="505" y1="566" x2="505" y2="606" class="guide"/>
+      <line x1="645" y1="582" x2="645" y2="606" class="guide"/>
+      <line x1="476" y1="607" x2="476" y2="623" class="tick" stroke="var(--ink)"/>
+      <line x1="505" y1="600" x2="505" y2="623" class="tick" stroke="var(--r)"/>
+      <line x1="357" y1="607" x2="357" y2="623" class="tick" stroke="var(--r)"/>
+      <line x1="645" y1="607" x2="645" y2="623" class="tick" stroke="var(--mut)"/>
+      <text x="420" y="545" class="s11 t">15:40 rollback abandoned — index dropped; rebuild &#8776;6&#8202;h</text>
+      <text x="505" y="561" class="s11 r">15:47 peak 31.2% &#183; traffic &#215;4.7</text>
+      <text x="575" y="577" class="s11 m">16:20 pool bump 80&#8594;200 backfires; reverted 16:31</text>
+      <rect x="357" y="623" width="534" height="8" fill="var(--r)" opacity="0.3"/>
+      <text x="400" y="645" class="s10 r">pool pinned — saturated 15:12, queue drained 17:18</text>
+    </g>
+
+    <!-- ===== step 7: recovery ===== -->
+    <g data-step="7" class="on">
+      <line x1="836" y1="566" x2="836" y2="606" class="guide"/>
+      <line x1="1040" y1="582" x2="1040" y2="606" class="guide"/>
+      <line x1="1150" y1="566" x2="1150" y2="606" class="guide"/>
+      <line x1="836" y1="600" x2="836" y2="623" class="tick" stroke="var(--b)"/>
+      <line x1="1040" y1="607" x2="1040" y2="623" class="tick" stroke="var(--b)"/>
+      <line x1="1150" y1="607" x2="1150" y2="623" class="tick" stroke="var(--ink)"/>
+      <text x="750" y="561" class="s11 b">17:05 flag off — errors fall in minutes</text>
+      <rect x="866" y="585" width="161" height="20" fill="var(--b)" opacity="0.16"/>
+      <text x="830" y="545" class="s10 b">VACUUM 17:12–17:50 — 38.1&#8202;M dead tuples removed</text>
+      <text x="1035" y="577" class="s11 t" text-anchor="end">17:53 all SLOs met</text>
+      <text x="1150" y="561" class="s11 t" text-anchor="end">18:19 closed — 4&#8202;h&#8202;17&#8202;m total</text>
+    </g>
+
+    <!-- ===== step 8: remediation ===== -->
+    <g data-step="8" class="on">
+      <text x="880" y="48" class="s13 bold b">P0 fixes — Q3 2026, tracked weekly</text>
+      <rect x="880" y="64" width="300" height="78" rx="8" class="card" stroke="var(--b)" stroke-width="1.2"/>
+      <text x="892" y="84" class="s12 bold t">1 &#183; Per-endpoint p99 latency SLO alerts</text>
+      <text x="892" y="100" class="s11 m">Alert on latency — what customers felt at</text>
+      <text x="892" y="114" class="s11 m">14:07 — not only on error rate.</text>
+      <circle cx="896" cy="126" r="4" fill="var(--mut)"/>
+      <text x="906" y="130" class="s10 it m">targets: the 68-minute detection lag</text>
+
+      <rect x="880" y="156" width="300" height="78" rx="8" class="card" stroke="var(--b)" stroke-width="1.2"/>
+      <text x="892" y="176" class="s12 bold t">2 &#183; Pool-saturation alerts + isolation</text>
+      <text x="892" y="192" class="s11 m">Page on cl_waiting &gt; 50 for 2 min; one</text>
+      <text x="892" y="206" class="s11 m">endpoint must not starve the shared pool.</text>
+      <circle cx="896" cy="218" r="4" fill="var(--r)"/>
+      <text x="906" y="222" class="s10 it m">targets: pool exhaustion (leg &#9314;)</text>
+
+      <rect x="880" y="248" width="300" height="78" rx="8" class="card" stroke="var(--b)" stroke-width="1.2"/>
+      <text x="892" y="268" class="s12 bold t">3 &#183; Standardized client retries</text>
+      <text x="892" y="284" class="s11 m">Exponential backoff + full jitter + retry</text>
+      <text x="892" y="298" class="s11 m">budgets across SDKs and internal clients.</text>
+      <circle cx="896" cy="310" r="4" fill="var(--r)"/>
+      <text x="906" y="314" class="s10 it m">targets: the retry storm (leg &#9314;)</text>
+
+      <text x="880" y="344" class="s10 d">Plus 3 P1 / 3 P2 items, incl. autovacuum tuning</text>
+      <text x="880" y="357" class="s10 d">for 50&#8202;M+ row tables, unbundling destructive</text>
+      <text x="880" y="370" class="s10 d">migrations, and query-plan checks in CI.</text>
+    </g>
+  </svg>
+  </div>
+
+  <p id="caption" aria-live="polite"><span class="n">8 / 8</span>Three P0 fixes land in Q3 2026 — latency alerts, pool alerting, jittered retries — one per failure leg.</p>
+
+  <div class="controls" id="controls" hidden>
+    <button id="play" type="button">&#9654; Replay the build-up</button>
+    <button id="prev" type="button" aria-label="Previous step">&#8249; back</button>
+    <button id="next" type="button" aria-label="Next step">next &#8250;</button>
+    <div class="dots" id="dots" role="group" aria-label="Jump to step"></div>
+    <span class="kbd">space = play/pause &#183; &#8592;/&#8594; = step</span>
+  </div>
+
+  <ol class="steps" id="steps" aria-label="The build, step by step">
+    <li>14:02: a deploy rewrites search into a leading-wildcard LIKE — no index can serve it; 0.4&#8202;ms becomes 24–31&#8202;s.</li>
+    <li>Latent debt: 38.1&#8202;M dead tuples from a June 22 backfill push scans past the 30&#8202;s timeout — ~57% die.</li>
+    <li>Failures retry every 1&#8202;s with no jitter — traffic &#215;4.7 — and the shared 80-connection pool saturates.</li>
+    <li>Three legs align into a 4&#8202;h&#8202;17&#8202;m outage; remove any one and it is a degradation, not an outage.</li>
+    <li>Detection lags 68 minutes: error-rate-only alerts, 1-in-100 sampling, and a broken deploy marker feed a network misdiagnosis.</li>
+    <li>Rollback fails — the migration dropped the old index (rebuild &#8776;6&#8202;h); even a pool bump backfires.</li>
+    <li>The feature flag stops the bleeding at 17:05; VACUUM and cache re-warm restore all SLOs by 17:53.</li>
+    <li>Three P0 fixes land in Q3 2026 — latency alerts, pool alerting, jittered retries — one per failure leg.</li>
+  </ol>
+
+  <footer>incident-analysis &#183; motion-explainer &#183; v1 &#183; 2026-08-11</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var TOTAL = 8;
+  var NAMES = ["Trigger", "Bloat", "Retry storm", "Outage", "Detection lag",
+               "Dead ends", "Recovery", "Fixes"];
+  var groups = Array.prototype.slice.call(document.querySelectorAll("[data-step]"));
+  var listEl = document.getElementById("steps");
+  var items = Array.prototype.slice.call(listEl.children);
+  var caps = items.map(function (li) { return li.textContent; });
+  var capEl = document.getElementById("caption");
+  var playBtn = document.getElementById("play");
+  var prevBtn = document.getElementById("prev");
+  var nextBtn = document.getElementById("next");
+  var dotsEl = document.getElementById("dots");
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var STEP_MS = reduced ? 1400 : 2100;
+  var cur = TOTAL, playing = false, timer = null;
+
+  document.documentElement.classList.add("js");
+  document.getElementById("controls").hidden = false;
+
+  var dots = [];
+  for (var i = 1; i <= TOTAL; i++) {
+    var d = document.createElement("button");
+    d.type = "button";
+    d.textContent = i;
+    d.setAttribute("aria-label", "Step " + i + ": " + NAMES[i - 1]);
+    d.title = NAMES[i - 1];
+    (function (n) {
+      d.addEventListener("click", function () { stop(); cur = n; render(); });
+    })(i);
+    dotsEl.appendChild(d);
+    dots.push(d);
+  }
+  items.forEach(function (li, idx) {
+    li.addEventListener("click", function () { stop(); cur = idx + 1; render(); });
+  });
+
+  function render() {
+    groups.forEach(function (g) {
+      g.classList.toggle("on", +g.getAttribute("data-step") <= cur);
+    });
+    if (cur === 0) {
+      capEl.innerHTML = "<span class='n'>0 / " + TOTAL + "</span>&#183; &#183; &#183;";
+    } else {
+      capEl.innerHTML = "<span class='n'>" + cur + " / " + TOTAL + "</span>";
+      capEl.appendChild(document.createTextNode(caps[cur - 1]));
+    }
+    dots.forEach(function (d, idx) {
+      d.classList.toggle("active", idx + 1 === cur);
+      d.classList.toggle("done", idx + 1 < cur);
+    });
+    items.forEach(function (li, idx) {
+      li.classList.toggle("active", idx + 1 === cur);
+    });
+    prevBtn.disabled = cur <= 0;
+    nextBtn.disabled = cur >= TOTAL;
+  }
+
+  function stop() {
+    playing = false;
+    if (timer) { clearInterval(timer); timer = null; }
+    playBtn.innerHTML = "&#9654; Replay the build-up";
+  }
+
+  function play() {
+    if (cur >= TOTAL) cur = 0;
+    playing = true;
+    playBtn.innerHTML = "&#10074;&#10074; Pause";
+    render();
+    timer = setInterval(function () {
+      cur++;
+      render();
+      if (cur >= TOTAL) stop();
+    }, STEP_MS);
+  }
+
+  playBtn.addEventListener("click", function () { playing ? stop() : play(); });
+  prevBtn.addEventListener("click", function () { stop(); if (cur > 0) cur--; render(); });
+  nextBtn.addEventListener("click", function () { stop(); if (cur < TOTAL) cur++; render(); });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === " " || e.code === "Space") {
+      e.preventDefault();
+      playing ? stop() : play();
+    } else if (e.key === "ArrowRight") {
+      stop(); if (cur < TOTAL) cur++; render();
+    } else if (e.key === "ArrowLeft") {
+      stop(); if (cur > 0) cur--; render();
+    }
+  });
+
+  render(); /* first paint = final frame (cur starts at TOTAL) */
+})();
+</script>
+</html>

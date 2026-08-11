@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anatomy of a 4 h 17 m outage — INC-1194</title>
+<style>
+  :root{
+    --paper:#faf8f3;
+    --ink:#21201c;
+    --muted:#716b60;
+    --accent:#c2410c;
+    --hairline:#ded8cc;
+    --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+    --sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#16140f;
+      --ink:#eae4d8;
+      --muted:#98917f;
+      --accent:#f2622e;
+      --hairline:#332e25;
+    }
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.5}
+  .page{max-width:1024px;margin:0 auto;padding:40px 32px 24px}
+  .meta{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+  h1{font-family:var(--serif);font-weight:400;font-size:40px;line-height:1.15;margin:12px 0 16px}
+  .standfirst{font-size:17px;line-height:1.55;max-width:52em;color:var(--ink)}
+  section{margin-top:48px;border-top:1px solid var(--hairline);padding-top:20px}
+  h2{font-size:15px;font-weight:600;letter-spacing:.02em;margin-bottom:16px}
+  .fig{overflow-x:auto}
+  .fig svg{display:block;width:100%;height:auto}
+  .fig--d1 svg{min-width:840px}
+  .fig--d2 svg{min-width:960px}
+  .fig--d3 svg{min-width:720px;max-width:880px;margin:0 auto}
+  .cap{font-size:13px;line-height:1.6;color:var(--muted);max-width:62em;margin-top:12px}
+  .cap b{color:var(--ink);font-weight:600}
+
+  /* figures strip */
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));border:1px solid var(--hairline);margin-top:24px}
+  .figs>div{padding:12px 16px;border-right:1px solid var(--hairline);border-bottom:1px solid var(--hairline)}
+  .figs dt{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .figs dd{font-family:var(--mono);font-size:12.5px;line-height:1.45}
+
+  /* action table */
+  .tblwrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:720px;font-size:13px}
+  th{text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 12px 8px 0;border-bottom:1px solid var(--ink)}
+  td{padding:8px 12px 8px 0;border-bottom:1px solid var(--hairline);vertical-align:top}
+  td.n{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+  td.leg,td.who,td.due{font-family:var(--mono);font-size:11.5px;white-space:nowrap;color:var(--muted)}
+  tr.grp td{border-bottom:none;padding-top:20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+  tr.grp.p0 td{color:var(--accent)}
+
+  .endnote{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--muted);margin-top:48px;max-width:44em}
+  footer{margin-top:40px;border-top:1px solid var(--hairline);padding-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+
+  /* SVG shared */
+  .node{fill:var(--paper);stroke:var(--ink);stroke-width:1;rx:8}
+  .nodeA{fill:var(--accent);fill-opacity:.07;stroke:var(--accent);stroke-width:1}
+  .nn{font-family:var(--sans);font-size:13px;font-weight:600;fill:var(--ink)}
+  .nnA{fill:var(--accent)}
+  .ns{font-family:var(--mono);font-size:10.5px;fill:var(--muted)}
+  .tg{font-family:var(--sans);font-size:9.5px;letter-spacing:.1em;fill:var(--muted)}
+  .an{font-family:var(--serif);font-style:italic;font-size:14px;fill:var(--ink)}
+  .flow{stroke:var(--muted);stroke-width:1;fill:none}
+  .leader{stroke:var(--muted);stroke-width:1;fill:none;stroke-dasharray:2 4}
+  .hair{stroke:var(--hairline);stroke-width:1}
+  .arrfill{fill:var(--muted)}
+  .seg{fill:var(--ink)}
+  .barlabel{font-family:var(--mono);font-size:10.5px;font-weight:600;fill:var(--ink)}
+  .tick{stroke:var(--muted);stroke-width:1}
+  .tl{font-family:var(--mono);font-size:10.5px;fill:var(--muted)}
+  .hourl{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
+  .acct{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;fill:var(--accent)}
+  .accl{stroke:var(--accent);stroke-width:1;fill:none}
+  .flaglabel{font-family:var(--sans);font-size:11px;font-weight:700;fill:var(--accent)}
+  .hatchline{stroke:var(--muted);stroke-width:1;stroke-opacity:.5}
+  .loopc{font-family:var(--serif);font-style:italic;font-size:14px;fill:var(--muted)}
+
+  @media (max-width:640px){
+    .page{padding:24px 20px 16px}
+    h1{font-size:29px}
+    .standfirst{font-size:15px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="meta">INC-1194 · SEV-1 partial API outage · 2026-06-24 · 14:02–18:19 UTC · blameless review · final 2026-07-01</p>
+  <h1>Anatomy of a 4&#8202;h&#8202;17&#8202;m outage</h1>
+  <p class="standfirst">A rewritten search query landed on two latent weaknesses — autovacuum debt from a two-day-old backfill and jitterless client retries — and took ledgerline&rsquo;s invoicing API down for 4&#8202;h&#8202;17&#8202;m; a wrong network theory cost 68 minutes, rollback was impossible, and a feature flag ended it.</p>
+</header>
+
+<section>
+  <h2>One outage, three causes</h2>
+  <div class="fig fig--d1">
+  <svg viewBox="0 0 1024 384" role="img" aria-label="Causal chain: search rewrite leads to full-table scans, timeouts, pool exhaustion, and a partial outage; autovacuum debt and retry policy amplify it">
+    <defs>
+      <marker id="a1" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" class="arrfill"/></marker>
+    </defs>
+    <!-- tags -->
+    <text class="tg" x="24" y="96">THE TRIGGER · SHIPPED 14:02</text>
+    <text class="tg" x="992" y="96" text-anchor="end">THE COST</text>
+    <!-- main chain -->
+    <rect class="node" x="24" y="104" width="168" height="88" rx="8"/>
+    <text class="nn" x="108" y="124" text-anchor="middle">Search rewrite</text>
+    <text class="ns" x="108" y="144" text-anchor="middle">PR #8841 · LIKE '%…%'</text>
+    <text class="ns" x="108" y="160" text-anchor="middle">unscoped, no usable index</text>
+    <text class="ns" x="108" y="176" text-anchor="middle">canary green (2 M rows)</text>
+
+    <rect class="node" x="224" y="104" width="168" height="88" rx="8"/>
+    <text class="nn" x="308" y="124" text-anchor="middle">Full-table scans</text>
+    <text class="ns" x="308" y="144" text-anchor="middle">274.2 M rows · 213 GB</text>
+    <text class="ns" x="308" y="160" text-anchor="middle">0.4 ms &#8594; 24–31 s</text>
+
+    <rect class="node" x="424" y="104" width="168" height="88" rx="8"/>
+    <text class="nn" x="508" y="124" text-anchor="middle">Slow &#8594; failing</text>
+    <text class="ns" x="508" y="144" text-anchor="middle">30 s statement timeout</text>
+    <text class="ns" x="508" y="160" text-anchor="middle">~57% of searches killed</text>
+
+    <rect class="node" x="624" y="104" width="168" height="88" rx="8"/>
+    <text class="nn" x="708" y="124" text-anchor="middle">Pool exhausted</text>
+    <text class="ns" x="708" y="144" text-anchor="middle">80/80 connections busy</text>
+    <text class="ns" x="708" y="160" text-anchor="middle">saturated at 15:12</text>
+
+    <rect class="nodeA" x="824" y="104" width="168" height="88" rx="8"/>
+    <text class="nn nnA" x="908" y="124" text-anchor="middle">Partial outage</text>
+    <text class="ns" x="908" y="144" text-anchor="middle">4 h 17 m · peak 31.2%</text>
+    <text class="ns" x="908" y="160" text-anchor="middle">2,312 orgs · &#8776;$41,300</text>
+    <text class="ns" x="908" y="176" text-anchor="middle">no data lost</text>
+
+    <line class="flow" x1="192" y1="148" x2="216" y2="148" marker-end="url(#a1)"/>
+    <line class="flow" x1="392" y1="148" x2="416" y2="148" marker-end="url(#a1)"/>
+    <line class="flow" x1="592" y1="148" x2="616" y2="148" marker-end="url(#a1)"/>
+    <line class="flow" x1="792" y1="148" x2="816" y2="148" marker-end="url(#a1)"/>
+
+    <!-- amplifiers -->
+    <text class="tg" x="508" y="268" text-anchor="middle">LATENT · JUN 22 BACKFILL</text>
+    <rect class="node" x="420" y="280" width="176" height="72" rx="8"/>
+    <text class="nn" x="508" y="304" text-anchor="middle">Autovacuum debt</text>
+    <text class="ns" x="508" y="324" text-anchor="middle">38.1 M dead tuples</text>
+    <text class="ns" x="508" y="340" text-anchor="middle">12.2% bloat · +23 GB</text>
+    <line class="flow" x1="508" y1="276" x2="508" y2="200" marker-end="url(#a1)"/>
+
+    <text class="tg" x="708" y="268" text-anchor="middle">LATENT · LONG-STANDING</text>
+    <rect class="node" x="620" y="280" width="176" height="72" rx="8"/>
+    <text class="nn" x="708" y="304" text-anchor="middle">Retry policy</text>
+    <text class="ns" x="708" y="324" text-anchor="middle">1 s fixed · 3 attempts</text>
+    <text class="ns" x="708" y="340" text-anchor="middle">no jitter · no budget</text>
+    <line class="flow" x1="708" y1="276" x2="708" y2="200" marker-end="url(#a1)"/>
+
+    <!-- annotation -->
+    <text class="an" x="24" y="288">No single root cause: remove any one leg —</text>
+    <text class="an" x="24" y="308">rewrite, bloat, or retries — and June 24 is a</text>
+    <text class="an" x="24" y="328">slow endpoint, not a platform-wide outage.</text>
+    <path class="leader" d="M 364 300 Q 448 272 504 244"/>
+  </svg>
+  </div>
+  <p class="cap">PR #8841 added a <b>leading-wildcard LIKE</b> — a pattern no B-tree index can anchor — and moved org-scoping out of the SQL, so every search scanned all 274.2&#8202;M rows; the canary table holds ~2&#8202;M rows, ran the same scan in ~180&#8202;ms, and stayed green. Bloat from the June&nbsp;22 backfill — 38.1&#8202;M <b>dead tuples</b>, the superseded row versions that Postgres&rsquo;s background <b>autovacuum</b> cleanup reclaims, except its trigger threshold on this table is &#8776;54.9&#8202;M so it never ran — stretched 24–31&#8202;s scans past the 30&#8202;s timeout, and ~57% of searches died as errors.</p>
+
+  <dl class="figs">
+    <div><dt>Error rate</dt><dd>19.1% avg · 31.2% peak (15:47)</dd></div>
+    <div><dt>Failed requests</dt><dd>&#8776;362,000 of &#8776;1.9 M</dd></div>
+    <div><dt>Orgs affected</dt><dd>2,312 of 9,480 active (24.4%)</dd></div>
+    <div><dt>SLA credits</dt><dd>&#8776;$41,300 · 216 contracts</dd></div>
+    <div><dt>p99 latency (completed reqs; timeouts count as errors)</dt><dd>420 ms &#8594; 28.4 s</dd></div>
+    <div><dt>Data lost</dt><dd>none · 37,400 webhooks replayed by 19:05</dd></div>
+    <div><dt>Stayed healthy</dt><dd>reporting (read replicas) · auth (own pool)</dd></div>
+  </dl>
+</section>
+
+<section>
+  <h2>Where 4&#8202;h&#8202;17&#8202;m went</h2>
+  <div class="fig fig--d2">
+  <svg viewBox="0 0 1092 288" role="img" aria-label="Timeline from 14:02 deploy to 18:19 close, with 68 minutes to diagnosis and the 17:05 feature-flag mitigation">
+    <defs>
+      <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line class="hatchline" x1="0" y1="0" x2="0" y2="8"/>
+      </pattern>
+    </defs>
+
+    <!-- annotation -->
+    <text class="an" x="640" y="48">The dashboards&rsquo; deploy marker had been broken since</text>
+    <text class="an" x="640" y="68">June 10, and latency panels sampled 1 in 100 requests —</text>
+    <text class="an" x="640" y="88">the network theory was the best read of what</text>
+    <text class="an" x="640" y="108">responders could actually see.</text>
+    <path class="leader" d="M 632 72 Q 480 80 344 124"/>
+
+    <!-- 68-minute bracket (accent) -->
+    <text class="acct" x="204" y="120" text-anchor="middle">68 MIN: ALERT &#8594; DIAGNOSIS</text>
+    <path class="accl" d="M 68 140 L 68 132 L 340 132 L 340 140"/>
+
+    <!-- hour ticks -->
+    <line class="tick" x1="264" y1="152" x2="264" y2="160"/><text class="hourl" x="264" y="148" text-anchor="middle">15:00</text>
+    <line class="tick" x1="504" y1="152" x2="504" y2="160"/><text class="hourl" x="504" y="148" text-anchor="middle">16:00</text>
+    <line class="tick" x1="744" y1="152" x2="744" y2="160"/><text class="hourl" x="744" y="148" text-anchor="middle">17:00</text>
+    <line class="tick" x1="984" y1="152" x2="984" y2="160"/><text class="hourl" x="984" y="148" text-anchor="middle">18:00</text>
+
+    <!-- bar: 4 px per minute from 14:02 at x=32 -->
+    <rect class="seg" x="32"  y="160" width="36"  height="40" fill-opacity=".06"/>
+    <rect class="seg" x="68"  y="160" width="36"  height="40" fill-opacity=".12"/>
+    <rect class="seg" x="104" y="160" width="200" height="40" fill-opacity=".06"/>
+    <rect x="104" y="160" width="200" height="40" fill="url(#hatch)"/>
+    <rect class="seg" x="304" y="160" width="36"  height="40" fill-opacity=".12"/>
+    <rect class="seg" x="340" y="160" width="424" height="40" fill-opacity=".16"/>
+    <rect class="seg" x="764" y="160" width="192" height="40" fill-opacity=".10"/>
+    <rect class="seg" x="956" y="160" width="104" height="40" fill-opacity=".04"/>
+    <rect x="32" y="160" width="1028" height="40" fill="none" class="hair"/>
+
+    <text class="barlabel" x="204" y="184" text-anchor="middle">network hypothesis · 50 min</text>
+    <text class="barlabel" x="552" y="184" text-anchor="middle">finding the fix · 106 min</text>
+    <text class="barlabel" x="860" y="184" text-anchor="middle">recovery · 48 min</text>
+    <text class="barlabel" x="1008" y="184" text-anchor="middle">stable · 26 min</text>
+
+    <!-- flag-off (accent) -->
+    <circle cx="764" cy="136" r="4" fill="var(--accent)"/>
+    <line class="accl" x1="764" y1="136" x2="764" y2="200"/>
+    <text class="flaglabel" x="764" y="124" text-anchor="middle">17:05 · FLAG OFF</text>
+
+    <!-- event ticks -->
+    <line class="tick" x1="32" y1="200" x2="32" y2="216"/><text class="tl" x="32" y="224">14:02 deploy</text>
+    <line class="tick" x1="340" y1="200" x2="340" y2="216"/><text class="tl" x="340" y="224" text-anchor="middle">15:19 database identified</text>
+    <line class="tick" x1="956" y1="200" x2="956" y2="216"/><text class="tl" x="956" y="224" text-anchor="middle">17:53 SLOs met</text>
+
+    <line class="tick" x1="68" y1="200" x2="68" y2="236"/><text class="tl" x="68" y="244">14:11 first alert</text>
+    <line class="tick" x1="424" y1="200" x2="424" y2="236"/><text class="tl" x="424" y="244" text-anchor="middle">15:40 rollback abandoned</text>
+    <line class="tick" x1="1060" y1="200" x2="1060" y2="236"/><text class="tl" x="1060" y="244" text-anchor="end">18:19 closed</text>
+
+    <line class="tick" x1="584" y1="200" x2="584" y2="256"/><text class="tl" x="584" y="264" text-anchor="middle">16:20 pool bump backfires</text>
+    <line class="tick" x1="792" y1="200" x2="792" y2="256"/><text class="tl" x="792" y="264">17:12–17:50 VACUUM</text>
+  </svg>
+  </div>
+  <p class="cap">The only alert watched <b>error rate</b> — search p99 had exploded at 14:07, four minutes before the 5xx alert — and a coincident cloud-provider packet-loss advisory anchored responders on a network theory for 50 minutes. Rollback died at 15:40 because migration 0412 had already dropped the <b>covering index</b> the old query needed (an index holding every column the query reads; rebuild &#8776;6&#8202;h — started 16:05 as insurance, done 21:48, after close), so the 90-second flag flip at 17:05 is what stopped the bleeding; search ran exact-match-only until the fixed, org-scoped contains search returned June&nbsp;26.</p>
+</section>
+
+<section>
+  <h2>Why it spread: the retry loop</h2>
+  <div class="fig fig--d3">
+  <svg viewBox="0 0 960 408" role="img" aria-label="Feedback loop: requests fail, clients retry without jitter, traffic multiplies 4.7 times, the connection pool stays pinned, causing more failures">
+    <defs>
+      <marker id="a3" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" class="arrfill"/></marker>
+    </defs>
+
+    <rect class="node" x="360" y="24" width="240" height="72" rx="8"/>
+    <text class="nn" x="480" y="56" text-anchor="middle">Requests fail</text>
+    <text class="ns" x="480" y="80" text-anchor="middle">5xx errors · 30 s gateway 504s</text>
+
+    <rect class="node" x="688" y="168" width="240" height="72" rx="8"/>
+    <text class="nn" x="808" y="192" text-anchor="middle">Clients retry</text>
+    <text class="ns" x="808" y="212" text-anchor="middle">1 s fixed · 3 attempts</text>
+    <text class="ns" x="808" y="228" text-anchor="middle">no jitter · no budget</text>
+
+    <rect class="nodeA" x="360" y="312" width="240" height="72" rx="8"/>
+    <text class="nn nnA" x="480" y="340" text-anchor="middle">Traffic &#215;4.7</text>
+    <text class="ns" x="480" y="360" text-anchor="middle">3,200 &#8594; 15,020 rpm</text>
+    <text class="ns" x="480" y="376" text-anchor="middle">1 s waves arrive in phase</text>
+
+    <rect class="node" x="32" y="168" width="240" height="72" rx="8"/>
+    <text class="nn" x="152" y="192" text-anchor="middle">Pool stays pinned</text>
+    <text class="ns" x="152" y="212" text-anchor="middle">80 conns held 30 s each</text>
+    <text class="ns" x="152" y="228" text-anchor="middle">wait queue peak 1,437</text>
+
+    <path class="flow" d="M 604 60 Q 808 60 808 164" marker-end="url(#a3)"/>
+    <path class="flow" d="M 808 244 Q 808 348 604 348" marker-end="url(#a3)"/>
+    <path class="flow" d="M 356 348 Q 152 348 152 244" marker-end="url(#a3)"/>
+    <path class="flow" d="M 152 164 Q 152 60 356 60" marker-end="url(#a3)"/>
+
+    <text class="loopc" x="480" y="196" text-anchor="middle">extra load,</text>
+    <text class="loopc" x="480" y="216" text-anchor="middle">zero extra successes</text>
+  </svg>
+  </div>
+  <p class="cap">Requests borrow one of 80 <b>pgbouncer</b> connections — a fixed, shared pool of database connections — so when the 15:00 wave of scheduled invoice-generation jobs pushed demand past the pool, every endpoint behind it (invoice creation, PDF rendering, webhook dispatch) queued behind 30-second scans from 15:12 until 17:18. A 16:20 bump to 200 connections <b>backfired</b> — more concurrent scans worsened write latency and it was reverted at 16:31 — because the holds, not the pool size, were the problem.</p>
+</section>
+
+<section>
+  <h2>The fix: nine scheduled items, three P0</h2>
+  <div class="tblwrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>Action</th><th>Targets</th><th>Owner</th><th>Due</th></tr>
+    </thead>
+    <tbody>
+      <tr class="grp p0"><td colspan="5">P0 — this quarter, tracked weekly at the ops review</td></tr>
+      <tr><td class="n">1</td><td>Per-endpoint-group p99 latency SLO alerts (invoicing first) — alert on latency, not only error rate</td><td class="leg">detection lag</td><td class="who">Priya N. · Observability</td><td class="due">Q3 2026</td></tr>
+      <tr><td class="n">2</td><td>pgbouncer saturation alerting (cl_waiting &gt; 50 for 2 min) + pool sizing/isolation review so one endpoint can&rsquo;t starve the shared pool</td><td class="leg">pool exhaustion</td><td class="who">Marcus T. · Infrastructure</td><td class="due">Q3 2026</td></tr>
+      <tr><td class="n">3</td><td>Standardize retries in all SDKs and internal clients: exponential backoff, full jitter, retry budgets</td><td class="leg">retry storm</td><td class="who">Dana K. · Platform</td><td class="due">Q3 2026</td></tr>
+      <tr class="grp"><td colspan="5">P1</td></tr>
+      <tr><td class="n">4</td><td>Per-table autovacuum tuning for tables &gt; 50 M rows (scale factor 0.2 &#8594; 0.01) + dead-tuple/bloat monitoring with alerts</td><td class="leg">autovacuum debt</td><td class="who">Yuki O. · Data Eng</td><td class="due">Q3 2026</td></tr>
+      <tr><td class="n">5</td><td>Migration reversibility policy: destructive migrations ship at least one release after the code that stops using them, never bundled</td><td class="leg">irreversible deploy</td><td class="who">Marcus T. · Infrastructure</td><td class="due">Q3 2026</td></tr>
+      <tr><td class="n">6</td><td>CI query-plan regression check: EXPLAIN hot queries against production-scale statistics; block plans that flip to sequential scan</td><td class="leg">query regression</td><td class="who">Al&eacute; G. · Billing Experience</td><td class="due">Q4 2026</td></tr>
+      <tr class="grp"><td colspan="5">P2</td></tr>
+      <tr><td class="n">7</td><td>Production-scale query replay in canary (shadow traffic against a full-size dataset)</td><td class="leg">query regression</td><td class="who">Yuki O. · Data Eng</td><td class="due">Q4 2026</td></tr>
+      <tr><td class="n">8</td><td>Fix dashboard deploy markers (broken since June 10); raise latency-panel sampling 1/100 &#8594; 1/10 on tier-1 endpoints</td><td class="leg">detection lag</td><td class="who">Priya N. · Observability</td><td class="due">Q3 2026</td></tr>
+      <tr><td class="n">9</td><td>IC training: hypothesis board + explicit deploy-correlation step in the first 15 minutes, to counter anchoring</td><td class="leg">misdiagnosis</td><td class="who">Rotimi O. · IC guild</td><td class="due">Q4 2026</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="cap">The three P0s each close a different leg of the failure: the alert gap that cost 68 minutes, the pool that spread the blast, and the retries that fed it. The P1/P2 tail hardens what made June&nbsp;24 possible — the bloat, the bundled irreversible migration, and the broken instruments.</p>
+</section>
+
+<p class="endnote">Blameless, by design: every decision was reasonable given what responders could see. The fixes target instruments and systems, not people.</p>
+
+<footer>incident-analysis · editorial-diagrams · v1 · 2026-08-11</footer>
+
+</div>
+</body>
+</html>

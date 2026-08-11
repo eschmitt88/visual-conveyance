@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tessel · Pathways onboarding A/B — final readout</title>
+<style>
+  :root{
+    --bg:#0f0f16; --panel:#14141d; --ink:#e9eaf2; --dim:#8b91a5; --faint:#3a3f52;
+    --win:#3ecf8e; --loss:#ff6b7a; --ns:#98a0b3; --warn:#f2c14e;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.45;
+  }
+  header{max-width:1180px;margin:0 auto;padding:18px 20px 6px}
+  h1{font-size:clamp(18px,2.2vw,26px);margin:0 0 4px;font-weight:650;letter-spacing:.2px}
+  h1 .id{color:var(--dim);font-weight:400;font-size:.72em}
+  .frame{margin:0;color:var(--dim);font-size:clamp(13px,1.2vw,15px);max-width:70em}
+  .frame b{color:var(--ink);font-weight:600}
+  main{max-width:1180px;margin:0 auto;padding:8px 20px 4px}
+  .scene-wrap{overflow-x:auto;background:var(--panel);border:1px solid #23273a;border-radius:12px}
+  .scene-wrap svg{display:block;min-width:980px;width:100%;height:auto}
+
+  /* ---------- controls ---------- */
+  .controls{display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 2px 2px}
+  .js .controls{display:flex}
+  .controls button{
+    background:#1c2030;color:var(--ink);border:1px solid #2c3148;border-radius:8px;
+    padding:6px 12px;font-size:14px;cursor:pointer
+  }
+  .controls button:hover{border-color:#4a5170}
+  .controls button:focus-visible{outline:2px solid var(--warn);outline-offset:1px}
+  .controls .play{background:#232a41;border-color:#3d4666;font-weight:600;padding:7px 16px}
+  .dots{display:flex;gap:6px;align-items:center}
+  .dots button{width:26px;height:26px;padding:0;border-radius:50%;font-size:12px;color:var(--dim)}
+  .dots button.on{background:#2c3450;color:var(--ink);border-color:#4a5170}
+  .dots button[aria-current="step"]{background:var(--warn);color:#101018;border-color:var(--warn);font-weight:700}
+  .stepno{color:var(--dim);font-size:13px;margin-left:auto}
+
+  /* ---------- captions ---------- */
+  .caption-region{padding:6px 2px 0;min-height:3.2em;font-size:clamp(13.5px,1.25vw,15.5px)}
+  .cap0{color:var(--dim)}
+  .captions{margin:0;padding-left:1.4em}
+  .captions li{margin:0 0 .45em;color:var(--ink)}
+  .js .captions{list-style:none;padding:0}
+  .js .captions li{display:none;margin:0}
+  .js .captions li.cur{display:block}
+  .captions .k{color:var(--warn);font-weight:600}
+
+  footer{max-width:1180px;margin:6px auto 14px;padding:0 20px;color:#5b6178;font-size:11.5px}
+
+  /* ---------- SVG typography & marks ---------- */
+  text{fill:var(--ink);font-family:inherit}
+  .tt{font-size:15px;font-weight:600}
+  .tl{font-size:13.5px}
+  .ts{font-size:12px}
+  .ty{font-size:10.5px}
+  .td{fill:var(--dim)}
+  .tw{fill:var(--win)} .tr{fill:var(--loss)} .tn{fill:var(--ns)} .ta{fill:var(--warn)}
+  .ci{stroke-width:5;stroke-linecap:round;fill:none}
+  .ci-ns{stroke:var(--ns);stroke-dasharray:1 9;stroke-width:5}
+  .ghost{stroke-width:2;stroke-dasharray:5 5;opacity:.75;fill:none}
+  .grid{stroke:var(--faint);stroke-width:1}
+  .zero{stroke:#4a5170;stroke-width:1.4;stroke-dasharray:4 5}
+
+  /* ---------- step machinery ---------- */
+  .st{transition:opacity .55s ease,transform .7s cubic-bezier(.4,0,.2,1)}
+  .scene:not(.p1) .s1,.scene:not(.p2) .s2,.scene:not(.p3) .s3,.scene:not(.p4) .s4,
+  .scene:not(.p5) .s5,.scene:not(.p6) .s6,.scene:not(.p7) .s7,.scene:not(.p8) .s8{opacity:0}
+  /* step 2 morph: platform rows emerge out of the blended overall row */
+  .row-mw,.row-ios,.row-and{transform:translateY(0)}
+  .scene:not(.p2) .row-mw{transform:translateY(-95px)}
+  .scene:not(.p2) .row-ios{transform:translateY(-155px)}
+  .scene:not(.p2) .row-and{transform:translateY(-225px)}
+  .row-mw{transition-delay:0s}.row-ios{transition-delay:.15s}.row-and{transition-delay:.3s}
+  /* step 4: the decay line draws on */
+  .decay-line{stroke-dashoffset:0;transition:stroke-dashoffset .9s ease .1s}
+  .scene:not(.p4) .decay-line{stroke-dashoffset:1}
+  .fade-up{transform:translateY(0)}
+  .scene:not(.p6) .s6.fade-up,.scene:not(.p7) .s7.fade-up,.scene:not(.p8) .s8.fade-up{transform:translateY(10px)}
+
+  @media (prefers-reduced-motion: reduce){
+    .st,.decay-line,.row-mw,.row-ios,.row-and{transition:none !important}
+  }
+  @media (max-width:700px){
+    .stepno{margin-left:0}
+  }
+</style>
+</head>
+<body>
+<!-- Storyboard (written before code):
+  1 Overall +0.8pp CI[-0.3,+1.9] p=.16 -> not significant, "can't tell"
+  2 Blend splits (morph): mobile-web +4.2 / iOS -1.9 / Android null; effects partially cancel
+  3 Caveat where iOS appears: p=.027 fails Bonferroni; pre-registered + mechanism => credible, not proof
+  4 Weekly delta decays +2.9 -> +0.1: novelty; early snapshots overstated B
+  5 Late window wks 4-6: mobile-web +3.8 persists; iOS -2.2 persists (CI crosses 0) -> split isn't novelty
+  6 Mechanism: iOS step-3 permission prompt, drop-off 8.1% -> 12.7%; other platforms barely move
+  7 Guardrail: 7-day retention flat +0.2 CI[-0.2,+0.6]; tickets blip resolved
+  8 Verdict: ship mobile-web only (5% holdback); don't ship iOS (fix experiment); hold Android
+-->
+<header>
+  <h1>Pathways onboarding A/B — final readout <span class="id">tessel · ONB-2026-014</span></h1>
+  <p class="frame">Six weeks, 184,204 randomized signups: the blended result is <b>not significant</b> — the decision-grade story is a <b>platform split</b>, a <b>novelty decay</b>, and a <b>narrow ship</b>.</p>
+</header>
+
+<main>
+  <div class="scene-wrap">
+  <svg id="scene" class="scene p1 p2 p3 p4 p5 p6 p7 p8" viewBox="0 0 1200 640" role="img"
+       aria-label="One diagram: forest plot of conversion effects (overall not significant; mobile-web +4.2pp win; iOS −1.9pp loss; Android null), weekly novelty decay from +2.9pp to +0.1pp, iOS step-3 drop-off 8.1% to 12.7%, flat retention guardrail, and a narrow-ship verdict.">
+
+    <!-- ===== legend (bound colors) ===== -->
+    <g class="st s1">
+      <line x1="660" y1="24" x2="686" y2="24" stroke="var(--win)" stroke-width="5" stroke-linecap="round"/>
+      <text class="ts td" x="694" y="28">credible win (CI excludes 0)</text>
+      <line x1="920" y1="24" x2="946" y2="24" stroke="var(--loss)" stroke-width="5" stroke-linecap="round"/>
+      <text class="ts td" x="954" y="28">credible loss (CI excludes 0)</text>
+      <line x1="660" y1="46" x2="686" y2="46" class="ci-ns"/>
+      <text class="ts td" x="694" y="50">straddles 0 — “can’t tell”</text>
+      <circle cx="928" cy="45" r="5" fill="var(--warn)"/>
+      <text class="ts td" x="954" y="50">novelty / caution</text>
+    </g>
+
+    <!-- ===== forest plot ===== -->
+    <g class="st s1">
+      <text class="tt" x="60" y="32">Trial-to-paid conversion — Δ (B − A), percentage points, 95% CI</text>
+      <line class="zero" x1="313.3" y1="62" x2="313.3" y2="378"/>
+      <line class="grid" x1="80" y1="372" x2="640" y2="372"/>
+      <g class="ty td" text-anchor="middle">
+        <text x="126.7" y="390">−4</text><text x="220" y="390">−2</text>
+        <text x="313.3" y="390">0</text><text x="406.7" y="390">+2</text>
+        <text x="500" y="390">+4</text><text x="593.3" y="390">+6</text>
+      </g>
+      <!-- overall row -->
+      <text class="tl" x="84" y="92"><tspan font-weight="650">Overall</tspan><tspan class="tn">  +0.8pp · CI [−0.3, +1.9] · p = 0.16</tspan></text>
+      <line class="ci-ns" x1="299.3" y1="110" x2="402" y2="110"/>
+      <circle cx="350.7" cy="110" r="6" fill="var(--panel)" stroke="var(--ns)" stroke-width="2.5"/>
+      <text class="ty td" x="84" y="134">not powered to confirm effects &lt; ≈1.55pp</text>
+      <rect x="420" y="96" width="300" height="24" rx="6" fill="none" stroke="var(--warn)" stroke-width="1.3"/>
+      <text class="ts ta" x="432" y="112">NOT SIGNIFICANT — read as “can’t tell”, not “B won”</text>
+    </g>
+
+    <!-- platform rows (morph out of the overall row on step 2) -->
+    <g class="st s2 row-mw">
+      <text class="tl tw" x="411" y="187">Mobile-web  +4.2pp · CI [+2.1, +6.3] · p &lt; 0.0001</text>
+      <line class="ci" x1="411.3" y1="205" x2="607.3" y2="205" stroke="var(--win)"/>
+      <circle cx="509.3" cy="205" r="6" fill="var(--win)"/>
+    </g>
+    <g class="st s2 row-ios">
+      <text class="tl tr" x="145" y="247">iOS  −1.9pp · CI [−3.6, −0.2] · p = 0.027</text>
+      <line class="ci" x1="145.3" y1="265" x2="304" y2="265" stroke="var(--loss)"/>
+      <circle cx="224.7" cy="265" r="6" fill="var(--loss)"/>
+    </g>
+    <g class="st s2 row-and">
+      <text class="tl tn" x="234" y="317">Android  +0.1pp · CI [−1.7, +1.9] · p = 0.92</text>
+      <line class="ci-ns" x1="234" y1="335" x2="402" y2="335"/>
+      <circle cx="318" cy="335" r="6" fill="var(--panel)" stroke="var(--ns)" stroke-width="2.5"/>
+    </g>
+    <g class="st s2">
+      <text class="ts td" x="84" y="163">Pre-registered platform subgroups — the blend averages a win with a loss:</text>
+    </g>
+
+    <!-- step 3: subgroup caveat, attached to the iOS row -->
+    <g class="st s3">
+      <text class="ts ta" x="330" y="258">p = 0.027 does not survive Bonferroni (α = 0.0167) —</text>
+      <text class="ts ta" x="330" y="274">pre-registered + mechanism ⇒ credible signal, not proof</text>
+    </g>
+
+    <!-- step 5: late-window ghosts -->
+    <g class="st s5">
+      <line class="ghost" x1="350.7" y1="221" x2="630.7" y2="221" stroke="var(--win)"/>
+      <circle cx="490.7" cy="221" r="4" fill="var(--panel)" stroke="var(--win)" stroke-width="2"/>
+      <text class="ty tw" x="632" y="238" text-anchor="end">wks 4–6: still +3.8 (CI ≈ [+0.8, +6.8])</text>
+      <line class="ghost" x1="98.7" y1="281" x2="322.7" y2="281" stroke="var(--loss)"/>
+      <circle cx="210.7" cy="281" r="4" fill="var(--panel)" stroke="var(--loss)" stroke-width="2"/>
+      <text class="ty tr" x="210" y="298" text-anchor="middle">wks 4–6: −2.2 (CI ≈ [−4.6, +0.2] crosses 0)</text>
+    </g>
+
+    <!-- ===== weekly decay chart ===== -->
+    <g class="st s4">
+      <text class="tt" x="700" y="74">Overall Δ by week (pp) — novelty decay</text>
+      <line class="zero" x1="710" y1="183.7" x2="1130" y2="183.7"/>
+      <!-- ±2.7pp weekly-CI whiskers -->
+      <g stroke="var(--faint)" stroke-width="2">
+        <line x1="720" y1="77.5" x2="720" y2="179.9"/><line x1="800" y1="104.1" x2="800" y2="206.5"/>
+        <line x1="880" y1="121.1" x2="880" y2="223.5"/><line x1="960" y1="132.5" x2="960" y2="234.9"/>
+        <line x1="1040" y1="140.1" x2="1040" y2="242.5"/><line x1="1120" y1="130.6" x2="1120" y2="233"/>
+      </g>
+      <polyline class="decay-line" pathLength="1" stroke-dasharray="1"
+        points="720,128.7 800,155.3 880,172.3 960,183.7 1040,191.3 1120,181.8"
+        fill="none" stroke="var(--warn)" stroke-width="3"/>
+      <g fill="var(--warn)">
+        <circle cx="720" cy="128.7" r="4.5"/><circle cx="800" cy="155.3" r="4.5"/>
+        <circle cx="880" cy="172.3" r="4.5"/><circle cx="960" cy="183.7" r="4.5"/>
+        <circle cx="1040" cy="191.3" r="4.5"/><circle cx="1120" cy="181.8" r="4.5"/>
+      </g>
+      <text class="ts ta" x="730" y="124">+2.9</text>
+      <text class="ts ta" x="1128" y="178" text-anchor="end">+0.1</text>
+      <g class="ty td" text-anchor="middle">
+        <text x="720" y="262">wk 1</text><text x="800" y="262">wk 2</text><text x="880" y="262">wk 3</text>
+        <text x="960" y="262">wk 4</text><text x="1040" y="262">wk 5</text><text x="1120" y="262">wk 6</text>
+      </g>
+      <text class="ty td" x="700" y="284">weekly CIs ≈ ±2.7pp — read the pattern, not any single week</text>
+      <text class="ty td" x="700" y="300">the week-2 interim readout (+2.2pp, nominally significant) is superseded</text>
+    </g>
+
+    <!-- ===== iOS mechanism: step-3 drop-off ===== -->
+    <g class="st s6 fade-up">
+      <text class="tt" x="700" y="332">Step-3 drop-off (permission prompt)</text>
+      <line class="grid" x1="712" y1="436" x2="1004" y2="436"/>
+      <!-- iOS pair -->
+      <rect x="720" y="383.9" width="28" height="52.1" fill="#3a3f52"/>
+      <rect x="752" y="354.3" width="28" height="81.7" fill="var(--loss)"/>
+      <text class="ty td" x="734" y="378" text-anchor="middle">8.1%</text>
+      <text class="ts tr" x="766" y="348" text-anchor="middle">12.7%</text>
+      <text class="ty td" x="734" y="430" text-anchor="middle">A</text>
+      <text class="ty" x="766" y="430" text-anchor="middle" fill="#101018">B</text>
+      <text class="ts tr" x="750" y="452" text-anchor="middle">iOS</text>
+      <!-- mobile-web pair -->
+      <rect x="830" y="415.4" width="28" height="20.6" fill="#3a3f52"/>
+      <rect x="862" y="414.1" width="28" height="21.9" fill="#5b6178"/>
+      <text class="ty td" x="844" y="409" text-anchor="middle">3.2%</text>
+      <text class="ty td" x="876" y="408" text-anchor="middle">3.4%</text>
+      <text class="ty td" x="860" y="452" text-anchor="middle">mobile-web</text>
+      <!-- Android pair -->
+      <rect x="940" y="403.8" width="28" height="32.2" fill="#3a3f52"/>
+      <rect x="972" y="400" width="28" height="36" fill="#5b6178"/>
+      <text class="ty td" x="954" y="398" text-anchor="middle">5.0%</text>
+      <text class="ty td" x="986" y="394" text-anchor="middle">5.6%</text>
+      <text class="ty td" x="970" y="452" text-anchor="middle">Android</text>
+      <text class="ty td" x="700" y="472">B fires the iOS system dialog at step 3 — the loss concentrates exactly at the changed step</text>
+    </g>
+
+    <!-- ===== guardrail ===== -->
+    <g class="st s7 fade-up">
+      <text class="tt" x="1024" y="332">Guardrail</text>
+      <text class="ts" x="1024" y="356">7-day retention: <tspan class="tn">flat — pass</tspan></text>
+      <line class="zero" x1="1081" y1="366" x2="1081" y2="394"/>
+      <line class="ci-ns" x1="1062" y1="380" x2="1138" y2="380"/>
+      <circle cx="1100" cy="380" r="5" fill="var(--panel)" stroke="var(--ns)" stroke-width="2.5"/>
+      <text class="ty td" x="1081" y="406" text-anchor="middle">0</text>
+      <text class="ty td" x="1024" y="422">+0.2pp · CI [−0.2, +0.6]</text>
+      <text class="ty td" x="1024" y="440">tickets +12% wks 1–2, then</text>
+      <text class="ty td" x="1024" y="454">normal after 05-15 copy fix</text>
+    </g>
+
+    <!-- ===== verdict ===== -->
+    <g class="st s8 fade-up">
+      <text class="tt" x="600" y="508" text-anchor="middle" font-size="18">The verdict is narrow: ship where it credibly wins — not a rollout, not a kill</text>
+      <rect x="60" y="524" width="340" height="64" rx="10" fill="none" stroke="var(--win)" stroke-width="1.6"/>
+      <text class="tl tw" x="230" y="550" text-anchor="middle" font-weight="700">MOBILE-WEB — SHIP</text>
+      <text class="ty td" x="230" y="572" text-anchor="middle">target 2026-07-06 · 5% holdback for 8 weeks</text>
+      <rect x="420" y="524" width="340" height="64" rx="10" fill="none" stroke="var(--loss)" stroke-width="1.6"/>
+      <text class="tl tr" x="590" y="550" text-anchor="middle" font-weight="700">iOS — DO NOT SHIP</text>
+      <text class="ty td" x="590" y="572" text-anchor="middle">fix &amp; re-test: revert prompt to day-2 ask (ONB-2026-019)</text>
+      <rect x="780" y="524" width="360" height="64" rx="10" fill="none" stroke="var(--ns)" stroke-width="1.6"/>
+      <text class="tl tn" x="960" y="550" text-anchor="middle" font-weight="700">ANDROID — HOLD</text>
+      <text class="ty td" x="960" y="572" text-anchor="middle">null result · revisit after the iOS fix settles the prompt question</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="controls" id="controls" aria-label="animation controls">
+    <button id="play" class="play" aria-label="replay the build-up">▶ replay the build-up</button>
+    <button id="prev" aria-label="previous step">◀</button>
+    <button id="next" aria-label="next step">▶</button>
+    <div class="dots" id="dots" role="group" aria-label="jump to step">
+      <button title="1 · Overall: not significant">1</button>
+      <button title="2 · The platform split">2</button>
+      <button title="3 · How seriously to take iOS">3</button>
+      <button title="4 · Novelty decay">4</button>
+      <button title="5 · The split persists late">5</button>
+      <button title="6 · iOS mechanism: step-3 prompt">6</button>
+      <button title="7 · Guardrail held">7</button>
+      <button title="8 · The decision">8</button>
+    </div>
+    <span class="stepno" id="stepno">8/8</span>
+  </div>
+
+  <div class="caption-region" aria-live="polite">
+    <span id="cap0" class="cap0" style="display:none">Press ▶ (or space / arrow keys) to build the readout one beat at a time.</span>
+    <ol class="captions" id="captions">
+      <li><span class="k">Overall:</span> +0.8pp, CI [−0.3, +1.9], p = 0.16 — not significant. Honest verdict: “can’t tell,” not “B won.”</li>
+      <li><span class="k">The blend splits:</span> mobile-web +4.2pp, iOS −1.9pp — opposite effects partially cancel. Platform was the one pre-registered subgroup.</li>
+      <li><span class="k">Caveat:</span> iOS p = 0.027 fails Bonferroni — a credible pre-registered signal warranting action, not proof. Mobile-web survives easily.</li>
+      <li><span class="k">Novelty:</span> the weekly delta decayed +2.9pp → +0.1pp. Early snapshots materially overstated B.</li>
+      <li><span class="k">Weeks 4–6:</span> mobile-web still +3.8pp; iOS still −2.2pp. The platform split is not novelty.</li>
+      <li><span class="k">Mechanism:</span> the step-3 notification-permission prompt — iOS drop-off 8.1% → 12.7%. Other platforms barely moved.</li>
+      <li><span class="k">Guardrail:</span> 7-day retention flat (+0.2pp, CI [−0.2, +0.6]). No hidden retention cost — and no retention gain.</li>
+      <li><span class="k">Decision:</span> ship mobile-web only with a 5% holdback; fix and re-test iOS (ONB-2026-019); hold Android.</li>
+    </ol>
+  </div>
+</main>
+
+<footer>experiment-results · motion-explainer · v1 · 2026-08-11</footer>
+
+<script>
+(function () {
+  "use strict";
+  var S = 8;
+  var scene = document.getElementById("scene");
+  var caps = Array.prototype.slice.call(document.querySelectorAll("#captions li"));
+  var dots = Array.prototype.slice.call(document.querySelectorAll("#dots button"));
+  var playBtn = document.getElementById("play");
+  var stepno = document.getElementById("stepno");
+  var cap0 = document.getElementById("cap0");
+  var rm = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var cur = S, timer = null;
+
+  document.body.classList.add("js");
+
+  function render() {
+    for (var i = 1; i <= S; i++) scene.classList.toggle("p" + i, i <= cur);
+    caps.forEach(function (li, i) { li.classList.toggle("cur", i + 1 === cur); });
+    cap0.style.display = (cur === 0) ? "" : "none";
+    dots.forEach(function (d, i) {
+      d.classList.toggle("on", i + 1 <= cur);
+      if (i + 1 === cur) d.setAttribute("aria-current", "step");
+      else d.removeAttribute("aria-current");
+    });
+    stepno.textContent = cur + "/" + S;
+  }
+
+  function set(n) { cur = Math.max(0, Math.min(S, n)); render(); }
+
+  function stop(label) {
+    if (timer) { clearInterval(timer); timer = null; }
+    playBtn.textContent = label || "▶ replay the build-up";
+  }
+
+  function advance() {
+    if (cur >= S) { stop(); return; }
+    set(cur + 1);
+    if (cur >= S) stop();
+  }
+
+  function start() {
+    if (cur >= S) set(0);
+    timer = setInterval(advance, rm.matches ? 1700 : 2700);
+    playBtn.textContent = "❚❚ pause";
+  }
+
+  function toggle() {
+    if (timer) stop("▶ resume");
+    else start();
+  }
+
+  playBtn.addEventListener("click", toggle);
+  document.getElementById("prev").addEventListener("click", function () { stop(); set(cur - 1); });
+  document.getElementById("next").addEventListener("click", function () { stop(); set(cur + 1); });
+  dots.forEach(function (d, i) {
+    d.addEventListener("click", function () { stop(); set(i + 1); });
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space") { e.preventDefault(); toggle(); }
+    else if (e.key === "ArrowRight") { stop(); set(cur + 1); }
+    else if (e.key === "ArrowLeft") { stop(); set(cur - 1); }
+  });
+
+  render(); /* first paint = final frame */
+})();
+</script>
+</body>
+</html>

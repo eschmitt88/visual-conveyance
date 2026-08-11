@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choosing a vector-search engine — Quiver vs Hearth, conditionally</title>
+<script>document.documentElement.classList.add('js');</script>
+<style>
+  :root{
+    --bg:#111321; --panel:#1a1a2e; --panel2:#20233a; --ink:#e8eaf6;
+    --muted:#9fa6c0; --faint:#6b7190;
+    --quiver:#58c4dd;   /* blue  = Quiver (managed SaaS) */
+    --hearth:#f6c85f;   /* amber = Hearth (self-hosted) */
+    --fail:#fc6255;     /* red   = must-have failure */
+    --cond:#83c167;     /* green = condition / crossover / trigger */
+    --line:#343a5e;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{background:var(--bg); color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:1220px; margin:0 auto; padding:14px 18px 28px}
+  header h1{font-size:1.42rem; line-height:1.25; letter-spacing:.01em}
+  header p.frame{color:var(--muted); font-size:.92rem; margin-top:4px; max-width:70em}
+  .scene-wrap{margin-top:10px; overflow-x:auto; background:var(--panel);
+    border:1px solid var(--line); border-radius:12px}
+  .scene-wrap svg{display:block; min-width:940px; width:100%; height:auto}
+  /* ---- caption + controls bar ---- */
+  .bar{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px}
+  .controls{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+  html:not(.js) .bar{display:none}
+  button{background:var(--panel2); color:var(--ink); border:1px solid var(--line);
+    border-radius:8px; padding:6px 12px; font-size:.9rem; cursor:pointer}
+  button:hover{border-color:var(--quiver)}
+  #play{font-weight:600}
+  .dots{display:flex; gap:5px; align-items:center}
+  .dots button{width:22px; height:22px; padding:0; border-radius:50%; font-size:.68rem;
+    color:var(--muted); line-height:1}
+  .dots button[aria-current="true"]{background:var(--quiver); color:#08222b;
+    border-color:var(--quiver); font-weight:700}
+  #cap{flex:1 1 380px; min-height:2.5em; font-size:.98rem; color:var(--ink);
+    border-left:3px solid var(--quiver); padding-left:10px}
+  #stepnum{color:var(--faint); font-size:.8rem; min-width:3.2em; text-align:right}
+  /* ---- no-JS caption script ---- */
+  ol.script{margin:12px 0 0 1.4em; color:var(--muted); font-size:.9rem; line-height:1.5}
+  html.js ol.script{display:none}
+  footer{margin-top:18px; color:var(--faint); font-size:.72rem}
+  /* ---- SVG element base = FINAL FRAME (JS-off state) ---- */
+  svg text{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .fx{transition:opacity .65s ease}
+  .draw{transition:stroke-dashoffset .8s ease .12s, opacity .3s ease}
+  .dimmed{opacity:.55; transition:opacity .65s ease}
+  /* hidden states exist ONLY with JS, when the scene lacks that step class */
+  html.js #scene:not(.k1) .st1{opacity:0}
+  html.js #scene:not(.k2) .st2{opacity:0}
+  html.js #scene:not(.k3) .st3{opacity:0}
+  html.js #scene:not(.k4) .st4{opacity:0}
+  html.js #scene:not(.k5) .st5{opacity:0}
+  html.js #scene:not(.k6) .st6{opacity:0}
+  html.js #scene:not(.k7) .st7{opacity:0}
+  html.js #scene:not(.k8) .st8{opacity:0}
+  html.js #scene:not(.k2) .st2.draw{stroke-dashoffset:1}
+  html.js #scene:not(.k3) .st3.draw{stroke-dashoffset:1}
+  html.js #scene:not(.k5) .st5.draw{stroke-dashoffset:1}
+  html.js #scene:not(.k6) .st6.draw{stroke-dashoffset:1}
+  html.js #scene:not(.k2) .dim2{opacity:1}
+  html.js #scene:not(.k3) .dim3{opacity:1}
+  @media (prefers-reduced-motion: reduce){
+    .fx,.draw,.dimmed{transition:none !important}
+  }
+  @media (max-width: 640px){
+    header h1{font-size:1.15rem}
+    #cap{font-size:.9rem}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Choosing a vector-search engine: no winner — an IF/THEN</h1>
+  <p class="frame">Fernwick's semantic product search — 4.1M vectors doubling yearly,
+  120&nbsp;QPS peak, 30% of queries filtered — needs a production engine this quarter.
+  Four candidates entered a two-week bakeoff at 10M vectors; two fail must-haves,
+  and the survivors trade cost trajectory against operational burden.</p>
+</header>
+
+<div class="scene-wrap">
+<!-- One persistent scene. Default markup/CSS = the FINISHED build (final frame). -->
+<svg id="scene" class="k1 k2 k3 k4 k5 k6 k7 k8" viewBox="0 0 1160 595" role="img"
+  aria-label="Decision diagram: four vector-search options gated by five must-haves; pgnearest and Braid eliminated; cost-crossover chart for Quiver versus Hearth; conditional recommendation with triggers.">
+
+  <!-- ========== step 1: must-have gates + the four option cards ========== -->
+  <g class="st1 fx">
+    <text x="20" y="16" font-size="11.5" fill="#9fa6c0"><tspan font-weight="700" fill="#e8eaf6">Must-haves (miss any &#8658; out):</tspan>  M1 p95 &#8804;100 ms at 10M incl. 30% filtered &#183; M2 recall@10 &#8805;0.92 &#183; M3 filtered recall &#8805;0.90 at 5% selectivity</text>
+    <text x="20" y="32" font-size="11.5" fill="#9fa6c0">M4 EU data residency &#183; M5 &#8804;$2,500/mo at ~10M vectors (12-month scale)</text>
+    <text x="20" y="48" font-size="10.5" fill="#6b7190">Glossary: recall@10 = fraction of the true top-10 results returned &#183; p95 = 95th-percentile latency &#183; selectivity = share of catalog passing the filter</text>
+  </g>
+
+  <!-- Quiver card -->
+  <g transform="translate(20,70)" class="st1 fx">
+    <rect width="352" height="112" rx="8" fill="#20233a" stroke="#343a5e"/>
+    <rect width="4" height="112" rx="2" fill="#58c4dd"/>
+    <text x="14" y="24" font-size="13.5" font-weight="700" fill="#58c4dd">Quiver <tspan fill="#9fa6c0" font-weight="400">— managed SaaS</tspan></text>
+    <g class="dimq">
+      <text x="14" y="50" font-size="11.5" fill="#cfd3e6">22 ms filtered p95 &#183; recall 0.96 @5%, 0.95 @1% sel.</text>
+      <text x="14" y="68" font-size="11.5" fill="#cfd3e6">$1,900/mo @10M &#183; ~0 FTE ops (vendor on-call, 99.9% SLA)</text>
+      <text x="14" y="86" font-size="11.5" fill="#cfd3e6">lock-in <tspan fill="#fc6255">high</tspan> &#183; in-VPC: <tspan fill="#fc6255">never</tspan> &#183; 12-mo price lock only</text>
+    </g>
+    <g class="st4 fx">
+      <rect x="276" y="10" width="62" height="20" rx="10" fill="none" stroke="#83c167"/>
+      <text x="307" y="24" font-size="11" font-weight="700" fill="#83c167" text-anchor="middle">&#10003; PASS</text>
+    </g>
+  </g>
+
+  <!-- Hearth card -->
+  <g transform="translate(20,198)" class="st1 fx">
+    <rect width="352" height="112" rx="8" fill="#20233a" stroke="#343a5e"/>
+    <rect width="4" height="112" rx="2" fill="#f6c85f"/>
+    <text x="14" y="24" font-size="13.5" font-weight="700" fill="#f6c85f">Hearth <tspan fill="#9fa6c0" font-weight="400">— self-hosted OSS</tspan></text>
+    <text x="14" y="50" font-size="11.5" fill="#cfd3e6">48 ms filtered p95 &#183; recall 0.90 @5% — <tspan fill="#f6c85f">at the M3 floor</tspan></text>
+    <text x="14" y="68" font-size="11.5" fill="#cfd3e6">$1,400/mo @10M &#183; ~0.2 FTE + &#8805;4-eng on-call &#183; low lock-in</text>
+    <text x="14" y="86" font-size="11.5" fill="#cfd3e6">0.86 @1% sel. &#183; one breaking index change (v3&#8594;v4, 2025)</text>
+    <g class="st4 fx">
+      <rect x="276" y="10" width="62" height="20" rx="10" fill="none" stroke="#83c167"/>
+      <text x="307" y="24" font-size="11" font-weight="700" fill="#83c167" text-anchor="middle">&#10003; PASS</text>
+    </g>
+  </g>
+
+  <!-- pgnearest card (eliminated at step 2) -->
+  <g transform="translate(20,326)" class="st1 fx">
+    <rect width="352" height="112" rx="8" fill="#20233a" stroke="#343a5e"/>
+    <rect width="4" height="112" rx="2" fill="#6b7190"/>
+    <g class="dimmed dim2">
+      <text x="14" y="24" font-size="13.5" font-weight="700" fill="#e8eaf6">pgnearest <tspan fill="#9fa6c0" font-weight="400">— Postgres extension (v0.9)</tspan></text>
+      <text x="14" y="50" font-size="11.5" fill="#cfd3e6">110 ms filtered p95 — <tspan fill="#fc6255" font-weight="700">fails M1</tspan> (&#8804;100 ms)</text>
+      <text x="14" y="68" font-size="11.5" fill="#cfd3e6">recall@10 0.89 — <tspan fill="#fc6255" font-weight="700">fails M2</tspan> (&#8805;0.92); an index ceiling, not tuning</text>
+      <text x="14" y="86" font-size="11.5" fill="#cfd3e6">one core maintainer &#183; re-benchmark when v1.0 exists (S5)</text>
+    </g>
+    <line x1="10" y1="102" x2="342" y2="12" stroke="#fc6255" stroke-width="2.5"
+      pathLength="1" stroke-dasharray="1" class="st2 draw"/>
+    <g class="st2 fx">
+      <rect x="266" y="10" width="72" height="20" rx="10" fill="#fc6255"/>
+      <text x="302" y="24" font-size="11" font-weight="700" fill="#1a1a2e" text-anchor="middle">&#10007; M1 M2</text>
+    </g>
+  </g>
+
+  <!-- Braid card (eliminated at step 3) -->
+  <g transform="translate(20,454)" class="st1 fx">
+    <rect width="352" height="112" rx="8" fill="#20233a" stroke="#343a5e"/>
+    <rect width="4" height="112" rx="2" fill="#6b7190"/>
+    <g class="dimmed dim3">
+      <text x="14" y="24" font-size="13.5" font-weight="700" fill="#e8eaf6">Braid <tspan fill="#9fa6c0" font-weight="400">— embedded library, in-process</tspan></text>
+      <text x="14" y="50" font-size="11.5" fill="#cfd3e6">12 ms p95, recall 0.98 — best raw numbers in the bakeoff</text>
+      <text x="14" y="68" font-size="11.5" fill="#cfd3e6">post-hoc filter recall 0.71 @5% — <tspan fill="#fc6255" font-weight="700">fails M3</tspan> (&#8805;0.90)</text>
+      <text x="14" y="86" font-size="11.5" fill="#cfd3e6">structural, not tunable — the index ignores metadata</text>
+    </g>
+    <line x1="10" y1="102" x2="342" y2="12" stroke="#fc6255" stroke-width="2.5"
+      pathLength="1" stroke-dasharray="1" class="st3 draw"/>
+    <g class="st3 fx">
+      <rect x="276" y="10" width="62" height="20" rx="10" fill="#fc6255"/>
+      <text x="307" y="24" font-size="11" font-weight="700" fill="#1a1a2e" text-anchor="middle">&#10007; M3</text>
+    </g>
+  </g>
+
+  <!-- ========== steps 5–6: the cost chart (center) ========== -->
+  <g class="st5 fx">
+    <text x="446" y="72" font-size="11" fill="#9fa6c0">$ / month (log)</text>
+    <line x1="445" y1="80" x2="445" y2="390" stroke="#343a5e" stroke-width="1.5"/>
+    <line x1="440" y1="390" x2="780" y2="390" stroke="#343a5e" stroke-width="1.5"/>
+    <text x="455" y="408" font-size="11" fill="#9fa6c0" text-anchor="middle">1M</text>
+    <text x="615" y="408" font-size="11" fill="#9fa6c0" text-anchor="middle">10M</text>
+    <text x="775" y="408" font-size="11" fill="#9fa6c0" text-anchor="middle">100M</text>
+    <text x="610" y="424" font-size="10.5" fill="#6b7190" text-anchor="middle">corpus size, vectors (log scale) — corpus has doubled every year</text>
+    <!-- today marker -->
+    <line x1="553" y1="90" x2="553" y2="390" stroke="#6b7190" stroke-width="1" stroke-dasharray="3 4"/>
+    <text x="553" y="76" font-size="11" fill="#e8eaf6" text-anchor="middle" font-weight="700">today: 4.1M</text>
+    <text x="553" y="88" font-size="10.5" fill="#9fa6c0" text-anchor="middle">$740 vs $520/mo</text>
+  </g>
+
+  <!-- infra curves -->
+  <path d="M455,359 L553,286 L615,237 L775,107" fill="none" stroke="#58c4dd"
+    stroke-width="2.5" pathLength="1" stroke-dasharray="1" class="st5 draw"/>
+  <path d="M455,304 L567,304 L615,252 L775,170" fill="none" stroke="#f6c85f"
+    stroke-width="2.5" pathLength="1" stroke-dasharray="1" class="st5 draw"/>
+  <g class="st5 fx">
+    <text x="448" y="376" font-size="11" fill="#58c4dd">$180</text>
+    <text x="460" y="296" font-size="11" fill="#f6c85f">$520 HA floor (covers to ~5M)</text>
+    <text x="622" y="234" font-size="11" fill="#58c4dd">$1,900</text>
+    <text x="620" y="270" font-size="11" fill="#f6c85f">$1,400</text>
+    <text x="770" y="100" font-size="11" fill="#58c4dd" text-anchor="end">$23,000 (Enterprise tier &gt;50M)</text>
+    <text x="770" y="186" font-size="11" fill="#f6c85f" text-anchor="end">$6,800 — 3.4&#215; cheaper</text>
+    <circle cx="529" cy="304" r="4.5" fill="#83c167"/>
+    <text x="524" y="326" font-size="11" fill="#83c167" text-anchor="end">infra crossover ~3M — behind us</text>
+  </g>
+
+  <!-- labor-adjusted layer (step 6) -->
+  <path d="M455,207 L615,195 L775,152" fill="none" stroke="#f6c85f" stroke-width="2"
+    stroke-dasharray="1" pathLength="1" class="st6 draw" opacity="0.85"/>
+  <g class="st6 fx">
+    <circle cx="691" cy="175" r="4.5" fill="#83c167"/>
+    <text x="688" y="140" font-size="11" fill="#83c167" text-anchor="end">labor-adjusted crossover</text>
+    <text x="688" y="153" font-size="11" fill="#83c167" text-anchor="end">~30M vectors &#8776; 2029</text>
+    <line x1="585" y1="222" x2="645" y2="222" stroke="#fc6255" stroke-width="1" stroke-dasharray="2 3"/>
+    <text x="649" y="226" font-size="10.5" fill="#fc6255">M5 cap $2,500 @10M</text>
+    <text x="440" y="447" font-size="10.5" fill="#9fa6c0">Quiver's quote is locked 12 months only (their list moved ~20% last year);</text>
+    <text x="440" y="461" font-size="10.5" fill="#9fa6c0">a 25% renewal rise pulls the ~30M crossover to ~20M (S4).</text>
+  </g>
+
+  <!-- chart legend (appears with chart) -->
+  <g class="st5 fx" transform="translate(628,312)">
+    <line x1="0" y1="0" x2="22" y2="0" stroke="#58c4dd" stroke-width="2.5"/>
+    <text x="28" y="4" font-size="10.5" fill="#cfd3e6">Quiver — managed SaaS</text>
+    <line x1="0" y1="16" x2="22" y2="16" stroke="#f6c85f" stroke-width="2.5"/>
+    <text x="28" y="20" font-size="10.5" fill="#cfd3e6">Hearth — self-hosted, infra only</text>
+    <line x1="0" y1="32" x2="22" y2="32" stroke="#f6c85f" stroke-width="2" stroke-dasharray="4 3"/>
+    <text x="28" y="36" font-size="10.5" fill="#cfd3e6">Hearth + ops labor (&#8776;$2,800/mo, ~0.2 FTE)</text>
+    <circle cx="11" cy="48" r="4" fill="#83c167"/>
+    <text x="28" y="52" font-size="10.5" fill="#cfd3e6">crossover / condition</text>
+    <line x1="2" y1="64" x2="20" y2="64" stroke="#fc6255" stroke-width="2.5"/>
+    <text x="28" y="68" font-size="10.5" fill="#cfd3e6">must-have failure</text>
+  </g>
+
+  <!-- ========== step 8: decision timeline under chart ========== -->
+  <g class="st8 fx">
+    <line x1="450" y1="505" x2="770" y2="505" stroke="#343a5e" stroke-width="1.5"/>
+    <circle cx="465" cy="505" r="4" fill="#9fa6c0"/>
+    <text x="465" y="525" font-size="10.5" fill="#e8eaf6" text-anchor="middle">2026-07-01</text>
+    <text x="465" y="539" font-size="10" fill="#9fa6c0" text-anchor="middle">brief proposed</text>
+    <circle cx="608" cy="505" r="4.5" fill="#83c167"/>
+    <text x="608" y="525" font-size="10.5" fill="#83c167" text-anchor="middle" font-weight="700">2026-10-01</text>
+    <text x="608" y="539" font-size="10" fill="#9fa6c0" text-anchor="middle">headcount checkpoint</text>
+    <circle cx="750" cy="505" r="4" fill="#9fa6c0"/>
+    <text x="750" y="525" font-size="10.5" fill="#e8eaf6" text-anchor="middle">2027-01-15</text>
+    <text x="750" y="539" font-size="10" fill="#9fa6c0" text-anchor="middle">full review</text>
+  </g>
+
+  <!-- ========== step 4: survivor tradeoff (right, top) ========== -->
+  <g transform="translate(800,70)" class="st4 fx">
+    <rect width="350" height="108" rx="8" fill="#20233a" stroke="#343a5e"/>
+    <text x="14" y="22" font-size="12.5" font-weight="700" fill="#e8eaf6">No dominant option — a direct tradeoff</text>
+    <text x="14" y="44" font-size="11.5" fill="#58c4dd">Quiver wins: ~0 FTE ops &#183; filtered-recall margin</text>
+    <text x="14" y="62" font-size="11.5" fill="#f6c85f">Hearth wins: cost trajectory &#183; low lock-in &#183; in-VPC</text>
+    <text x="14" y="79" font-size="10.5" fill="#9fa6c0">(in-VPC likely needed for 2027 enterprise contracts)</text>
+    <text x="14" y="96" font-size="10.5" fill="#9fa6c0">Raw speed didn't decide — both clear M1 with room.</text>
+  </g>
+
+  <!-- ========== step 7: conditional recommendation (right, middle) ========== -->
+  <g transform="translate(800,192)" class="st7 fx">
+    <rect width="350" height="256" rx="8" fill="#20233a" stroke="#83c167" stroke-width="1.5"/>
+    <text x="14" y="24" font-size="12.5" font-weight="700" fill="#e8eaf6">Recommendation — an IF/THEN, not a winner</text>
+    <text x="14" y="48" font-size="11.5" font-weight="700" fill="#83c167">IF, by the 2026-10-01 checkpoint:</text>
+    <text x="22" y="67" font-size="11.5" fill="#cfd3e6">&#8226; PLAT-7 infra hire has signed and started</text>
+    <text x="34" y="83" font-size="10.5" fill="#9fa6c0">(req approved today — not yet filled)</text>
+    <text x="22" y="101" font-size="11.5" fill="#cfd3e6">&#8226; &#8805;4-engineer on-call rotation committed, in writing</text>
+    <text x="14" y="126" font-size="12.5" font-weight="700" fill="#f6c85f">&#8594; Hearth (self-hosted) is primary</text>
+    <text x="14" y="152" font-size="11.5" font-weight="700" fill="#58c4dd">ELSE &#8594; Quiver, with a mandatory exit plan:</text>
+    <text x="22" y="171" font-size="11" fill="#cfd3e6">&#8226; queries stay behind our SearchIndex adapter</text>
+    <text x="22" y="188" font-size="11" fill="#cfd3e6">&#8226; quarterly JSONL export drill into a scratch Hearth</text>
+    <text x="22" y="205" font-size="11" fill="#cfd3e6">&#8226; standing ~3 engineer-week migration budget</text>
+    <text x="22" y="222" font-size="11" fill="#cfd3e6">&#8226; re-evaluate at 30M vectors or first renewal</text>
+    <text x="14" y="244" font-size="10.5" fill="#9fa6c0">Why Hearth first: crossover is inside this decision's lifetime.</text>
+  </g>
+
+  <!-- ========== step 8: standing flip trigger (right, bottom) ========== -->
+  <g transform="translate(800,462)" class="st8 fx">
+    <rect width="350" height="94" rx="8" fill="#20233a" stroke="#fc6255" stroke-width="1.5"/>
+    <text x="14" y="22" font-size="12" font-weight="700" fill="#fc6255">Standing override — S1 (watch continuously)</text>
+    <text x="14" y="44" font-size="11" fill="#cfd3e6">Filtered queries &gt;60% of traffic, or facet selectivity</text>
+    <text x="14" y="61" font-size="11" fill="#cfd3e6">&lt;2% &#8594; Quiver even if the hire lands: Hearth's 0.90</text>
+    <text x="14" y="78" font-size="11" fill="#cfd3e6">filtered recall has no margin. Filter share is trending up.</text>
+  </g>
+</svg>
+</div>
+
+<!-- caption + controls (JS path) -->
+<div class="bar">
+  <div class="controls">
+    <button id="play" aria-pressed="false">&#9654; replay the build-up</button>
+    <button id="prev" aria-label="previous step">&#9664;</button>
+    <button id="next" aria-label="next step">&#9654;</button>
+    <span class="dots" id="dots" role="group" aria-label="jump to step"></span>
+    <span id="stepnum">8/8</span>
+  </div>
+  <p id="cap" aria-live="polite">Otherwise Quiver with a budgeted exit plan; filtered traffic &gt;60% or &lt;2% selectivity flips to Quiver regardless.</p>
+</div>
+
+<!-- the build script: visible ordered list when JS is off; caption source when on -->
+<ol class="script" id="script">
+  <li>Four architectures enter; five must-haves — latency, recall, filtered recall, EU residency, budget — gate the decision.</li>
+  <li>pgnearest is eliminated: 110 ms filtered fails M1; recall 0.89 fails M2 — an index ceiling, not tuning.</li>
+  <li>Braid is fastest (12 ms, 0.98 recall) but post-hoc filtering collapses to 0.71 — fails M3. Benchmarks didn't decide.</li>
+  <li>Survivors trade directly: Quiver wins operational simplicity and filter margin; Hearth wins cost trajectory, lock-in, in-VPC.</li>
+  <li>Infra costs invert: Quiver cheapest at 1M, 3.4× Hearth's price at 100M; crossover ~3M — already behind us.</li>
+  <li>Add ~0.2 FTE labor (≈$2,800/mo): Quiver stays cheaper until ~30M vectors — about 2029 at 2×/yr growth.</li>
+  <li>Hearth is primary only if the PLAT-7 hire starts and ≥4-engineer on-call is committed by 2026-10-01.</li>
+  <li>Otherwise Quiver with a budgeted exit plan; filtered traffic &gt;60% or &lt;2% selectivity flips to Quiver regardless.</li>
+</ol>
+
+<footer>tradeoff-decision &#183; motion-explainer &#183; v1 &#183; 2026-08-11</footer>
+</div>
+
+<script>
+(function () {
+  var scene = document.getElementById('scene');
+  var caps = Array.prototype.map.call(
+    document.querySelectorAll('#script li'),
+    function (li) { return li.textContent; });
+  var N = caps.length; // 8
+  var cap = document.getElementById('cap');
+  var stepnum = document.getElementById('stepnum');
+  var dotsBox = document.getElementById('dots');
+  var playBtn = document.getElementById('play');
+  var cur = N, timer = null;
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var DELAY = reduced ? 1500 : 2800;
+  var START_CAP = 'Press play — the argument assembles: options, eliminations, cost crossover, then the condition.';
+
+  var dots = [];
+  for (var i = 1; i <= N; i++) (function (i) {
+    var b = document.createElement('button');
+    b.textContent = i;
+    b.setAttribute('aria-label', 'step ' + i);
+    b.addEventListener('click', function () { stop(); setStep(i); });
+    dotsBox.appendChild(b);
+    dots.push(b);
+  })(i);
+
+  function setStep(n) {
+    cur = Math.max(0, Math.min(N, n));
+    var cls = [];
+    for (var i = 1; i <= cur; i++) cls.push('k' + i);
+    scene.setAttribute('class', cls.join(' '));
+    cap.textContent = cur === 0 ? START_CAP : caps[cur - 1];
+    stepnum.textContent = cur + '/' + N;
+    for (var j = 0; j < N; j++)
+      dots[j].setAttribute('aria-current', j + 1 === cur ? 'true' : 'false');
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    playBtn.innerHTML = '&#9654; replay the build-up';
+    playBtn.setAttribute('aria-pressed', 'false');
+  }
+
+  function play() {
+    if (timer) { stop(); return; }
+    if (cur >= N) setStep(0);
+    playBtn.innerHTML = '&#10074;&#10074; pause';
+    playBtn.setAttribute('aria-pressed', 'true');
+    timer = setInterval(function () {
+      if (cur >= N) { stop(); return; }
+      setStep(cur + 1);
+      if (cur >= N) stop();
+    }, DELAY);
+  }
+
+  playBtn.addEventListener('click', play);
+  document.getElementById('prev').addEventListener('click', function () { stop(); setStep(cur - 1); });
+  document.getElementById('next').addEventListener('click', function () { stop(); setStep(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === ' ') { e.preventDefault(); play(); }
+    else if (e.key === 'ArrowRight') { stop(); setStep(cur + 1); }
+    else if (e.key === 'ArrowLeft') { stop(); setStep(cur - 1); }
+  });
+
+  setStep(N); // first paint = final frame
+})();
+</script>
+</body>
+</html>

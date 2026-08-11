@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>murmur — does cheap reverb-style augmentation work?</title>
+<style>
+  :root {
+    --page: #0d0f14;
+    --canvas: #12141c;
+    --ink: #dfe4ee;
+    --muted: #9aa3b5;
+    --blue: #58C4DD;   /* helps → kept in the recipe */
+    --red: #FC6255;    /* hurts → cut back or dropped */
+    --gray: #8a93a6;   /* null result / seed noise */
+    --gold: #F4D345;   /* current best */
+    --line: #2a2f3d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--page); color: var(--ink); }
+  body {
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      Helvetica, Arial, sans-serif;
+    padding: 20px 16px 28px;
+  }
+  main { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 1.35rem; font-weight: 650; letter-spacing: .01em; }
+  h1 .slug { color: var(--gold); }
+  p.framing { color: var(--muted); font-size: .95rem; max-width: 72ch; margin-top: 4px; }
+  .scenewrap {
+    margin-top: 14px; background: var(--canvas);
+    border: 1px solid var(--line); border-radius: 12px;
+    overflow-x: auto;
+  }
+  .scenewrap svg { display: block; width: 100%; height: auto; min-width: 940px; }
+  svg text { fill: var(--ink); font-family: inherit; }
+  .muted { fill: var(--muted); }
+  .blue { fill: var(--blue); } .red { fill: var(--red); }
+  .gray { fill: var(--gray); } .gold { fill: var(--gold); }
+
+  g[data-step] { transition: opacity .65s ease; }
+  g[data-step].off { opacity: 0; }
+  .seg { transition: stroke-dashoffset .8s ease .12s; }
+  @media (prefers-reduced-motion: reduce) {
+    g[data-step], .seg { transition: none !important; }
+  }
+
+  .capbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+    margin-top: 10px; }
+  #cap { flex: 1 1 420px; min-height: 2.6em; font-size: 1rem; color: var(--ink); }
+  #cap b { color: var(--gold); font-weight: 650; margin-right: .5em; }
+  .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .controls button {
+    background: #1a1e2a; color: var(--ink); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 12px; font: inherit; font-size: .9rem;
+    cursor: pointer;
+  }
+  .controls button:hover { border-color: var(--gray); }
+  #play { color: var(--gold); border-color: #4a4324; }
+  .dots { display: flex; gap: 6px; }
+  .dots button { padding: 4px 7px; font-size: .75rem; color: var(--muted);
+    border-radius: 6px; }
+  .dots button.on { color: #0d0f14; background: var(--blue); border-color: var(--blue); }
+  ol.steps { margin: 14px 0 0 1.4em; color: var(--ink); font-size: .95rem; }
+  ol.steps li { margin: 4px 0; }
+  footer { margin-top: 26px; color: #5c657a; font-size: .72rem; }
+  @media (max-width: 480px) { body { padding: 12px 8px 20px; } h1 { font-size: 1.1rem; } }
+</style>
+</head>
+<body>
+<main>
+  <h1><span class="slug">murmur</span> — do near-free, reverb-flavoured audio
+    augmentations lift a small bird-call classifier?</h1>
+  <p class="framing">Six experiments, March–June 2026, on 6,200 clips across 34
+    long-tailed species: the bet is that physically-plausible augmentation beats
+    spending the same budget on a bigger backbone. Verdict below: partially
+    supported.</p>
+
+  <div class="scenewrap">
+  <svg viewBox="0 0 1240 700" role="img"
+    aria-label="One diagram: macro-F1 trajectory over six experiments (0.612 baseline, 0.589 regression, 0.671 best), per-species gains showing the rare tail barely moves, and the verdict with next steps.">
+
+    <!-- ====================== STEP 1: floor ====================== -->
+    <g data-step="1">
+      <text x="90" y="42" font-size="16" font-weight="650">Validation macro-F1 across the six-experiment ledger</text>
+      <text x="90" y="62" font-size="12.5" class="muted">macro-F1 = unweighted mean F1 over all 34 species — the rare tail counts equally · 11 species have &lt;80 clips</text>
+
+      <!-- legend: each hue bound to one meaning -->
+      <rect x="660" y="28" width="12" height="12" rx="2" fill="var(--blue)"/>
+      <text x="678" y="39" font-size="12.5" class="muted">helps → kept</text>
+      <rect x="790" y="28" width="12" height="12" rx="2" fill="var(--red)"/>
+      <text x="808" y="39" font-size="12.5" class="muted">hurts → cut back</text>
+      <rect x="940" y="28" width="12" height="12" rx="2" fill="var(--gray)"/>
+      <text x="958" y="39" font-size="12.5" class="muted">null / seed noise</text>
+      <rect x="1090" y="28" width="12" height="12" rx="2" fill="var(--gold)"/>
+      <text x="1108" y="39" font-size="12.5" class="muted">current best</text>
+
+      <!-- y grid -->
+      <g stroke="var(--line)" stroke-width="1">
+        <line x1="100" y1="80"  x2="590" y2="80"/>
+        <line x1="100" y1="168" x2="590" y2="168"/>
+        <line x1="100" y1="256" x2="590" y2="256"/>
+        <line x1="100" y1="344" x2="590" y2="344"/>
+        <line x1="100" y1="432" x2="590" y2="432"/>
+        <line x1="100" y1="520" x2="590" y2="520"/>
+      </g>
+      <g font-size="12" text-anchor="end">
+        <text x="88" y="84"  class="muted">0.68</text>
+        <text x="88" y="172" class="muted">0.66</text>
+        <text x="88" y="260" class="muted">0.64</text>
+        <text x="88" y="348" class="muted">0.62</text>
+        <text x="88" y="436" class="muted">0.60</text>
+        <text x="88" y="524" class="muted">0.58</text>
+      </g>
+
+      <!-- baseline reference -->
+      <line x1="100" y1="379" x2="590" y2="379" stroke="var(--ink)" stroke-opacity=".35" stroke-dasharray="5 5"/>
+      <text x="588" y="371" font-size="11.5" text-anchor="end" class="muted">baseline 0.612</text>
+
+      <circle cx="120" cy="379" r="6" fill="var(--ink)"/>
+      <text x="120" y="406" font-size="14" font-weight="650" text-anchor="middle">0.612</text>
+      <text x="120" y="423" font-size="12" text-anchor="middle" class="muted">01 no-aug baseline</text>
+      <text x="120" y="545" font-size="11.5" text-anchor="middle" class="muted">2026-03-08</text>
+    </g>
+
+    <!-- ====================== STEP 2: first win ====================== -->
+    <g data-step="2">
+      <line class="seg" x1="120" y1="379" x2="212" y2="252" stroke="var(--blue)" stroke-width="3"/>
+      <circle cx="212" cy="252" r="6" fill="var(--blue)"/>
+      <text x="212" y="212" font-size="12" text-anchor="middle" class="muted">02 + light reverb</text>
+      <text x="212" y="230" font-size="14" font-weight="650" text-anchor="middle" class="blue">0.641</text>
+      <text x="212" y="545" font-size="11.5" text-anchor="middle" class="muted">03-24</text>
+    </g>
+
+    <!-- ====================== STEP 3: regression ====================== -->
+    <g data-step="3">
+      <line class="seg" x1="212" y1="252" x2="304" y2="480" stroke="var(--red)" stroke-width="3"/>
+      <circle cx="304" cy="480" r="6" fill="var(--red)"/>
+      <text x="318" y="477" font-size="13.5" font-weight="650" class="red">0.589 · 03 + pitch/time stretch</text>
+      <text x="318" y="496" font-size="11.5" class="muted">only ±2 semitones tested — gentler settings untried</text>
+      <text x="304" y="545" font-size="11.5" text-anchor="middle" class="muted">04-11</text>
+    </g>
+
+    <!-- ====================== STEP 4: null ====================== -->
+    <g data-step="4">
+      <rect x="100" y="225" width="490" height="53" fill="var(--gray)" opacity=".14"/>
+      <text x="106" y="241" font-size="11.5" class="muted">seed noise ≈ ±0.006 around 0.641</text>
+      <line class="seg" x1="304" y1="480" x2="396" y2="243" stroke="var(--gray)" stroke-width="3"/>
+      <circle cx="396" cy="243" r="6" fill="var(--gray)"/>
+      <text x="408" y="264" font-size="13.5" font-weight="650" class="gray">0.643 · 04 + noise-mix (null)</text>
+      <text x="396" y="545" font-size="11.5" text-anchor="middle" class="muted">04-29</text>
+    </g>
+
+    <!-- ====================== STEP 5: current best ====================== -->
+    <g data-step="5">
+      <line class="seg" x1="396" y1="243" x2="488" y2="120" stroke="var(--blue)" stroke-width="3"/>
+      <circle cx="488" cy="120" r="7" fill="var(--gold)"/>
+      <text x="504" y="98" font-size="12" class="muted">05 the stack: reverb + noise + SpecAugment</text>
+      <text x="504" y="117" font-size="14.5" font-weight="700" class="gold">0.671 ★ best (+0.059)</text>
+      <text x="488" y="545" font-size="11.5" text-anchor="middle" class="muted">05-20</text>
+    </g>
+
+    <!-- ====================== STEP 6: heavy reverb ====================== -->
+    <g data-step="6">
+      <line class="seg" x1="488" y1="120" x2="580" y2="155" stroke="var(--red)" stroke-width="3"/>
+      <circle cx="580" cy="155" r="6" fill="var(--red)"/>
+      <text x="596" y="188" font-size="13.5" font-weight="650" text-anchor="end" class="red">0.663 · 06 heavy reverb</text>
+      <text x="596" y="205" font-size="11.5" text-anchor="end" class="muted">helps common classes only</text>
+      <text x="580" y="545" font-size="11.5" text-anchor="middle" class="muted">06-14</text>
+    </g>
+
+    <!-- ====================== STEP 7: per-species ====================== -->
+    <g data-step="7">
+      <text x="616" y="112" font-size="15.5" font-weight="650">Where the +0.059 lives — per-species F1, baseline <tspan class="gray">●</tspan> → best</text>
+
+      <!-- axis -->
+      <line x1="860" y1="400" x2="1180" y2="400" stroke="var(--line)"/>
+      <g font-size="11" text-anchor="middle">
+        <text x="860"  y="418" class="muted">0.3</text>
+        <text x="967"  y="418" class="muted">0.5</text>
+        <text x="1073" y="418" class="muted">0.7</text>
+        <text x="1180" y="418" class="muted">0.9</text>
+      </g>
+      <text x="1205" y="404" font-size="11" class="muted">F1</text>
+
+      <!-- American Robin -->
+      <text x="846" y="154" font-size="13" text-anchor="end">American Robin · common · 480 clips</text>
+      <text x="846" y="170" font-size="11" text-anchor="end" class="muted">0.79 → 0.85</text>
+      <line class="seg" x1="1121" y1="150" x2="1153" y2="150" stroke="var(--blue)" stroke-width="3"/>
+      <circle cx="1121" cy="150" r="5" fill="var(--gray)"/>
+      <circle cx="1153" cy="150" r="5" fill="var(--blue)"/>
+      <text x="1167" y="155" font-size="13" font-weight="650" class="blue">+0.06</text>
+
+      <!-- Northern Cardinal -->
+      <text x="846" y="209" font-size="13" text-anchor="end">Northern Cardinal · common · 421 clips</text>
+      <text x="846" y="225" font-size="11" text-anchor="end" class="muted">0.76 → 0.83</text>
+      <line class="seg" x1="1105" y1="205" x2="1143" y2="205" stroke="var(--blue)" stroke-width="3"/>
+      <circle cx="1105" cy="205" r="5" fill="var(--gray)"/>
+      <circle cx="1143" cy="205" r="5" fill="var(--blue)"/>
+      <text x="1157" y="210" font-size="13" font-weight="650" class="blue">+0.07</text>
+
+      <!-- Song Sparrow -->
+      <text x="846" y="264" font-size="13" text-anchor="end">Song Sparrow · mid · 308 clips</text>
+      <text x="846" y="280" font-size="11" text-anchor="end" class="muted">0.68 → 0.74</text>
+      <line class="seg" x1="1063" y1="260" x2="1095" y2="260" stroke="var(--blue)" stroke-width="3"/>
+      <circle cx="1063" cy="260" r="5" fill="var(--gray)"/>
+      <circle cx="1095" cy="260" r="5" fill="var(--blue)"/>
+      <text x="1109" y="265" font-size="13" font-weight="650" class="blue">+0.06</text>
+
+      <!-- Wood Thrush -->
+      <text x="846" y="319" font-size="13" text-anchor="end">Wood Thrush · rare · 92 clips</text>
+      <text x="846" y="335" font-size="11" text-anchor="end" class="muted">0.51 → 0.54</text>
+      <line class="seg" x1="972" y1="315" x2="988" y2="315" stroke="var(--blue)" stroke-width="3"/>
+      <circle cx="972" cy="315" r="5" fill="var(--gray)"/>
+      <circle cx="988" cy="315" r="5" fill="var(--blue)"/>
+      <text x="1002" y="320" font-size="13" font-weight="650" class="blue">+0.03</text>
+
+      <!-- Kirtland's Warbler -->
+      <text x="846" y="374" font-size="13" text-anchor="end">Kirtland's Warbler · deep tail · 41 clips</text>
+      <text x="846" y="390" font-size="11" text-anchor="end" class="muted">0.34 → 0.33</text>
+      <line class="seg" x1="881" y1="370" x2="876" y2="370" stroke="var(--red)" stroke-width="3"/>
+      <circle cx="881" cy="370" r="5" fill="var(--gray)"/>
+      <circle cx="876" cy="370" r="5" fill="var(--red)"/>
+      <text x="897" y="375" font-size="13" font-weight="650" class="red">−0.01</text>
+
+      <text x="616" y="444" font-size="12.5" class="muted">decomposition: ≈4.5 of the +5.9 points come from common &amp; mid tiers —</text>
+      <text x="616" y="461" font-size="12.5" class="muted">global augmentation has run out of road on the classes that most need help</text>
+    </g>
+
+    <!-- ====================== STEP 8: verdict ====================== -->
+    <g data-step="8">
+      <rect x="90" y="570" width="1120" height="118" rx="10" fill="var(--gold)" fill-opacity=".05" stroke="var(--gold)" stroke-opacity=".4"/>
+      <text x="112" y="598" font-size="16" font-weight="700" class="gold">Verdict: partially supported</text>
+      <text x="112" y="622" font-size="14.5">+0.059 macro-F1 (0.612 → 0.671) at negligible extra compute — but the gain concentrates in common/mid species; the deep tail is the ceiling.</text>
+      <text x="112" y="644" font-size="13" class="muted">Open: H2 (“cheaper than a bigger backbone”) is asserted, not shown — the fair backbone arm hasn't run; sampler vs augmentation is confounded in exp-05.</text>
+      <text x="112" y="670" font-size="14.5" class="blue" font-weight="650">Next: ① class-conditional augmentation (protect the tail)&#160;&#160;② sampler-vs-aug 2×2 ablation&#160;&#160;③ backbone-fairness arm (settles H2)</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="capbar">
+    <div id="cap" hidden></div>
+    <div class="controls" id="controls" hidden>
+      <button id="play" aria-label="Replay the build-up">▶ replay the build-up</button>
+      <button id="prev" aria-label="Previous step">⏮</button>
+      <button id="next" aria-label="Next step">⏭</button>
+      <div class="dots" id="dots" role="group" aria-label="Jump to step"></div>
+    </div>
+  </div>
+
+  <ol class="steps" id="steplist">
+    <li>Baseline (exp-01): small CNN, no augmentation — validation macro-F1 0.612. Tail classes carry almost all the error.</li>
+    <li>Light impulse-response reverb (exp-02): 0.641, +0.029 — the first clear win; gain skews to common/mid tiers.</li>
+    <li>Pitch/time stretch (exp-03): 0.589, below baseline — warping smears the spectral cues rare classes depend on.</li>
+    <li>Noise mixing (exp-04): 0.643, only +0.002 over reverb alone — a null result, inside ±0.006 seed noise.</li>
+    <li>The stack (exp-05): reverb + noise mix + SpecAugment + partial balanced sampler — 0.671, +0.059, current best.</li>
+    <li>Heavy reverb (exp-06): 0.663, below best — helps common classes further, blurs short rare-class calls.</li>
+    <li>Per-species: head gains +0.06–0.07, Wood Thrush +0.03, Kirtland's Warbler −0.01 — the lift barely reaches the tail.</li>
+    <li>Verdict: partially supported. Next: class-conditional augmentation — apply each transform only where it helps; protect the tail.</li>
+  </ol>
+
+  <footer>research-project · motion-explainer · v1 · 2026-08-11</footer>
+</main>
+
+<script>
+(function () {
+  var CAPS = [
+    "Baseline: small CNN, no augmentation — validation macro-F1 0.612. Tail classes carry almost all the error.",
+    "Light impulse-response reverb: 0.641, +0.029 — the first clear win; gain skews to common/mid tiers.",
+    "Pitch/time stretch regresses to 0.589, below baseline — warping smears the cues rare classes depend on.",
+    "Noise mixing lands at 0.643: +0.002 over reverb alone — null, inside ±0.006 seed noise.",
+    "The stack — reverb + noise mix + SpecAugment + partial balanced sampler — hits 0.671: current best, +0.059.",
+    "Heavy reverb drops to 0.663, below best — helps common classes, blurs short rare-class calls.",
+    "The lift is uneven: head species gain +0.06–0.07, Wood Thrush +0.03, Kirtland's Warbler −0.01.",
+    "Verdict: partially supported. Next: class-conditional augmentation — keep what helps, protect the rare tail."
+  ];
+  var LABELS = ["floor", "reverb", "regression", "null", "best", "heavy", "species", "verdict"];
+  var N = 8, cur = N, playing = false, timer = null;
+  var STEP_MS = 2100;
+
+  var groups = Array.prototype.slice.call(document.querySelectorAll("g[data-step]"));
+  var segs = Array.prototype.slice.call(document.querySelectorAll(".seg"));
+  var cap = document.getElementById("cap");
+  var controls = document.getElementById("controls");
+  var playBtn = document.getElementById("play");
+  var dotsBox = document.getElementById("dots");
+  var dots = [];
+
+  segs.forEach(function (s) {
+    var L = s.getTotalLength();
+    s.dataset.len = L;
+    s.style.strokeDasharray = L + " " + L;
+    s.style.strokeDashoffset = "0";
+  });
+
+  for (var i = 1; i <= N; i++) {
+    (function (n) {
+      var b = document.createElement("button");
+      b.textContent = n + " " + LABELS[n - 1];
+      b.title = "Step " + n + ": " + LABELS[n - 1];
+      b.addEventListener("click", function () { stopPlay(); setStep(n); });
+      dotsBox.appendChild(b);
+      dots.push(b);
+    })(i);
+  }
+
+  function apply() {
+    groups.forEach(function (g) {
+      var n = +g.dataset.step, on = n <= cur;
+      g.classList.toggle("off", !on);
+      Array.prototype.forEach.call(g.querySelectorAll(".seg"), function (s) {
+        s.style.strokeDashoffset = on ? "0" : s.dataset.len;
+      });
+    });
+    dots.forEach(function (d, idx) { d.classList.toggle("on", idx + 1 <= cur); });
+    if (cur >= 1) {
+      cap.innerHTML = "<b>" + cur + "/" + N + "</b>" + escapeHtml(CAPS[cur - 1]);
+    } else {
+      cap.innerHTML = "<b>0/" + N + "</b>";
+    }
+    playBtn.textContent = playing ? "⏸ pause" : "▶ replay the build-up";
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function setStep(n) {
+    cur = Math.max(0, Math.min(N, n));
+    apply();
+  }
+
+  function stopPlay() {
+    playing = false;
+    if (timer) { clearTimeout(timer); timer = null; }
+    apply();
+  }
+
+  function tick() {
+    if (!playing) return;
+    if (cur >= N) { stopPlay(); return; }
+    setStep(cur + 1);
+    if (cur >= N) { playing = false; apply(); return; }
+    timer = setTimeout(tick, STEP_MS);
+  }
+
+  playBtn.addEventListener("click", function () {
+    if (playing) { stopPlay(); return; }
+    playing = true;
+    if (cur >= N) setStep(0);
+    timer = setTimeout(tick, 500);
+    apply();
+  });
+  document.getElementById("prev").addEventListener("click", function () {
+    stopPlay(); setStep(cur - 1);
+  });
+  document.getElementById("next").addEventListener("click", function () {
+    stopPlay(); setStep(cur + 1);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    if (e.key === "ArrowRight") { stopPlay(); setStep(cur + 1); e.preventDefault(); }
+    else if (e.key === "ArrowLeft") { stopPlay(); setStep(cur - 1); e.preventDefault(); }
+    else if (e.key === " ") { playBtn.click(); e.preventDefault(); }
+  });
+
+  // JS is available: switch from the static ordered list to the live caption.
+  document.getElementById("steplist").hidden = true;
+  cap.hidden = false;
+  controls.hidden = false;
+  apply(); // first paint = final frame (cur = N)
+})();
+</script>
+</body>
+</html>

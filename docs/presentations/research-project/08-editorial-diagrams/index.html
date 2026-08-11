@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>murmur — research state</title>
+<style>
+  :root {
+    --paper: #faf6ee;
+    --ink: #201c14;
+    --muted: #837a68;
+    --accent: #b23a0c;
+    --hairline: #e3dccc;
+    --serif: Georgia, 'Times New Roman', 'Iowan Old Style', serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.45;
+    max-width: 1008px;
+    margin: 0 auto;
+    padding: 40px 24px 32px;
+  }
+  header { margin-bottom: 36px; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 44px;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  .subtitle {
+    font-size: 15px;
+    color: var(--muted);
+    margin-top: 8px;
+    max-width: 640px;
+  }
+  .standfirst {
+    font-family: var(--serif);
+    font-size: 19px;
+    line-height: 1.5;
+    margin-top: 16px;
+    max-width: 800px;
+  }
+  .standfirst strong { color: var(--accent); font-weight: 700; }
+  section { margin-bottom: 44px; }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--ink);
+    border-top: 1px solid var(--hairline);
+    padding-top: 12px;
+    margin-bottom: 16px;
+  }
+  figure { margin: 0; }
+  .fig { overflow-x: auto; }
+  .fig svg { display: block; width: 100%; height: auto; min-width: 720px; }
+  figcaption {
+    font-size: 13.5px;
+    color: var(--muted);
+    max-width: 760px;
+    margin-top: 8px;
+  }
+  /* SVG text roles */
+  .lbl  { font-family: var(--sans); font-size: 14px; font-weight: 500; fill: var(--ink); }
+  .lblM { font-family: var(--sans); font-size: 14px; font-weight: 500; fill: var(--muted); }
+  .val  { font-family: var(--mono); font-size: 12px; fill: var(--muted); }
+  .valA { font-family: var(--mono); font-size: 13px; font-weight: 700; fill: var(--accent); }
+  .ax   { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+  .ann  { font-family: var(--serif); font-style: italic; font-size: 15px; fill: var(--ink); }
+  .kick { font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; fill: var(--muted); }
+  .grid { stroke: var(--hairline); stroke-width: 1; }
+  .lead { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; fill: none; }
+  .dataline { stroke: var(--ink); stroke-width: 2; fill: none; }
+  .refline { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+  .dot   { fill: var(--ink); }
+  .dotO  { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+  .dotA  { fill: var(--accent); }
+  .box   { fill: var(--paper); stroke: var(--ink); stroke-width: 1; }
+  .boxOff{ fill: var(--paper); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+  .off   { fill: var(--muted); }
+  .bignum{ font-family: var(--sans); font-size: 28px; font-weight: 700; fill: var(--accent); }
+  /* table */
+  table { border-collapse: collapse; width: 100%; max-width: 880px; font-size: 14px; }
+  th {
+    text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--ink); padding: 8px 16px 8px 0;
+  }
+  td { border-bottom: 1px solid var(--hairline); padding: 12px 16px 12px 0; vertical-align: top; }
+  td.slug { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+  td.est  { font-family: var(--mono); font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .note {
+    font-family: var(--serif); font-style: italic; font-size: 14.5px;
+    color: var(--muted); margin-top: 16px; max-width: 720px;
+  }
+  footer {
+    border-top: 1px solid var(--hairline);
+    margin-top: 48px; padding-top: 12px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  @media (max-width: 640px) {
+    body { padding: 24px 16px; }
+    h1 { font-size: 34px; }
+    .standfirst { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>murmur</h1>
+  <p class="subtitle">Can near-free, natural-reverb-flavoured audio augmentation beat spending on a bigger backbone — on 6,200 clips across 34 long-tailed bird species?</p>
+  <p class="standfirst">Partially supported: the best stack lifts validation macro-F1 from 0.612 to <strong>0.671</strong> (+5.9 points) at negligible compute — but the gain concentrates in the common species, barely reaches the rare tail, and two family members earned their way out of the recipe.</p>
+</header>
+
+<section>
+  <h2>Six experiments, one dip, one null</h2>
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 960 400" role="img" aria-label="Line chart of validation macro-F1 across six experiments, March to June 2026, from 0.612 baseline to 0.671 best, with a dip to 0.589 and a null at 0.643">
+      <text class="ax" x="96" y="20">validation macro-F1</text>
+      <!-- gridlines -->
+      <line class="grid" x1="96" y1="40"  x2="880" y2="40"/>
+      <line class="grid" x1="96" y1="88"  x2="880" y2="88"/>
+      <line class="grid" x1="96" y1="136" x2="880" y2="136"/>
+      <line class="grid" x1="96" y1="184" x2="880" y2="184"/>
+      <line class="grid" x1="96" y1="232" x2="880" y2="232"/>
+      <line class="grid" x1="96" y1="280" x2="880" y2="280"/>
+      <text class="ax" x="88" y="44"  text-anchor="end">0.68</text>
+      <text class="ax" x="88" y="92"  text-anchor="end">0.66</text>
+      <text class="ax" x="88" y="140" text-anchor="end">0.64</text>
+      <text class="ax" x="88" y="188" text-anchor="end">0.62</text>
+      <text class="ax" x="88" y="236" text-anchor="end">0.60</text>
+      <text class="ax" x="88" y="284" text-anchor="end">0.58</text>
+      <!-- baseline reference -->
+      <line class="refline" x1="96" y1="204" x2="880" y2="204"/>
+      <text class="ax" x="876" y="196" text-anchor="end">baseline</text>
+      <!-- data -->
+      <polyline class="dataline" points="128,204 264,132 400,260 536,128 672,60 808,80"/>
+      <circle class="dot"  cx="128" cy="204" r="4"/>
+      <circle class="dot"  cx="264" cy="132" r="4"/>
+      <circle class="dot"  cx="400" cy="260" r="4"/>
+      <circle class="dot"  cx="536" cy="128" r="4"/>
+      <circle class="dotA" cx="672" cy="60"  r="8"/>
+      <circle class="dot"  cx="808" cy="80"  r="4"/>
+      <!-- point labels -->
+      <text class="lbl" x="128" y="164" text-anchor="middle">baseline · no aug</text>
+      <text class="val" x="128" y="184" text-anchor="middle">0.612</text>
+      <text class="lbl" x="264" y="96"  text-anchor="middle">light reverb</text>
+      <text class="val" x="264" y="112" text-anchor="middle">0.641</text>
+      <text class="lbl" x="424" y="288" text-anchor="middle">+ pitch/stretch</text>
+      <text class="val" x="424" y="304" text-anchor="middle">0.589</text>
+      <text class="lbl" x="536" y="92"  text-anchor="middle">+ noise mix</text>
+      <text class="val" x="536" y="108" text-anchor="middle">0.643</text>
+      <text class="lbl" x="672" y="24"  text-anchor="middle">full stack</text>
+      <text class="valA" x="672" y="44" text-anchor="middle">0.671 · best</text>
+      <text class="lbl" x="808" y="108" text-anchor="middle">heavy reverb</text>
+      <text class="val" x="808" y="124" text-anchor="middle">0.663</text>
+      <!-- annotation: regression -->
+      <text class="ann" x="112" y="296">pitch/time warping smears the</text>
+      <text class="ann" x="112" y="316">spectral cues the rare tail</text>
+      <text class="ann" x="112" y="336">depends on — below the floor</text>
+      <path class="lead" d="M 312 292 Q 352 284 388 268"/>
+      <!-- annotation: null -->
+      <text class="ann" x="560" y="200">+0.002 over reverb-only —</text>
+      <text class="ann" x="560" y="220">inside seed noise (±0.006)</text>
+      <path class="lead" d="M 556 192 Q 552 164 540 140"/>
+      <!-- dates -->
+      <text class="ax" x="128" y="376" text-anchor="middle">Mar 08</text>
+      <text class="ax" x="264" y="376" text-anchor="middle">Mar 24</text>
+      <text class="ax" x="400" y="376" text-anchor="middle">Apr 11</text>
+      <text class="ax" x="536" y="376" text-anchor="middle">Apr 29</text>
+      <text class="ax" x="672" y="376" text-anchor="middle">May 20</text>
+      <text class="ax" x="808" y="376" text-anchor="middle">Jun 14</text>
+    </svg>
+    </div>
+    <figcaption>Each step changes one thing on a fixed small CNN: exp-03 added ±2-semitone pitch-shift and 0.9–1.1× time-stretch to the light-reverb recipe and fell below the no-augmentation floor; exp-04 reverted it and added SNR-controlled noise beds instead. Seed-to-seed variability is ≈ ±0.006, which is why exp-04 reads as a null, not a win.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Where the +5.9 points live</h2>
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 960 336" role="img" aria-label="Dumbbell chart of per-species F1, baseline versus best recipe, for five representative species; common species gain most, the deepest-tail species slips">
+      <text class="ax" x="24" y="28">per-species F1 (val)</text>
+      <!-- legend -->
+      <circle class="dotO" cx="556" cy="24" r="4"/>
+      <text class="val" x="568" y="28">baseline (exp-01)</text>
+      <circle class="dot" cx="724" cy="24" r="4"/>
+      <text class="val" x="736" y="28">best (exp-05)</text>
+      <!-- gridlines -->
+      <line class="grid" x1="192" y1="48" x2="192" y2="284"/>
+      <line class="grid" x1="272" y1="48" x2="272" y2="284"/>
+      <line class="grid" x1="352" y1="48" x2="352" y2="284"/>
+      <line class="grid" x1="432" y1="48" x2="432" y2="284"/>
+      <line class="grid" x1="512" y1="48" x2="512" y2="284"/>
+      <line class="grid" x1="592" y1="48" x2="592" y2="284"/>
+      <line class="grid" x1="672" y1="48" x2="672" y2="284"/>
+      <text class="ax" x="192" y="304" text-anchor="middle">0.3</text>
+      <text class="ax" x="272" y="304" text-anchor="middle">0.4</text>
+      <text class="ax" x="352" y="304" text-anchor="middle">0.5</text>
+      <text class="ax" x="432" y="304" text-anchor="middle">0.6</text>
+      <text class="ax" x="512" y="304" text-anchor="middle">0.7</text>
+      <text class="ax" x="592" y="304" text-anchor="middle">0.8</text>
+      <text class="ax" x="672" y="304" text-anchor="middle">0.9</text>
+      <!-- American Robin -->
+      <text class="lbl" x="24" y="68">American Robin</text>
+      <text class="val" x="24" y="84">480 clips · common</text>
+      <line x1="584" y1="72" x2="632" y2="72" stroke="var(--muted)" stroke-width="2"/>
+      <circle class="dotO" cx="584" cy="72" r="4"/>
+      <circle class="dot"  cx="632" cy="72" r="4"/>
+      <text class="val" x="728" y="76">+0.06</text>
+      <!-- Northern Cardinal -->
+      <text class="lbl" x="24" y="116">Northern Cardinal</text>
+      <text class="val" x="24" y="132">421 clips · common</text>
+      <line x1="560" y1="120" x2="616" y2="120" stroke="var(--muted)" stroke-width="2"/>
+      <circle class="dotO" cx="560" cy="120" r="4"/>
+      <circle class="dot"  cx="616" cy="120" r="4"/>
+      <text class="val" x="728" y="124">+0.07</text>
+      <!-- Song Sparrow -->
+      <text class="lbl" x="24" y="164">Song Sparrow</text>
+      <text class="val" x="24" y="180">308 clips · mid</text>
+      <line x1="496" y1="168" x2="544" y2="168" stroke="var(--muted)" stroke-width="2"/>
+      <circle class="dotO" cx="496" cy="168" r="4"/>
+      <circle class="dot"  cx="544" cy="168" r="4"/>
+      <text class="val" x="728" y="172">+0.06</text>
+      <!-- Wood Thrush -->
+      <text class="lbl" x="24" y="212">Wood Thrush</text>
+      <text class="val" x="24" y="228">92 clips · rare</text>
+      <line x1="360" y1="216" x2="384" y2="216" stroke="var(--muted)" stroke-width="2"/>
+      <circle class="dotO" cx="360" cy="216" r="4"/>
+      <circle class="dot"  cx="384" cy="216" r="4"/>
+      <text class="val" x="728" y="220">+0.03</text>
+      <!-- Kirtland's Warbler -->
+      <text class="lbl" x="24" y="260">Kirtland's Warbler</text>
+      <text class="val" x="24" y="276">41 clips · deep tail</text>
+      <circle class="dotO" cx="224" cy="264" r="4"/>
+      <circle class="dotA" cx="216" cy="264" r="4"/>
+      <text class="valA" x="728" y="268">−0.01</text>
+      <!-- annotation -->
+      <text class="ann" x="304" y="248">the one class the best recipe</text>
+      <text class="ann" x="304" y="268">makes slightly worse</text>
+      <path class="lead" d="M 296 260 Q 264 256 232 264"/>
+    </svg>
+    </div>
+    <figcaption>Baseline (open) to best recipe (filled), for five representative species. Decomposition puts ≈4.5 of the 5.9 aggregate points in the common and mid tiers — global augmentation has run out of road on the classes that most need help.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The recipe, and what it leaves out</h2>
+  <figure>
+    <div class="fig">
+    <svg viewBox="0 0 960 372" role="img" aria-label="Layer stack of the best recipe: light IR reverb, background-noise mixing, SpecAugment, class-balanced sampler over a fixed small CNN, producing 0.671; pitch/time stretch and heavy reverb are left out">
+      <text class="kick" x="48" y="20">the stack (exp-05)</text>
+      <!-- stack -->
+      <rect class="box" x="48" y="32" width="304" height="56" rx="8"/>
+      <text class="lbl" x="64" y="56">Light IR reverb</text>
+      <text class="val" x="64" y="76">p 0.5 · RT60 0.3–0.6 s · measured rooms</text>
+      <rect class="box" x="48" y="100" width="304" height="56" rx="8"/>
+      <text class="lbl" x="64" y="124">Background-noise mix</text>
+      <text class="val" x="64" y="144">SNR 5–20 dB · wind · rain · chorus</text>
+      <rect class="box" x="48" y="168" width="304" height="56" rx="8"/>
+      <text class="lbl" x="64" y="192">SpecAugment</text>
+      <text class="val" x="64" y="212">2 freq masks · 2 time masks</text>
+      <rect class="box" x="48" y="236" width="304" height="56" rx="8"/>
+      <text class="lbl" x="64" y="260">Class-balanced sampler</text>
+      <text class="val" x="64" y="280">partial reweight · 0.5</text>
+      <rect class="boxOff" x="48" y="308" width="304" height="48" rx="8"/>
+      <text class="val" x="64" y="328">fixed control — never varied</text>
+      <text class="val" x="64" y="344">small CNN · log-mel 128 · 60 epochs</text>
+      <!-- bracket -->
+      <line class="grid" x1="352" y1="60"  x2="384" y2="60"/>
+      <line class="grid" x1="352" y1="128" x2="384" y2="128"/>
+      <line class="grid" x1="352" y1="196" x2="384" y2="196"/>
+      <line class="grid" x1="352" y1="264" x2="384" y2="264"/>
+      <line class="grid" x1="384" y1="60"  x2="384" y2="264"/>
+      <line x1="384" y1="164" x2="420" y2="164" stroke="var(--ink)" stroke-width="1"/>
+      <path d="M 420 156 L 432 164 L 420 172 Z" fill="var(--ink)"/>
+      <!-- result -->
+      <rect class="box" x="432" y="124" width="224" height="80" rx="8"/>
+      <text class="bignum" x="544" y="164" text-anchor="middle">0.671</text>
+      <text class="val" x="544" y="188" text-anchor="middle">val macro-F1 · +0.059 vs floor</text>
+      <!-- annotation: composition -->
+      <text class="ann" x="432" y="44">noise mixing was null alone;</text>
+      <text class="ann" x="432" y="64">it pays only in composition</text>
+      <path class="lead" d="M 424 52 Q 388 68 360 116"/>
+      <!-- excluded -->
+      <text class="kick" x="696" y="108">left out</text>
+      <rect class="boxOff" x="696" y="120" width="240" height="64" rx="8"/>
+      <text class="lblM" x="712" y="144">Pitch/time stretch</text>
+      <text class="val" x="712" y="160">±2 st · 0.9–1.1× → 0.589</text>
+      <text class="val" x="712" y="176">only strength tried</text>
+      <rect class="boxOff" x="696" y="200" width="240" height="64" rx="8"/>
+      <text class="lblM" x="712" y="224">Heavy reverb</text>
+      <text class="val" x="712" y="240">RT60 0.8–1.5 s · p 0.7 → 0.663</text>
+      <text class="val" x="712" y="256">helped common classes only</text>
+    </svg>
+    </div>
+    <figcaption>The best recipe is a composition, not one transform: the noise mixing that was null on its own becomes useful once SpecAugment is present, and the whole stack adds well under a minute of wall-clock over the clean baseline. The "cheaper than a bigger backbone" half of the bet (H2) is still asserted, not shown — that control has never been run.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Next: condition augmentation on class</h2>
+  <table>
+    <thead>
+      <tr><th>experiment</th><th>what it settles</th><th>est.</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="slug">class-conditional-aug</td>
+        <td>light reverb everywhere; pitch/stretch and heavy reverb kept off the rare and deep-tail classes</td>
+        <td class="est">~1 h</td>
+      </tr>
+      <tr>
+        <td class="slug">sampler-vs-aug-ablation</td>
+        <td>2×2 de-confounding exp-05's balanced sampler from its augmentations</td>
+        <td class="est">4 × ~50 min</td>
+      </tr>
+      <tr>
+        <td class="slug">backbone-fairness-arm</td>
+        <td>the untested H2 control — larger/pretrained backbone, no augmentation, matched compute</td>
+        <td class="est">up to ~6 h</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="note">All figures are validation macro-F1; the ~930-clip test split stays untouched until the recipe freezes.</p>
+</section>
+
+<footer>research-project · editorial-diagrams · v1 · 2026-08-11</footer>
+
+</body>
+</html>

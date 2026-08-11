@@ -1,7 +1,8 @@
 """Build docs/presentations/manifest.json from the on-disk matrix + evals.
 
 Scans docs/presentations/<testcase>/<approach>/index.html, joins AI eval
-scores from the experiment's results/evals/, and preserves any existing
+scores from the given run's results/evals/ — falling back to the most
+recent other run that evaluated the cell — and preserves any existing
 human evaluation state (human_evaluated, human_rating, human_notes).
 
 Usage: uv run python tools/build_manifest.py [experiments/<run>]
@@ -23,13 +24,19 @@ def main() -> None:
         for cell in json.loads(manifest_path.read_text()).get("cells", []):
             old[(cell["testcase"], cell["approach"])] = cell
 
+    runs = [RUN] + sorted((p for p in (ROOT / "experiments").iterdir()
+                           if p.is_dir() and p != RUN), reverse=True)
+
     cells = []
     for html in sorted(PRES.glob("*/*/index.html")):
         tc, ap = html.parent.parent.name, html.parent.name
-        eval_path = RUN / "results" / "evals" / f"{tc}--{ap}.json"
-        scores = None
-        if eval_path.exists():
-            scores = json.loads(eval_path.read_text()).get("scores")
+        scores, eval_run = None, None
+        for run in runs:
+            eval_path = run / "results" / "evals" / f"{tc}--{ap}.json"
+            if eval_path.exists():
+                scores = json.loads(eval_path.read_text()).get("scores")
+                eval_run = run.name
+                break
         prev = old.get((tc, ap), {})
         cells.append({
             "testcase": tc,
@@ -37,6 +44,7 @@ def main() -> None:
             "path": f"{tc}/{ap}/index.html",
             "ai_scores": scores,
             "ai_evaluated": scores is not None,
+            "eval_run": eval_run,
             "human_evaluated": prev.get("human_evaluated", False),
             "human_rating": prev.get("human_rating"),
             "human_notes": prev.get("human_notes"),

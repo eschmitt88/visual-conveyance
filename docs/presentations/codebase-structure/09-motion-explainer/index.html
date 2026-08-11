@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meridian — the shape of the codebase</title>
+<style>
+  :root{
+    --bg:#0d0d15; --panel:#12121d; --edge:#26263a;
+    --ink:#e8e8f0; --mut:#a2a2bd; --dim:#77779a;
+    --blue:#58c4dd; --green:#83c167; --amber:#f0c674; --red:#fc6255;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  main{max-width:1180px;margin:0 auto;padding:16px 20px 6px}
+  h1{font-size:22px;margin:0 0 3px;font-weight:700;letter-spacing:.2px}
+  .frame{margin:0 0 10px;color:var(--mut);font-size:14px;max-width:70em}
+  .scene-wrap{overflow-x:auto;background:var(--panel);
+    border:1px solid var(--edge);border-radius:12px}
+  svg{display:block;width:100%;height:auto;min-width:860px}
+
+  /* ---- scene text + shapes ---- */
+  .bt{font-size:15px;font-weight:650;fill:#ecebf4}
+  .bs{font-size:12.5px;fill:var(--mut)}
+  .xs{font-size:12px;fill:var(--mut)}
+  .lb{font-size:13px;fill:var(--dim)}
+  .blue{fill:var(--blue)} .green{fill:var(--green)}
+  .amber{fill:var(--amber)} .warn{fill:var(--red)}
+  .box{fill:#181826;stroke-width:1.4}
+  .sub{fill:#1f1f30;stroke-width:1}
+  .cB{stroke:var(--blue)} .cG{stroke:var(--green)} .cY{stroke:var(--amber)}
+  .cR{stroke:var(--red)} .cN{stroke:#55556e}
+  .wire{fill:none;stroke-width:2;stroke-dasharray:1;stroke-dashoffset:0;
+    transition:stroke-dashoffset .7s ease .15s}
+  .wired{fill:none;stroke-width:1.7}
+
+  /* ---- build steps ---- */
+  .step{transition:opacity .55s ease,transform .55s ease}
+  .step.off{opacity:0;pointer-events:none;transform:translateY(9px)}
+  .step.off .wire{stroke-dashoffset:1;transition:none}
+  .noanim .step,.noanim .wire{transition:none!important}
+  @media (prefers-reduced-motion: reduce){
+    .step,.wire{transition:none!important}
+  }
+
+  /* ---- caption bar + controls ---- */
+  .bar{display:none;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:10px 2px 0;min-height:44px}
+  body.js .bar{display:flex}
+  .bar button{background:#1b1b2b;color:var(--ink);border:1px solid #34344c;
+    border-radius:8px;padding:6px 12px;font-size:13.5px;cursor:pointer}
+  .bar button:hover{border-color:var(--blue)}
+  #playBtn{font-weight:650}
+  .dots{display:flex;gap:7px;align-items:center}
+  .dot{width:11px;height:11px;padding:0;border-radius:50%;
+    border:1px solid #55556e;background:transparent}
+  .dot.on{background:var(--blue);border-color:var(--blue)}
+  #caption{flex:1 1 22em;font-size:14.5px;color:var(--ink);min-height:1.4em}
+  ol#caps{color:var(--mut);font-size:14px;margin:12px 0 0;padding-left:1.6em}
+  ol#caps li{margin:3px 0}
+  body.js ol#caps{display:none}
+  footer{color:#606078;font-size:11.5px;margin:14px 0 16px}
+  @media (max-width:640px){ h1{font-size:19px} .frame{font-size:13px} }
+</style>
+</head>
+<body>
+<main>
+  <h1>meridian — the shape of the codebase</h1>
+  <p class="frame">A self-hosted read-later / RSS service, 13,710 lines of
+  backend Python: a one-way ingest pipeline writes into one SQLite file, and
+  an HTTP API, a web reader, and a CLI read it back out.</p>
+
+  <div class="scene-wrap">
+  <svg id="scene" viewBox="0 0 1240 780" role="img"
+       aria-label="Architecture diagram of the meridian codebase: ingest pipeline writing into a SQLite store, read back by an API, web reader, and CLI">
+    <defs>
+      <marker id="mB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#58c4dd"/></marker>
+      <marker id="mG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#83c167"/></marker>
+      <marker id="mY" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#f0c674"/></marker>
+      <marker id="mR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#fc6255"/></marker>
+      <marker id="mN" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#55556e"/></marker>
+    </defs>
+
+    <!-- chrome: legend (colors bound to meaning) -->
+    <g class="lgd" font-size="12.5">
+      <rect x="30" y="30" width="13" height="13" rx="3" fill="#58c4dd"/>
+      <text x="50" y="41" class="bs">write path (ingest)</text>
+      <rect x="185" y="30" width="13" height="13" rx="3" fill="#f0c674"/>
+      <text x="205" y="41" class="bs">the store — the hub</text>
+      <rect x="355" y="30" width="13" height="13" rx="3" fill="#83c167"/>
+      <text x="375" y="41" class="bs">read path (serve)</text>
+      <rect x="505" y="30" width="13" height="13" rx="3" fill="#fc6255"/>
+      <text x="525" y="41" class="bs">hotspot / caution</text>
+    </g>
+
+    <!-- STEP 2 · the write pipeline -->
+    <g class="step" data-step="2">
+      <text x="30" y="84" class="bs blue">pipeline/ — the ingest stages · 4,180 LOC · 84% cov · largest module</text>
+
+      <rect class="box cB" x="30" y="95" width="150" height="110" rx="9"/>
+      <text x="42" y="116" class="bt" font-size="14">scheduler.py</text>
+      <text x="42" y="135" class="bs">60 s tick</text>
+      <text x="42" y="152" class="bs">polls feeds due</text>
+      <text x="42" y="169" class="bs">(default 30 min)</text>
+      <text x="42" y="186" class="bs">1 job per feed</text>
+
+      <path class="wire" pathLength="1" d="M182,150 H206" stroke="#58c4dd" marker-end="url(#mB)"/>
+
+      <rect class="box cB" x="210" y="95" width="200" height="110" rx="9"/>
+      <text x="222" y="116" class="bt" font-size="14">queue/ — no broker</text>
+      <text x="222" y="135" class="bs">jobs table in SQLite</text>
+      <text x="222" y="152" class="bs">8 workers · 500 ms poll</text>
+      <text x="222" y="169" class="bs">retry 1 / 5 / 30 min → dead</text>
+      <text x="222" y="186" class="bs">depth 30–60 · alert @ 500</text>
+      <text x="222" y="201" class="xs">1,120 LOC · 88% cov</text>
+
+      <path class="wire" pathLength="1" d="M412,150 H436" stroke="#58c4dd" marker-end="url(#mB)"/>
+
+      <rect class="box cB" x="440" y="95" width="160" height="110" rx="9"/>
+      <text x="452" y="116" class="bt" font-size="14">fetcher.py</text>
+      <text x="452" y="135" class="bs">conditional GET</text>
+      <text x="452" y="152" class="bs">(ETag/Last-Modified)</text>
+      <text x="452" y="169" class="bs">20 s timeout</text>
+      <text x="452" y="186" class="bs">per-host politeness</text>
+      <text x="452" y="201" class="xs">620 LOC</text>
+
+      <path class="wire" pathLength="1" d="M602,150 H626" stroke="#58c4dd" marker-end="url(#mB)"/>
+
+      <rect class="box cB" x="630" y="95" width="220" height="110" rx="9"/>
+      <text x="642" y="116" class="bt" font-size="14">extractor.py — pure</text>
+      <text x="642" y="135" class="bs">raw HTML → Article</text>
+      <text x="642" y="152" class="bs">no network · disk · DB · clock</text>
+      <text x="642" y="169" class="bs">p50 45 ms · p95 320 ms</text>
+
+      <path class="wire" pathLength="1" d="M852,150 H874" stroke="#58c4dd" marker-end="url(#mB)"/>
+
+      <rect class="box cB" x="878" y="95" width="172" height="110" rx="9"/>
+      <text x="890" y="116" class="bt" font-size="14">dedup.py</text>
+      <text x="890" y="135" class="bs">64-bit simhash</text>
+      <text x="890" y="152" class="bs">Hamming ≤ 3 ⇒ dup</text>
+      <text x="890" y="169" class="bs">~7% of items dropped</text>
+      <text x="890" y="186" class="xs">380 LOC</text>
+
+      <path class="wire" pathLength="1" d="M955,208 C 915,250 855,258 804,276" stroke="#58c4dd" marker-end="url(#mB)"/>
+      <text x="1000" y="242" class="xs blue" text-anchor="middle">p50 2.1 s dequeue →</text>
+      <text x="1000" y="258" class="xs blue" text-anchor="middle">searchable (network-bound)</text>
+
+      <text x="470" y="240" class="xs blue">one-way — produces articles, never serves them</text>
+
+      <path class="wired cY" stroke-dasharray="4 3" pathLength="1" d="M305,207 C 340,248 380,262 424,279" marker-end="url(#mY)" opacity=".75"/>
+      <text x="300" y="264" class="xs amber">jobs table = a table in the same SQLite file</text>
+
+      <rect class="box cB" x="30" y="300" width="255" height="105" rx="9"/>
+      <text x="42" y="321" class="bt" font-size="14">pipeline/sources/ — adapters</text>
+      <text x="42" y="340" class="bs">SOURCE_REGISTRY: type → adapter</text>
+      <text x="42" y="357" class="bs">rss.py · html_page.py · mailbox.py</text>
+      <text x="42" y="374" class="bs">subclass SourceAdapter (base.py)</text>
+      <text x="42" y="391" class="xs">plug in here to add a source type</text>
+      <path class="wired cN" stroke-dasharray="3 4" d="M165,297 C 250,258 380,235 464,211" marker-end="url(#mN)" opacity=".8"/>
+    </g>
+
+    <!-- STEP 1 · the store hub -->
+    <g class="step" data-step="1">
+      <rect class="box cY" x="400" y="280" width="420" height="165" rx="10" stroke-width="1.8"/>
+      <text x="416" y="304" class="bt">store/ — sole owner of SQLite</text>
+      <text x="804" y="304" class="xs" text-anchor="end">2,310 LOC · 91% cov</text>
+      <text x="416" y="324" class="bs amber">one 1.8 GB file · WAL · ~120,000 articles · ~200 feeds</text>
+
+      <rect class="sub cY" x="416" y="334" width="190" height="54" rx="7"/>
+      <text x="426" y="353" class="xs amber" font-weight="650">writer.py · 610 LOC</text>
+      <text x="426" y="370" class="xs">ALL writes live here</text>
+
+      <rect class="sub cY" x="614" y="334" width="190" height="54" rx="7"/>
+      <text x="624" y="353" class="xs amber" font-weight="650">reader.py · 720 LOC</text>
+      <text x="624" y="370" class="xs">reads → frozen dataclasses</text>
+
+      <text x="416" y="412" class="xs">schema.sql — 9 tables + articles_fts (FTS5) · 7 migrations</text>
+      <text x="416" y="429" class="xs">triggers keep the FTS index in sync — Python never writes it</text>
+    </g>
+
+    <!-- STEP 3 · extractor hotspot + the layering violation -->
+    <g class="step" data-step="3">
+      <rect x="628" y="93" width="224" height="114" rx="10" fill="none" stroke="#fc6255" stroke-width="2"/>
+      <text x="840" y="115" class="warn" font-size="15" text-anchor="end">⚠</text>
+      <text x="642" y="187" class="xs warn">1,140 LOC — largest file in the repo</text>
+      <text x="642" y="202" class="xs warn">14 site heuristics · complexity 38</text>
+
+      <path class="wired cR" stroke-dasharray="6 4" d="M800,208 C 872,300 900,390 868,470" marker-end="url(#mR)"/>
+
+      <rect class="box cR" x="960" y="555" width="250" height="160" rx="9"/>
+      <text x="972" y="576" class="bt warn" font-size="14">⚠ the one layering violation</text>
+      <text x="972" y="595" class="xs">extractor.py line 41 imports</text>
+      <text x="972" y="611" class="xs">clean_html() from render/sanitize —</text>
+      <text x="972" y="627" class="xs">a sideways pipeline → render edge</text>
+      <text x="972" y="643" class="xs">(since v0.8). Display changes can</text>
+      <text x="972" y="659" class="xs">silently change what gets stored.</text>
+      <text x="972" y="678" class="xs warn">2 purity tests xfail · fix tracked</text>
+      <text x="972" y="694" class="xs warn">as issue #214 (top of debt list)</text>
+    </g>
+
+    <!-- STEP 4 · the read path -->
+    <g class="step" data-step="4">
+      <rect class="box cG" x="430" y="475" width="260" height="110" rx="9"/>
+      <text x="442" y="496" class="bt" font-size="14">api/ — the HTTP surface</text>
+      <text x="442" y="515" class="bs">all 31 endpoints in routes.py (830 LOC)</text>
+      <text x="442" y="532" class="bs">auth · pagination · OPML · schemas</text>
+      <text x="442" y="548" class="xs">2,940 LOC · 62% cov · enqueues, never fetches</text>
+      <text x="442" y="565" class="xs warn">⚠ 11 routes inline copy-pasted auth</text>
+      <text x="442" y="580" class="xs warn">routes.py file coverage: 54%</text>
+
+      <rect class="box cG" x="730" y="475" width="220" height="110" rx="9"/>
+      <text x="742" y="496" class="bt" font-size="14">render/ — display HTML</text>
+      <text x="742" y="515" class="bs">sanitize.py — clean_html()</text>
+      <text x="742" y="532" class="bs">template.py · annotations.py</text>
+      <text x="742" y="548" class="bs">highlights → &lt;mark&gt; spans</text>
+      <text x="742" y="565" class="xs">1,610 LOC · 76% cov</text>
+
+      <path class="wire" pathLength="1" d="M540,447 V471" stroke="#83c167" marker-end="url(#mG)"/>
+      <path class="wire" pathLength="1" d="M812,447 L845,471" stroke="#83c167" marker-end="url(#mG)"/>
+      <path class="wire" pathLength="1" d="M728,530 H696" stroke="#83c167" marker-end="url(#mG)"/>
+      <text x="430" y="603" class="xs green">GET /articles/{id} — p50 28 ms (store 6 + template 14 + annotations 8)</text>
+    </g>
+
+    <!-- STEP 5 · the clients -->
+    <g class="step" data-step="5">
+      <path class="wire" pathLength="1" d="M490,587 L460,615" stroke="#83c167" marker-end="url(#mG)"/>
+      <path class="wire" pathLength="1" d="M650,587 L775,615" stroke="#83c167" marker-end="url(#mG)"/>
+
+      <rect class="box cG" x="350" y="620" width="310" height="115" rx="9"/>
+      <text x="362" y="641" class="bt" font-size="14">web/ — vanilla-JS reader · 3,280 lines</text>
+      <text x="362" y="660" class="bs">no framework · no build step · same API</text>
+      <text x="362" y="677" class="xs warn">0 automated tests — no JS harness at all</text>
+      <text x="362" y="693" class="xs warn">⚠ reader.js (920 LOC) anchors highlights to</text>
+      <text x="362" y="708" class="xs warn">char offsets — template.py markup changes</text>
+      <text x="362" y="723" class="xs warn">corrupt them · 3 of last 10 user bugs</text>
+
+      <rect class="box cG" x="690" y="620" width="250" height="115" rx="9"/>
+      <text x="702" y="641" class="bt" font-size="14">cli/ — 980 LOC · 41% cov</text>
+      <text x="702" y="660" class="bs">talks HTTP via client.py (330 LOC)</text>
+      <text x="702" y="677" class="bs">imports no backend package</text>
+      <text x="702" y="693" class="bs">no private DB backdoor</text>
+      <text x="702" y="709" class="xs">add · sync · search · export</text>
+      <text x="702" y="724" class="xs">main.py auto-discovers commands/</text>
+    </g>
+
+    <!-- STEP 6 · invariants + layering + tests -->
+    <g class="step" data-step="6">
+      <rect class="box cN" x="960" y="280" width="250" height="255" rx="9"/>
+      <text x="972" y="301" class="bt" font-size="14">the load-bearing rules</text>
+      <text x="972" y="321" class="xs">1· only store/writer.py writes the DB</text>
+      <text x="972" y="338" class="xs">2· extractor is pure — a property test</text>
+      <text x="984" y="354" class="xs">replays 1,400 fixture pages in CI</text>
+      <text x="972" y="371" class="xs">3· articles_fts is trigger-maintained</text>
+      <text x="984" y="387" class="xs">— the index can never drift</text>
+      <text x="972" y="404" class="xs">4· jobs are idempotent — retries safe</text>
+      <text x="984" y="420" class="xs">(dedup + the writer's upsert keys)</text>
+      <text x="972" y="437" class="xs">5· the API never fetches inline —</text>
+      <text x="984" y="453" class="xs">enqueue a job, return 202 Accepted</text>
+      <line x1="972" y1="466" x2="1198" y2="466" stroke="#34344c"/>
+      <text x="972" y="486" class="xs amber">layering: store/ imports nothing;</text>
+      <text x="972" y="502" class="xs amber">nothing imports api/ or cli/</text>
+      <text x="972" y="521" class="xs">breaking these breaks replayability</text>
+
+      <text x="620" y="764" class="xs" text-anchor="middle">412 tests — 348 unit + 64 integration · ~41 s · backend 13,710 LOC at 77% line coverage · frontend 0%</text>
+    </g>
+
+    <!-- STEP 7 · where your first change goes -->
+    <g class="step" data-step="7">
+      <rect class="box cN" x="30" y="540" width="310" height="210" rx="9"/>
+      <text x="42" y="562" class="bt" font-size="14">★ your first change goes here</text>
+      <text x="42" y="583" class="xs blue">① add a source type — the 4-file recipe</text>
+      <text x="54" y="600" class="xs">sources/base.py — subclass SourceAdapter</text>
+      <text x="54" y="616" class="xs">sources/__init__.py — SOURCE_REGISTRY</text>
+      <text x="54" y="632" class="xs">store/migrations/ — CHECK constraint</text>
+      <text x="54" y="648" class="xs">cli/commands/add.py — expose --type</text>
+      <text x="54" y="664" class="xs">(+ a fixture-backed unit test)</text>
+      <text x="42" y="685" class="xs green">② add an API endpoint — routes.py +</text>
+      <text x="54" y="701" class="xs green">schemas.py (+ web/js/api.js)</text>
+      <text x="42" y="722" class="xs">newcomers almost never touch store/ or</text>
+      <text x="42" y="738" class="xs">queue/ — stable, 91% / 88% covered</text>
+
+      <circle cx="283" cy="302" r="12" fill="#58c4dd"/>
+      <text x="283" y="307" text-anchor="middle" font-size="13" font-weight="700" fill="#0d0d15">1</text>
+      <circle cx="688" cy="477" r="12" fill="#83c167"/>
+      <text x="688" y="482" text-anchor="middle" font-size="13" font-weight="700" fill="#0d0d15">2</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="bar">
+    <button id="playBtn">▶ replay the build-up</button>
+    <button id="prevBtn" aria-label="previous step">◀</button>
+    <button id="nextBtn" aria-label="next step">▶</button>
+    <span class="dots" id="dots"></span>
+    <span id="caption"></span>
+  </div>
+
+  <ol id="caps">
+    <li>One SQLite file is the hub — 1.8 GB, WAL mode, ~120,000 articles. Only store/ touches it; only writer.py writes.</li>
+    <li>A one-way pipeline writes in: schedule → fetch → extract → dedup → store; p50 2.1 s until searchable.</li>
+    <li>extractor.py is the caution zone: largest file, 14 fragile heuristics, and the codebase's one layering violation.</li>
+    <li>Reads flow back out through the API — p50 28 ms; routes.py crams all 31 endpoints into one file.</li>
+    <li>Web reader and CLI use the same HTTP API — no database backdoors. The frontend has zero tests.</li>
+    <li>Five invariants keep it testable and replayable; the layering puts store/ at the bottom, api/ and cli/ on top.</li>
+    <li>First changes land in pipeline/sources/ (4-file recipe) or api/routes.py — almost never in store/ or queue/.</li>
+  </ol>
+
+  <footer>codebase-structure · motion-explainer · v1 · 2026-08-11</footer>
+</main>
+
+<script>
+(function () {
+  document.body.classList.add('js');
+  var N = 7;
+  var caps = Array.prototype.map.call(
+    document.querySelectorAll('#caps li'),
+    function (li) { return li.textContent.replace(/\s+/g, ' ').trim(); });
+  var names = ['the store', 'the write path', 'the extractor hotspot',
+               'the read path', 'the clients', 'the invariants', 'first changes'];
+  var steps = document.querySelectorAll('.step');
+  var scene = document.getElementById('scene');
+  var cap = document.getElementById('caption');
+  var dotsBox = document.getElementById('dots');
+  var playBtn = document.getElementById('playBtn');
+  var RM = window.matchMedia &&
+           window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cur = N, timer = null;
+
+  for (var i = 0; i < N; i++) {
+    var d = document.createElement('button');
+    d.className = 'dot';
+    d.title = 'step ' + (i + 1) + ' — ' + names[i];
+    d.setAttribute('aria-label', d.title);
+    (function (n) {
+      d.addEventListener('click', function () { halt(); apply(n); label(); });
+    })(i + 1);
+    dotsBox.appendChild(d);
+  }
+  var dots = dotsBox.children;
+
+  function apply(n) {
+    cur = n;
+    Array.prototype.forEach.call(steps, function (g) {
+      g.classList.toggle('off', +g.getAttribute('data-step') > n);
+    });
+    cap.textContent = n >= 1 ? caps[n - 1] : '';
+    for (var i = 0; i < N; i++) dots[i].classList.toggle('on', i < n);
+  }
+  function label() {
+    playBtn.textContent = timer ? '⏸ pause'
+      : (cur >= N ? '▶ replay the build-up' : '▶ resume');
+  }
+  function halt() {
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  function tick() {
+    if (cur >= N) { halt(); label(); return; }
+    apply(cur + 1);
+    if (cur >= N) { halt(); label(); }
+  }
+  function play() {
+    if (timer) { halt(); label(); return; }
+    if (cur >= N) {                      // reset instantly, then build up
+      scene.classList.add('noanim');
+      apply(0);
+      void scene.getBoundingClientRect();
+      scene.classList.remove('noanim');
+    }
+    timer = setInterval(tick, RM ? 1000 : 1900);
+    label();
+  }
+  function stepTo(n) {
+    halt();
+    apply(Math.max(0, Math.min(N, n)));
+    label();
+  }
+
+  playBtn.addEventListener('click', play);
+  document.getElementById('prevBtn')
+    .addEventListener('click', function () { stepTo(cur - 1); });
+  document.getElementById('nextBtn')
+    .addEventListener('click', function () { stepTo(cur + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === ' ') { e.preventDefault(); play(); }
+    else if (e.key === 'ArrowRight') { stepTo(cur + 1); }
+    else if (e.key === 'ArrowLeft') { stepTo(cur - 1); }
+  });
+
+  apply(N);   // first paint = final frame
+  label();
+})();
+</script>
+</body>
+</html>
