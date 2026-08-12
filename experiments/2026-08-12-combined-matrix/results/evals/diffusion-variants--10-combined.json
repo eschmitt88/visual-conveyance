@@ -1,0 +1,45 @@
+{
+  "testcase": "diffusion-variants",
+  "approach": "10-combined",
+  "rubric_version": 1,
+  "glance_takeaway": "This page explains how diffusion image generators (Stable Diffusion, Midjourney, DALL-E 3, Flux) all work: a fixed forward process gradually destroys an image into noise over ~1,000 steps, a network learns to undo one small step at a time, and generation runs the process backwards starting from pure random noise. All the variants — DDIM, latent diffusion, distillation, flow matching — exist to make sampling cheaper: naive sampling needs ~1,000 network passes, DDIM cuts it to 20-50, and latent-space diffusion (~48x fewer values) is what put Stable Diffusion on consumer GPUs. It also stresses two things it never does: generation doesn't start from an existing photo, and the model doesn't store copies of its training images.",
+  "scores": {
+    "glance_comprehension": 7.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.0,
+    "visual_craft": 8.5,
+    "density_fit": 8.0,
+    "overall": 8.7
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Hero dek + Section 1: 'a fixed process gradually destroys images into noise... generation runs the destruction backwards from pure random noise'."},
+    "F2": {"status": "conveyed", "note": "Section 1: 'about T = 1000 steps — following a predefined noise schedule... statistically indistinguishable from pure Gaussian noise'."},
+    "F3": {"status": "conveyed", "note": "Section 2 three cards (ε / score / velocity, 'mathematically interchangeable') + 'the network sees the noisy image and the timestep t — plus... a representation of the prompt'."},
+    "F4": {"status": "conveyed", "note": "Section 3 numbered training recipe: random timestep, 'closed-form formula... in one shot', 'mean-squared error', 'no adversarial game as in GANs'."},
+    "F5": {"status": "conveyed", "note": "Section 4: '~1,000 sequential forward passes per image, and the steps cannot be parallelized... Nearly every major variant since exists to attack this cost'."},
+    "F6": {"status": "conveyed", "note": "Section 5: 'same trained network, unchanged... deterministic... 20-50 steps is the typical practical range — with only a modest quality loss'."},
+    "F7": {"status": "conveyed", "note": "Section 5: 'noise to final image becomes a well-defined function, so you can invert... and smoothly interpolate between two images'."},
+    "F8": {"status": "conveyed", "note": "Section 6: SDE forward, reverse-time SDE vs 'probability flow ODE', 'DDIM is essentially a discretization of this ODE', DPM-Solver '~10-20 steps with no retraining'."},
+    "F9": {"status": "conveyed", "note": "Section 7 + pipeline SVG: diffusion loop in VAE latent space, 'decode the final clean latent through the VAE decoder — one single pass'."},
+    "F10": {"status": "conveyed", "note": "Section 7: '512x512x3 = 786,432 numbers... 8x in each spatial dimension... 64x64 latent with 4 channels = 16,384 numbers — roughly 48x fewer values', consumer GPUs."},
+    "F11": {"status": "conveyed", "note": "Section 8: prompt dropped '~10-20%' of training examples, runs network 'twice' per step, formula 'guided = unconditional + s x (conditional - unconditional)', 'doubles the evaluations per step'."},
+    "F12": {"status": "conveyed", "note": "Section 8 slider labels: '1 — no guidance', '~7.5 — common default', '>12-15 — artifact territory' with oversaturation described in the zone text."},
+    "F13": {"status": "conveyed", "note": "Section 9 cards: progressive/adversarial distillation, consistency models mapping 'any noisy point on a trajectory... to the same clean endpoint', 1-4 steps, quality/diversity tradeoff stated."},
+    "F14": {"status": "conveyed", "note": "Section 10: velocity field, rectified flow 'straight lines', 'a reframing that generalizes, not a rival mechanism', 'Stable Diffusion 3 and Flux-class models are trained this way'."},
+    "F15": {"status": "conveyed", "note": "Hero banner + Section 12 myths: no database collage, weights encode statistics not copies, starts from noise except explicit img2img/inpainting, memorization of duplicated images noted as 'exceptional failure mode, not the mechanism'."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Perfect fact coverage: all 15 ground-truth facts land, including the fiddly ones (10-20% prompt dropout, 786,432 vs 16,384 numbers, DDIM-as-ODE-discretization, memorization-exception nuance).",
+    "The above-the-fold layer is genuinely self-sufficient: hero diagram + four stat tiles + misconception banner deliver T1, T2 (partially), and T3 in one screen.",
+    "Honest, purposeful graphics — the step-count chart is a real log-scale with correctly placed bars and a retrain-vs-no-retrain color legend; the CFG vector diagram matches the extrapolation formula."
+  ],
+  "weaknesses": [
+    "The fourth takeaway (guidance) is below the fold except for a terse 's = 7.5' tile that a glancing reader can miss — my own glance takeaway did not register it.",
+    "No table of contents or anchor links on a 13-section page; wayfinding relies on scrolling past numbered kickers.",
+    "The interactive CFG slider carries some content (zone descriptions) that is invisible in any static rendering or print; the key numbers are duplicated in the scale labels, mitigating but not eliminating this."
+  ],
+  "evaluator_notes": "Accuracy is formulaic: 15/15 conveyed, 0 distorted, 0 contradicted -> 10.0. Glance scored strictly from the recorded takeaway: T1 and T3 fully landed, T2 mostly (missed the 10-20 and 1-4 tiers), T4 missed entirely -> 7.5. Depth is strong for the briefed audience (jargon defined inline, glossary, misconceptions section directly serves the brief's debunking goal), held below 9 because 13 sections is a lot for a 2-3 minute read. Verified the log-scale bar chart geometry against its axis (180px=1, 690px=1000): all bars are numerically correct. Caveats present throughout: modest quality loss (DDIM), compression bottleneck (VAE), quality/diversity cost (distillation), artifact regime (CFG), memorization exception."
+}

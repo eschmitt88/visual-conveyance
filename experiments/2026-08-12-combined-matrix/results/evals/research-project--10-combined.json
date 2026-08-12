@@ -1,0 +1,46 @@
+{
+  "testcase": "research-project",
+  "approach": "10-combined",
+  "rubric_version": 1,
+  "glance_takeaway": "This is a project dossier for 'murmur' — teaching a small classifier to hear one bird through cheap, physically-plausible noise. After 6 experiments the verdict is 'Partially supported': cheap reverb-flavoured augmentation lifted validation macro-F1 from 0.612 to 0.671 (+5.9 pts) at almost no extra compute (<1 min per run), but most of the gain lands on common/mid species — the rare tail barely moves (deepest-tail class, Kirtland's Warbler with 41 clips, is at 0.33, slightly below baseline). Not every augmentation helped (pitch/time stretch regressed to 0.589, below baseline); the best result is a stack of tricks, and the next move is class-conditional augmentation.",
+  "scores": {
+    "glance_comprehension": 9.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 9.0,
+    "structure_nav": 8.5,
+    "visual_craft": 9.0,
+    "density_fit": 9.0,
+    "overall": 9.3
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "'The bet' lede + H1/H2 cards: reverb-family augmentation vs no-aug on fixed small CNN, and 'augmentation is the better marginal spend' vs bigger backbone (H2 flagged 'asserted, not shown')."},
+    "F2": {"status": "conveyed", "note": "Setup lede: '6,200 call-centred clips (5 s, mono, 32 kHz), 34 species, log-mel features (128 mels, 25 ms / 10 ms)'."},
+    "F3": {"status": "conveyed", "note": "Setup lede: '70/15/15 stratified split; ~930 validation clips. The ~930-clip test split has not been touched'; chart subtitle notes 'same seed, split'."},
+    "F4": {"status": "conveyed", "note": "Long-tail card: Robin 480 bar; '8 most common species hold ~52% of all clips; 11 species have <80 clips, 5 have <45 (\"deep tail\")... Median ≈ 120 clips/class.'"},
+    "F5": {"status": "conveyed", "note": "Macro-F1 rationale card ('F1 averaged per class... weights the tail equally with the head'); every number labelled validation; '±0.006 seed-to-seed noise' band on the chart."},
+    "F6": {"status": "conveyed", "note": "Ledger row 01: baseline-clean, 2026-03-08, 0.612, 'The floor.'"},
+    "F7": {"status": "conveyed", "note": "Ledger row 02: reverb-light-ir 2026-03-24, 'RT60 ≈ 0.3–0.6 s, p=0.5', 0.641, +0.029, chip 'first win'."},
+    "F8": {"status": "conveyed", "note": "Ledger row 03: '±2 semitones... 0.9–1.1×', 0.589, −0.023, chip 'regression'; chart annotates 'regression — below baseline'."},
+    "F9": {"status": "conveyed", "note": "Ledger row 04: 'SNR-controlled background noise... 5–20 dB SNR', 0.643, '+0.002 over exp-02 is inside ±0.006 run-to-run noise', chip 'null'."},
+    "F10": {"status": "conveyed", "note": "Ledger row 05: full stack (light reverb + noise mix + SpecAugment + partial class-balanced sampler), 0.671, +0.059, chip 'best'."},
+    "F11": {"status": "conveyed", "note": "Ledger row 06: 'long RT60 (0.8–1.5 s), p=0.7', 0.663, 'Helps common classes further but blurs short, quiet rare-class calls — net −0.008 vs the stack.'"},
+    "F12": {"status": "conveyed", "note": "Post-mortem card: warping 'smears the spectral-envelope cues rare classes depend on'; 'with <50 real clips there aren't enough true examples to anchor against the corrupted ones. Common classes have the data to shrug it off.'"},
+    "F13": {"status": "conveyed", "note": "Ledger row 04 + caption: '+0.002 over exp-02 sits inside the ±0.006 noise band — read as null'; 'Kept anyway on the hypothesis it composes with SpecAugment.'"},
+    "F14": {"status": "conveyed", "note": "Recipe block reproduces the config exactly: small_cnn, logmel_128, reverb_ir {p: 0.5, rt60 [0.3, 0.6]}, noise_mix {snr [5, 20]}, specaugment {2/2}, class_balanced 0.5, pitch/stretch and heavy reverb commented OFF."},
+    "F15": {"status": "conveyed", "note": "'Where the gain went' dumbbell + twin table: 0.79→0.85, 0.76→0.83, 0.68→0.74, 0.51→0.54, 0.34→0.33 (−0.01); '~4.5 of the 5.9 points come from common/mid tiers' in verdict card and ledger row 05."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Perfect fact fidelity: all 15 facts conveyed with exact numbers, dates, and parameter ranges; nothing distorted or oversold.",
+    "The glance zone alone (verdict card + annotated trajectory + four stat tiles) delivers essentially all four required takeaways in seconds, including the honest negative (0.33 tail F1, −0.01 vs baseline, labelled 'the ceiling').",
+    "Exceptional caveat surfacing: H2 flagged 'asserted, not shown', explicit 'honest caveat' paragraphs in both post-mortems, an 'open questions the ledger can't answer yet' card, ±0.006 noise band drawn on the chart, and a note that all numbers are validation-only.",
+    "Honest, purposeful visual encoding: trajectory chart with baseline refline and seed-noise band, dumbbell chart paired with a 'read as a table' twin, chart-to-ledger hover linking, glosses for IR/SNR/SpecAugment jargon."
+  ],
+  "weaknesses": [
+    "No table of contents or anchor links on a long single-scroll page; wayfinding relies entirely on section headings.",
+    "Total volume slightly exceeds the brief's 'couple of minutes' reading goal — the deep sections (post-mortems, open questions, recipe) reward more like 5 minutes; the glance zone compensates but a hurried reader may skip real content.",
+    "The verdict card's three bullets are text-dense for an above-the-fold element; the second half of T4 (the bigger-backbone fairness arm) is only visible below the fold."
+  ],
+  "evaluator_notes": "Accuracy = 10 × 15/15 = 10.0 (15 conveyed, 0 distorted, 0 contradicted). Glance comprehension: T1, T2, T3 landed fully from the glance; T4 landed its main clause (class-conditional next) but not the backbone-fairness arm — scored 9.0. Overall = 0.35*10 + 0.30*9 + 0.15*9 + 0.10*8.5 + 0.10*9 = 9.3. Interactive tooltips (run recipes, per-species deltas) could not be exercised from static screenshots, but the page degrades gracefully — all tooltip content also exists in the ledger and table, so nothing is hover-gated. Deliberately high score: the fact audit is objective and flawless, and the glance pass demonstrably conveyed the required takeaways before any deep read."
+}

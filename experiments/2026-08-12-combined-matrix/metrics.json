@@ -1,1 +1,89 @@
-{}
+{
+  "n_cells": 6,
+  "rubric_version": 1,
+  "approach_ranking_by_overall": [
+    "10-combined"
+  ],
+  "by_approach": {
+    "10-combined": {
+      "overall": 9.15,
+      "glance_comprehension": 8.67,
+      "accuracy": 10.0,
+      "depth_comprehension": 8.83,
+      "structure_nav": 8.33,
+      "visual_craft": 8.67,
+      "density_fit": 8.58,
+      "n": 6
+    }
+  },
+  "by_testcase": {
+    "codebase-structure": {
+      "overall": 9.3,
+      "glance_comprehension": 9.0,
+      "accuracy": 10.0,
+      "depth_comprehension": 9.0,
+      "structure_nav": 8.5,
+      "visual_craft": 8.5,
+      "density_fit": 8.5,
+      "n": 1
+    },
+    "diffusion-variants": {
+      "overall": 8.7,
+      "glance_comprehension": 7.5,
+      "accuracy": 10.0,
+      "depth_comprehension": 8.5,
+      "structure_nav": 8.0,
+      "visual_craft": 8.5,
+      "density_fit": 8.0,
+      "n": 1
+    },
+    "experiment-results": {
+      "overall": 9.3,
+      "glance_comprehension": 9.0,
+      "accuracy": 10.0,
+      "depth_comprehension": 9.0,
+      "structure_nav": 8.5,
+      "visual_craft": 9.0,
+      "density_fit": 8.5,
+      "n": 1
+    },
+    "incident-analysis": {
+      "overall": 9.4,
+      "glance_comprehension": 9.5,
+      "accuracy": 10.0,
+      "depth_comprehension": 9.0,
+      "structure_nav": 8.0,
+      "visual_craft": 8.5,
+      "density_fit": 9.0,
+      "n": 1
+    },
+    "research-project": {
+      "overall": 9.3,
+      "glance_comprehension": 9.0,
+      "accuracy": 10.0,
+      "depth_comprehension": 9.0,
+      "structure_nav": 8.5,
+      "visual_craft": 9.0,
+      "density_fit": 9.0,
+      "n": 1
+    },
+    "tradeoff-decision": {
+      "overall": 8.9,
+      "glance_comprehension": 8.0,
+      "accuracy": 10.0,
+      "depth_comprehension": 8.5,
+      "structure_nav": 8.5,
+      "visual_craft": 8.5,
+      "density_fit": 8.5,
+      "n": 1
+    }
+  },
+  "cells": {
+    "codebase-structure--10-combined": 9.3,
+    "diffusion-variants--10-combined": 8.7,
+    "experiment-results--10-combined": 9.3,
+    "incident-analysis--10-combined": 9.4,
+    "research-project--10-combined": 9.3,
+    "tradeoff-decision--10-combined": 8.9
+  }
+}

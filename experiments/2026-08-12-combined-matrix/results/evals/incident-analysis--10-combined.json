@@ -1,0 +1,48 @@
+{
+  "testcase": "incident-analysis",
+  "approach": "10-combined",
+  "rubric_version": 1,
+  "glance_takeaway": "A blameless post-incident review of a June 24 SEV-1 partial outage of ledgerline's invoicing API (14:02-18:19 UTC, 4h17m), where a bad deploy (a search rewrite to a leading-wildcard LIKE that abandoned its index) combined with two pre-existing latent weaknesses - autovacuum debt / table bloat from a June 22 backfill, and jitterless 1s client retries saturating a shared 80-connection pool - to turn a one-endpoint regression into a platform-wide outage. Key numbers legible at a glance: 31.2% peak error rate, 2,312 orgs affected, ~$41,300 SLA credits, ~362,000 failed requests, zero data loss. Four headline cards land the synthesis: no single root cause; 68 minutes lost to diagnosis (wrong network theory; alerts watched error rate not latency, dashboards sampled 1/100); rollback was impossible (migration irreversibly dropped the old index, ~6h rebuild) so a feature flag stopped the bleeding at 17:05; and three P0 fixes are scheduled for Q3 2026, one per failure leg.",
+  "scores": {
+    "glance_comprehension": 9.5,
+    "accuracy": 10.0,
+    "depth_comprehension": 9.0,
+    "structure_nav": 8.0,
+    "visual_craft": 8.5,
+    "density_fit": 9.0,
+    "overall": 9.4
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Header meta: 'SEV-1 partial API outage · 2026-06-24, 14:02-18:19 UTC · 4 h 17 m (257 min)'"},
+    "F2": {"status": "conveyed", "note": "Stat row + impact table: '19.1% average across the window; peak 31.2% at 15:47'; '≈362,000 of ≈1.9 M requests'"},
+    "F3": {"status": "conveyed", "note": "Impact table: 'p50 85 ms → 2.9 s; p99 420 ms → 28.4 s (completed requests only... 504 errors... counted as failures, not latency)'"},
+    "F4": {"status": "conveyed", "note": "Stat row + table: '2,312 organizations — 24.4% of 9,480 active'; '≈$41,300 across 216 enterprise contracts'; zero data loss; '37,400 queued deliveries, all replayed by 19:05'"},
+    "F5": {"status": "conveyed", "note": "Cause card 1: leading-wildcard LIKE, unscoped, seq scan of 274.2 M rows; 'Before: index-only scan, mean 0.4 ms... After: 24,000-31,000 ms... filtering out 312,344,806 rows'. Only the EXPLAIN cost figure (8.44 → 6.2 M) is omitted"},
+    "F6": {"status": "conveyed", "note": "Cause card 1: 'canary table holds ~2 M rows, where the same scan takes ~180 ms — under every alert threshold'"},
+    "F7": {"status": "conveyed", "note": "Cause card 2: June 22 backfill, 38.1 M dead tuples, 190 GB → 213 GB (12.2% bloat), threshold '≈54.9 M dead tuples' on a 274.2 M-row table; 'Autovacuum never ran — correctly, by its configuration'"},
+    "F8": {"status": "conveyed", "note": "Cause card 2 evidence box: bloat-free ~26 s vs observed 24-31 s 'straddling the 30-second statement timeout'; '~57% of search queries were killed'; 'A killed query still held its pooled connection for the full 30 s'"},
+    "F9": {"status": "conveyed", "note": "Cause card 3 + pool bars: pgbouncer pool of 80 shared by reads/writes/PDF/webhooks; '≈1.2/s → ≈5.6/s: demand ≈160+ vs 80 — saturation at 15:12'; 'peak 1,437 waiting clients at 15:58'"},
+    "F10": {"status": "conveyed", "note": "Cause card 3: 'fixed 1-second interval, 3 attempts, no jitter, no retry budget... 3,200 → 15,020 rpm (4.7×)... extra load, zero extra successes... nearly two hours'; pool bump 80→200 at 16:20 backfired, reverted 16:31"},
+    "F11": {"status": "conveyed", "note": "Takeaway card 2, gaps grid, timeline: 14:05 advisory + 504s + broken deploy markers anchored a network hypothesis 14:20-15:10 (50 min); first alert 14:11 to diagnosis 15:19 = 68 min"},
+    "F12": {"status": "conveyed", "note": "Rollback section: migration 0412 'dropped idx_invoices_org_number'; 'Code rollback wouldn't help... would seq-scan just the same'; rebuild ~6 h, 'started at 16:05... finished at 21:48 — well after incident close'"},
+    "F13": {"status": "conveyed", "note": "Rollback section + timeline: 16:35 staging verification of the exact-match fallback on the untouched unique index; invoice_search_contains to 0% at 17:05; errors <3% within ten minutes; 'the flip took 90 seconds'; exact-match-only until re-enable June 26"},
+    "F14": {"status": "conveyed", "note": "Rollback section + timeline: VACUUM (ANALYZE) 17:12-17:50 removed the 38.1 M dead tuples and refreshed statistics; SLOs met from 17:53; closed 18:19 after 26 minutes of stable metrics"},
+    "F15": {"status": "conveyed", "note": "Gaps grid: only firing alert 'gateway 5xx > 2% over 5 min' (14:11); no latency SLO alert for invoicing despite p99 exploding 14:07; sampling 1/100 ('~0.7 samples per minute'); deploy marker broken since June 10 hid the 14:02 deploy"},
+    "F16": {"status": "conveyed", "note": "Remediation table: 9 items, 3 P0 / 3 P1 / 3 P2, named owners and quarters; P0s all Q3 2026 (Priya N. latency SLO alerts, Marcus T. pgbouncer saturation + isolation, Dana K. retries with backoff/full jitter/budgets); P1s include migration-reversibility policy, autovacuum tuning, CI query-plan checks"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "Above-the-fold zone lands all four critical takeaways (T1-T4) as four labeled cards plus a three-legs-converge causal diagram — the glance alone delivers the full synthesis, not just the topic",
+    "Perfect fact fidelity: all 16 facts conveyed with correct numbers; caveats preserved (completed-requests-only latency, 'seen only in retrospect' timeline markers, why the peak stopped at 31.2%, VACUUM space-reuse caveat, blameless framing)",
+    "Audience-calibrated glosses (B-tree as phone book, dead tuples, pgbouncer pool) placed exactly where the engineering-manager reader needs them, matching brief.md's 'one-line gloss' requirement",
+    "Honest quantitative encodings: the 257-minute time-allocation bar is proportionally accurate to the minute (verified against segment widths), and pool-utilization bars match 34/80; consistent leg color-coding (red/amber/purple) runs from headline cards through chain, timeline phases, and remediation-target tags"
+  ],
+  "weaknesses": [
+    "No table of contents or anchor navigation on a very long (~7,700 px) page — refinding a specific item means scrolling; section ids exist but are unexposed",
+    "The EXPLAIN cost figure (8.44 → ≈6.2 M) from F5 is dropped, a minor loss of one quantitative anchor",
+    "The full timeline and lessons sections are largely redundant with earlier sections; a 2-3 minute reader gets the story twice rather than deeper",
+    "Interactive counterfactual toggle hides two of three counterfactuals behind clicks; in print/screenshot form only 'without the query change' is visible"
+  ],
+  "evaluator_notes": "Accuracy computed per formula: 16 conveyed, 0 distorted, 0 contradicted of n=16 -> 10 x 16/16 = 10.0. Overall = 0.35*10.0 + 0.30*9.5 + 0.15*9.0 + 0.10*8.0 + 0.10*8.5 = 9.35 -> 9.4. Glance scored strictly from the recorded takeaway, which already contained all four T* takeaways because the four takeaway cards and causal diagram sit above the fold; withheld the last half-point because a real 10-second human glance would absorb the card headings and stat row but not every card body. The page is unusually strong on causal-structure legibility (the brief's stated hard part): trigger + two amplifiers is the organizing spine of the header cards, the evidence cards, the numbered chain, the counterfactuals, and the remediation 'targets' column. Density is high but layered so understanding accrues top-down; fits the EM audience who must defend P0 priorities. No rendering defects in glance.png or full.png; dark-mode CSS and a no-JS fallback for the counterfactual panels are present in the source."
+}

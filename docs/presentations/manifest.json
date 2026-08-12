@@ -1,5 +1,5 @@
 {
-  "run": "2026-08-11-new-approach-matrix",
+  "run": "2026-08-12-combined-matrix",
   "rubric_version": 1,
   "testcases": [
     "codebase-structure",
@@ -18,7 +18,8 @@
     "06-visual-metaphor",
     "07-scrolly-slides",
     "08-editorial-diagrams",
-    "09-motion-explainer"
+    "09-motion-explainer",
+    "10-combined"
   ],
   "cells": [
     {
@@ -188,6 +189,25 @@
       },
       "ai_evaluated": true,
       "eval_run": "2026-08-11-new-approach-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "codebase-structure",
+      "approach": "10-combined",
+      "path": "codebase-structure/10-combined/index.html",
+      "ai_scores": {
+        "glance_comprehension": 9.0,
+        "accuracy": 10.0,
+        "depth_comprehension": 9.0,
+        "structure_nav": 8.5,
+        "visual_craft": 8.5,
+        "density_fit": 8.5,
+        "overall": 9.3
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-12-combined-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -364,6 +384,25 @@
       "human_notes": null
     },
     {
+      "testcase": "diffusion-variants",
+      "approach": "10-combined",
+      "path": "diffusion-variants/10-combined/index.html",
+      "ai_scores": {
+        "glance_comprehension": 7.5,
+        "accuracy": 10.0,
+        "depth_comprehension": 8.5,
+        "structure_nav": 8.0,
+        "visual_craft": 8.5,
+        "density_fit": 8.0,
+        "overall": 8.7
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-12-combined-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
       "testcase": "experiment-results",
       "approach": "01-prose-baseline",
       "path": "experiment-results/01-prose-baseline/index.html",
@@ -530,6 +569,25 @@
       },
       "ai_evaluated": true,
       "eval_run": "2026-08-11-new-approach-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "experiment-results",
+      "approach": "10-combined",
+      "path": "experiment-results/10-combined/index.html",
+      "ai_scores": {
+        "glance_comprehension": 9.0,
+        "accuracy": 10.0,
+        "depth_comprehension": 9.0,
+        "structure_nav": 8.5,
+        "visual_craft": 9.0,
+        "density_fit": 8.5,
+        "overall": 9.3
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-12-combined-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null
@@ -706,6 +764,25 @@
       "human_notes": null
     },
     {
+      "testcase": "incident-analysis",
+      "approach": "10-combined",
+      "path": "incident-analysis/10-combined/index.html",
+      "ai_scores": {
+        "glance_comprehension": 9.5,
+        "accuracy": 10.0,
+        "depth_comprehension": 9.0,
+        "structure_nav": 8.0,
+        "visual_craft": 8.5,
+        "density_fit": 9.0,
+        "overall": 9.4
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-12-combined-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
       "testcase": "research-project",
       "approach": "01-prose-baseline",
       "path": "research-project/01-prose-baseline/index.html",
@@ -877,6 +954,25 @@
       "human_notes": null
     },
     {
+      "testcase": "research-project",
+      "approach": "10-combined",
+      "path": "research-project/10-combined/index.html",
+      "ai_scores": {
+        "glance_comprehension": 9.0,
+        "accuracy": 10.0,
+        "depth_comprehension": 9.0,
+        "structure_nav": 8.5,
+        "visual_craft": 9.0,
+        "density_fit": 9.0,
+        "overall": 9.3
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-12-combined-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
       "testcase": "tradeoff-decision",
       "approach": "01-prose-baseline",
       "path": "tradeoff-decision/01-prose-baseline/index.html",
@@ -1043,6 +1139,25 @@
       },
       "ai_evaluated": true,
       "eval_run": "2026-08-11-new-approach-matrix",
+      "human_evaluated": false,
+      "human_rating": null,
+      "human_notes": null
+    },
+    {
+      "testcase": "tradeoff-decision",
+      "approach": "10-combined",
+      "path": "tradeoff-decision/10-combined/index.html",
+      "ai_scores": {
+        "glance_comprehension": 8.0,
+        "accuracy": 10.0,
+        "depth_comprehension": 8.5,
+        "structure_nav": 8.5,
+        "visual_craft": 8.5,
+        "density_fit": 8.5,
+        "overall": 8.9
+      },
+      "ai_evaluated": true,
+      "eval_run": "2026-08-12-combined-matrix",
       "human_evaluated": false,
       "human_rating": null,
       "human_notes": null

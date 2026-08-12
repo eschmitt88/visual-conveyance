@@ -1,0 +1,47 @@
+{
+  "testcase": "codebase-structure",
+  "approach": "10-combined",
+  "rubric_version": 1,
+  "glance_takeaway": "This is a codebase map for new contributors to 'meridian', a self-hosted read-later/RSS service. Main message: a one-way ingest pipeline (scheduler → jobs queue → fetcher → extractor → dedup) writes into a single SQLite file, and everything (API, web reader, CLI) reads back through that store — two processes, no external broker or DB server. It also says where a first change goes (pipeline/sources/ for a new source type, api/routes.py+schemas.py for endpoints), the invariants (only store/writer.py writes the DB; extractor is pure; FTS updated by triggers; nothing imports api/ or cli/), and the danger zones (pipeline/extractor.py, 1,140 LOC with a layering violation; web/js/reader.js 920 LOC, zero tests, 0% frontend coverage). Scale: ~13.7k LOC backend Python, 412 tests, 77% backend coverage, ~200 feeds / ~120k articles, p50 2.1 s ingest-to-searchable, 28 ms read.",
+  "scores": {
+    "glance_comprehension": 9.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 9.0,
+    "structure_nav": 8.5,
+    "visual_craft": 8.5,
+    "density_fit": 8.5,
+    "overall": 9.3
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Map lede 'Six Python packages under meridian/ plus the web/ frontend'; module table lists api/pipeline/queue/store/render/cli; web/ row: 'No framework, no build step'."},
+    "F2": {"status": "conveyed", "note": "Hero write-path lane scheduler→jobs queue→fetcher→extractor→dedup→SQLite store ('triggers keep FTS'); Flow A steps 1-6 give the same order in detail."},
+    "F3": {"status": "conveyed", "note": "Invariant 2: 'Every INSERT, UPDATE, and DELETE in the codebase lives in that one 610-LOC file; everything else reads through store/reader.py.'"},
+    "F4": {"status": "conveyed", "note": "Invariant 1: 'No network, disk, DB, or clock; the same HTML always yields the same Article.'"},
+    "F5": {"status": "conveyed", "note": "'The violation, spelled out' card: extractor.py line 41 imports clean_html() from render/sanitize.py, sideways pipeline→render edge, since v0.8, issue #214; also red dashed edge in the layering SVG."},
+    "F6": {"status": "conveyed", "note": "Rules lede: 'store/ sits at the bottom and imports no other meridian package (stdlib + sqlite3 only); nothing imports api/ or cli/'; hero rules card repeats the api/cli half."},
+    "F7": {"status": "conveyed", "note": "Hotspot card: '1,140 LOC — largest file in the repo', '14 site-specific extraction heuristics'; also in hero Tread-carefully card and flow node."},
+    "F8": {"status": "conveyed", "note": "Stats strip '13,710 LOC backend Python'; module table pipeline/ 4,180 is the largest row (LOC column sums to 13,710)."},
+    "F9": {"status": "conveyed", "note": "Table: store 91% (highest), cli 41% (lowest), 77% in stats strip; web/ '0% — no JS test harness'; tests section repeats the full ranking."},
+    "F10": {"status": "conveyed", "note": "Tests section: '412 tests — 348 unit + 64 integration — full suite in ~41 s locally.'"},
+    "F11": {"status": "conveyed", "note": "Flow A step 5: '64-bit simhash of the body; Hamming distance ≤ 3 ... marks a duplicate. About 7% of incoming items are flagged and dropped.'"},
+    "F12": {"status": "conveyed", "note": "'The most common contribution: exactly 4 files' tab lists sources/base.py, sources/__init__.py, a store/migrations/ migration, cli/commands/add.py."},
+    "F13": {"status": "conveyed", "note": "Hero node 'jobs queue — SQLite table · 8 workers'; queue/ row 'No Redis, no Celery'; Flow A step 1 'Typical queue depth 30–60; the health endpoint alerts at 500.'"},
+    "F14": {"status": "conveyed", "note": "Flow B: routes.py → store/reader.py → render/template.py → render/annotations.py, with stacked latency bar 6+14+8 = '28 ms total'."},
+    "F15": {"status": "conveyed", "note": "Invariant 3: 'articles_fts is updated only by SQLite triggers in schema.sql; no Python touches it'; Flow A step 6: 'application code never writes the index.'"}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none — SVG layering diagram, coverage bars, and latency bar all render correctly; two of the three first-change recipe tabs are hidden by default (JS tabs), which is intended behavior but means a static capture only shows the source-type recipe",
+  "strengths": [
+    "Perfect fact fidelity: all 15 ground-truth facts conveyed, with exact numbers that are internally consistent (module LOC sums to 13,710; read-path bar segments sum to 28 ms)",
+    "The above-the-fold zone is a compressed version of the whole page — the headline states the architecture thesis and the three colored cards map one-to-one onto takeaways T2/T4/T3, so all four critical takeaways land at a glance",
+    "Negative facts are foregrounded, not sanded off: the layering violation gets its own red card with mechanism ('display sanitizer can silently change what gets stored'), xfail tests, and issue #214; frontend 0% coverage is in red in the stat strip",
+    "Honest, purposeful encodings: proportional coverage bars, a to-scale latency breakdown, and an import-direction SVG with a legend distinguishing imports from HTTP calls and the one violation"
+  ],
+  "weaknesses": [
+    "The hero is dense for a literal 10-second glance — a first-time reader gets the headline and card titles reliably, but the bullet-level detail (e.g. the 4-file recipe) takes longer than a glance",
+    "Two of three contribution recipes (API endpoint, CLI command) are behind JS tabs, so they are invisible in print/static form and slightly hurt re-findability",
+    "No table of contents or anchor navigation for a long multi-section page; wayfinding relies on scrolling past section kickers",
+    "The layering SVG's small annotation text (11-12px) and the cryptic top dashed arrow between api/ and cli/ require the legend to decode"
+  ],
+  "evaluator_notes": "Scored blind per rubric v1. Glance pass done strictly before reading key_facts or any other file; glance_takeaway recorded first. accuracy = 10 × max(0, 15 − 0)/15 = 10.0. Overall = 0.35×10.0 + 0.30×9.0 + 0.15×9.0 + 0.10×8.5 + 0.10×8.5 = 9.25 → 9.3. Page contains many claims beyond the F-list (1.8 GB DB, WAL, 830-LOC routes.py, 11 copy-pasted auth checks, p50 45 ms extractor); these could not be verified against source.md from the provided ground truth but none conflict with any F-fact and all internal arithmetic checks out. Density is high but appropriate for the briefed audience (a competent developer); the glance zone is genuinely glanceable while deep sections reward the 2-3 minute read."
+}

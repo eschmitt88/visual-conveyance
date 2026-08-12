@@ -11,3 +11,4 @@ Channel choices (generator-reported):
 - tradeoff-decision:   prose + svg + css-layout only; declined all JS
 - experiment-results:  prose + svg + css-layout only; declined all JS ("caveats read more honestly than any interaction")
 Convergent pattern: hand SVG chosen over Mermaid 6/6 ("tighter control"); animation chosen 0/6; JS only where it encodes a real question.
+2026-08-12 evals complete: 6/6, mean 9.15, accuracy 10.0 across all cells; zero layout complaints from evaluators

@@ -1,0 +1,45 @@
+{
+  "testcase": "experiment-results",
+  "approach": "10-combined",
+  "rubric_version": 1,
+  "glance_takeaway": "This is a final readout of an A/B test ('Pathways' onboarding redesign, variant B vs current A) at a company called tessel, with trial-to-paid conversion as the primary metric. The headline message: there is no overall winner — overall +0.8pp is not statistically significant (p=0.16) because a strong mobile-web gain (+4.2pp, p<0.0001) is being cancelled out by a real iOS loss (-1.9pp, p=0.027), with Android flat. The recommended action is to ship to mobile-web only, not ship iOS (run a fix experiment instead), and not ship Android; early-week results overstated B due to novelty decay, and the 7-day retention guardrail passed flat.",
+  "scores": {
+    "glance_comprehension": 9.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 9.0,
+    "structure_nav": 8.5,
+    "visual_craft": 9.0,
+    "density_fit": 8.5,
+    "overall": 9.3
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Hero card: '+0.8pp ... 11.4% -> 12.2%'; also subgroup table row Overall."},
+    "F2": {"status": "conveyed", "note": "Hero: '95% CI [-0.3, +1.9] . p = 0.16' with 'not significant' tag and 'can't tell, not B won' framing."},
+    "F3": {"status": "conveyed", "note": "Table footnote 'Trial starters only (13,249 of 184,204 randomized)'; table n 6,602/6,647; validity card '92,114 vs 92,090 against 50/50'."},
+    "F4": {"status": "conveyed", "note": "Power card: '80% power to detect an absolute lift of +1.55pp overall (a = 0.05)'; 'not powered to confirm effects smaller than ~1.5pp'."},
+    "F5": {"status": "conveyed", "note": "Forest-plot caption and trust card: 'platform was the single pre-registered subgroup dimension, chosen before launch' — not post-hoc fishing."},
+    "F6": {"status": "conveyed", "note": "Table: 13.9% -> 18.1%, +4.2, [+2.1, +6.3], p<0.0001; trust card: 'survives easily' under Bonferroni."},
+    "F7": {"status": "conveyed", "note": "Table: 11.6% -> 9.7%, -1.9, [-3.6, -0.2], p 0.027; trust card: 'does not survive the strict correction' but pre-registration + mechanism make it 'a credible signal that warrants action'."},
+    "F8": {"status": "conveyed", "note": "Table and forest plot: Android +0.1pp, [-1.7, +1.9], p 0.92, gray/null styling."},
+    "F9": {"status": "conveyed", "note": "Headline 'cancelling each other out' plus explicit weighted reconciliation equation '(2,354 x 4.2 - 2,535 x 1.9 + 1,736 x 0.1) / 6,625 ~ +0.8pp' and 'not a modest win everywhere'."},
+    "F10": {"status": "conveyed", "note": "Weekly bar chart with exact series +2.9, +1.5, +0.6, 0.0, -0.4, +0.1; hero card '+2.9pp -> +0.1pp week 1 -> week 6' with 'novelty decay' tag."},
+    "F11": {"status": "conveyed", "note": "'...but the platform split is not novelty' card: weeks 4-6 pooled 'Mobile-web still +3.8pp', 'iOS still -2.2pp' (flagged exploratory)."},
+    "F12": {"status": "conveyed", "note": "Guardrail card/table: 31.2% -> 31.4%, +0.2pp [-0.2, +0.6], 'flat — pass'; tickets +12% wks 1-2 'blip, resolved', 0% wks 3-6."},
+    "F13": {"status": "conveyed", "note": "Secondaries table: 4m52s -> 4m14s (= 292s -> 254s), -38s [-45, -31], p<0.001; trial-start 7.17% vs 7.22% flat, tied to denominator validity."},
+    "F14": {"status": "conveyed", "note": "Step-3 drop-off bars: iOS 8.1% -> 12.7%, mobile-web 3.2% -> 3.4%, Android 5.0% -> 5.6%, with the OS-dialog mechanism explained; bar widths proportional."},
+    "F15": {"status": "conveyed", "note": "Decision strip + numbered next steps: ship mobile-web only with 5% holdback, do not ship iOS (ONB-2026-019 reverts/softens prompt), do not ship Android; validity card 'No sample-ratio mismatch ... chi2 p = 0.96', instrumentation audited clean."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none material — the hero forest-plot card has some unused vertical whitespace below the chart at desktop width; all SVG geometry checked against labeled values and is proportionally honest",
+  "strengths": [
+    "Perfect fact survival: all 15 facts present with correct numbers, directions, and significance status; the weighted reconciliation equation makes F9 (win and loss averaging out) unusually concrete.",
+    "The glance zone alone delivers all four required takeaways: headline states the cancellation, the forest plot color-codes CIs clear of zero vs crossing zero, and the three-card decision strip lands the narrow ship.",
+    "Exemplary uncertainty hygiene: Bonferroni discussion cuts both ways, funnel evidence labeled exploratory/confounded and 'not causal on its own', power limitation stated, plan deviation disclosed, and a 'What this readout does not support' section pre-empts the exact misreadings the brief fears."
+  ],
+  "weaknesses": [
+    "Long single-scroll page with no table of contents or in-page anchors; finding a specific item again relies on scanning section headings.",
+    "Density runs slightly hot for the stated PM audience in places (alpha = 0.0167 threshold, Bayesian-shrinkage plan deviation, per-arm-averaged weights in the reconciliation equation that a careful reader may try to match against the table's per-arm n's).",
+    "The novelty-decay takeaway lives in a smaller side card in the glance zone, so at a true 10-second glance it lands less reliably than the other three takeaways."
+  ],
+  "evaluator_notes": "Audit basis: n=15 facts, 15 conveyed, 0 distorted, 0 contradicted -> accuracy 10 x 15/15 = 10.0. Overall = 0.35*10.0 + 0.30*9.0 + 0.15*9.0 + 0.10*8.5 + 0.10*9.0 = 9.3. Verified chart honesty from raw SVG: weekly bars scale at 45px/pp exactly matching labels; step-3 hbar widths proportional to percentages; forest plot zero line and CI extents consistent with tabled CIs. The page also correctly supersedes the misleading week-2 interim readout and instructs retiring it. Density_fit reported but excluded from overall per rubric."
+}

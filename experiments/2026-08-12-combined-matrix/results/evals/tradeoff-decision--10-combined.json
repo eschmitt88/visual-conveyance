@@ -1,0 +1,45 @@
+{
+  "testcase": "tradeoff-decision",
+  "approach": "10-combined",
+  "rubric_version": 1,
+  "glance_takeaway": "The page is about picking a vector-search engine for semantic product search (Fernwick), from a four-candidate bake-off at 10M-vector scale. Two candidates (pgnearest, Braid) were eliminated on hard failures; the two survivors trade off directly, and the recommendation is conditional, not a winner: Hearth (self-hosted) if an infra hire starts by 2026-10-01 and a >=4-engineer on-call rotation is committed in writing, otherwise Quiver (managed SaaS) with a mandatory budgeted exit plan - plus a standing override to Quiver if filtered queries exceed ~60% of traffic. Cost ranking inverts with scale: Quiver cheapest today, Hearth cheaper at 100M, with crossovers around ~3M (infra-only) and ~30M (total cost).",
+  "scores": {
+    "glance_comprehension": 8.0,
+    "accuracy": 10.0,
+    "depth_comprehension": 8.5,
+    "structure_nav": 8.5,
+    "visual_craft": 8.5,
+    "density_fit": 8.5,
+    "overall": 8.9
+  },
+  "fact_audit": {
+    "F1": {"status": "conveyed", "note": "Matrix caption lists all five verbatim: 'M1 p95 <= 100 ms at 10M incl. 30% filtered traffic . M2 recall@10 >= 0.92 unfiltered . M3 filtered recall >= 0.90 down to 5% selectivity ... M4 EU data residency . M5 <= $2,500/mo at 10M.'"},
+    "F2": {"status": "conveyed", "note": "Kicker: 'Today: 4.1M vectors, doubling yearly; 30% of queries carry filters' with 10M as 'our 12-month scale'; filter growth ('trending up', 'grows every quarter') and the 100M horizon appear via the chart axis and ~2029/S3 growth framing."},
+    "F3": {"status": "conveyed", "note": "Matrix kicker: 'one frozen 10M snapshot ... identical 3x(16 vCPU/64 GB/NVMe) nodes for self-hosted options, 48-hour production log replayed at 120 QPS ... recall vs exact brute-force ground truth'; dates 2026-06-08 -> 06-19 in header."},
+    "F4": {"status": "conveyed", "note": "Matrix row 'p95 latency, unfiltered': 18 / 41 / 95~ / 12 ms; Braid marked best, all under 100 ms."},
+    "F5": {"status": "conveyed", "note": "Matrix row 'Recall@10, unfiltered (M2 >=0.92)': 0.97 / 0.94 / 0.89 x / 0.98; only pgnearest flagged failing."},
+    "F6": {"status": "conveyed", "note": "pgnearest card: 'Fails M1: 110 ms p95 filtered (>100 ms). Fails M2: recall 0.89 (<0.92)'; matrix verdict 'FAIL (M1, M2)'."},
+    "F7": {"status": "conveyed", "note": "Braid card: 'Fastest & most accurate measured (12 ms, 0.98) - yet fails M3: post-hoc filtering collapses recall to 0.71 at 5% selectivity. Structural, not tunable.'"},
+    "F8": {"status": "conveyed", "note": "Both cards badged 'PASS all 5'; Hearth 'filtered recall 0.90, exactly at the M3 floor (0.86 at 1%)'; Quiver 'holds 0.95 even at 1% filter selectivity'; override box repeats both margins."},
+    "F9": {"status": "conveyed", "note": "Matrix row 'Cost @1M': Quiver $180 (best) vs Hearth $520, pgnearest $240, Braid $210."},
+    "F10": {"status": "conveyed", "note": "Matrix: @10M $1,900 vs $1,400 both checked against M5; @100M $23,000 vs $6,800 with '~$13,500 (est.)' and '~$4,200 (est. + DIY build)'; '3.4x cheaper at 100M' in the tradeoff strip."},
+    "F11": {"status": "conveyed", "note": "Strip + chart caption: 'Infra-only crossover ~3M vectors - already behind us (today, 4.1M: $740 vs $520)'; 'Counting Hearth's ops labor (~0.2 FTE ~ $2,800/mo), the total-cost crossover sits near ~30M vectors - roughly 2029'."},
+    "F12": {"status": "conveyed", "note": "Quiver '~0 FTE' + '99.9% SLA allows ~43 min/month down'; Hearth flow box '~0.5 FTE first quarter ... ~0.2 FTE steady-state' + '>=4-engineer on-call rotation'; PLAT-7 'approved, not filled'."},
+    "F13": {"status": "conveyed", "note": "Matrix 'Migration lock-in: High vs Low', 'In-VPC (N1): x never offered' for Quiver; risks panel 'exit ~3 engineer-weeks today and growing', 'In-VPC never possible - a problem if 2027 enterprise-seller contracts demand it'. (Names 'proprietary hybrid-scoring features' rather than 'query DSL' - substance intact.)"},
+    "F14": {"status": "conveyed", "note": "Verdict banner IF/THEN + flow box 'Either fails -> Quiver + exit plan: all queries behind our SearchIndex adapter; quarterly timed export drill into a scratch Hearth cluster; standing ~3 engineer-week migration budget; re-evaluate at 30M vectors or first renewal'."},
+    "F15": {"status": "conveyed", "note": "'Standing override' banner: filtered >60% or selectivity <~2% -> 'Quiver even if the hire lands'; dates 'headcount checkpoint 2026-10-01 . full review 2027-01-15' in override box and closing caption."}
+  },
+  "caveat_fidelity": true,
+  "render_issues": "none",
+  "strengths": [
+    "The glance zone alone carries the decision structure: the IF/THEN verdict banner with the standing override beside it, four pass/eliminated cards with the kill reasons, and both cost-crossover numbers land above the fold.",
+    "Perfect fact fidelity - all 15 facts audit as conveyed, estimates for eliminated options are flagged '(est.)', and zero-margin/unfilled-hire caveats are kept visible rather than smoothed over.",
+    "The log-log cost chart is honest and precisely plotted (crossover markers at the correct 3M/30M positions, 'today 4.1M' reference line, labor-adjusted dashed line), and the 'two attacks, pre-answered' section directly serves the brief's defend-the-decision goal."
+  ],
+  "weaknesses": [
+    "The fourth takeaway (benchmarks alone would pick the wrong option) is the weakest at a glance - Braid's 'fastest yet eliminated' irony sits in the last card's body text and did not surface in a 10-second read.",
+    "The page is long and uniformly dense (matrix, five sensitivity items, dual risk panels); a time-poor reader gets no table of contents or visual de-emphasis to signal which lower sections are optional.",
+    "Quiver's filtered recall appears as 0.96 at 5% in the matrix but 0.95-at-1% everywhere else - consistent, but a scanning reader may briefly stumble on which number is the comparison figure."
+  ],
+  "evaluator_notes": "Glance scored from the recorded takeaway only: T1, T2, T3 landed fully; T4 (raw benchmarks did not decide this) was only implicit as 'eliminated on hard failures', so glance_comprehension is 8.0 rather than higher. Accuracy is mechanical: 15/15 conveyed, 0 distorted, 0 contradicted -> 10 x 15/15 = 10.0. Overall = 0.35*10.0 + 0.30*8.0 + 0.15*8.5 + 0.10*8.5 + 0.10*8.5 = 8.9. High scores are deliberate here despite the harsh-grader instruction: the fact audit found nothing absent or distorted, the conditional structure (the brief's declared failure mode if flattened) is the page's organizing principle, and the chart geometry was verified against the stated data points."
+}

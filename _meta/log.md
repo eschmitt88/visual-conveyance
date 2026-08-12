@@ -22,3 +22,4 @@ skills; read by `/lint`.
 2026-08-11 21:23 new-approach-matrix: 12 evals aggregated, manifest rebuilt, experiment closed (status done)
 2026-08-12 04:35 human feedback recorded (eval/human-feedback-2026-08-12.md); approach 10-combined + tools/layout_check.py (ADR 0003)
 2026-08-12 04:36 new-experiment combined-matrix
+2026-08-12 04:51 combined-matrix: 6 evals aggregated (10-combined 9.15, new #1), manifest rebuilt (60 cells), experiment closed
