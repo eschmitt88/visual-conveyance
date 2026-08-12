@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diffusion models and their variants: how modern image generators work</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,.10);
+    --blue: #2a78d6;
+    --orange: #eb6834;
+    --blue-wash: rgba(42,120,214,.10);
+    --orange-wash: rgba(235,104,52,.10);
+    --good: #0ca30c;
+    --crit: #d03b3b;
+    --sky: #9ec5f4;
+    --sun: #eda100;
+    --hill: #2f7d4f;
+    --ground: #24653f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255,255,255,.12);
+      --blue: #3987e5;
+      --orange: #d95926;
+      --blue-wash: rgba(57,135,229,.14);
+      --orange-wash: rgba(217,89,38,.14);
+      --sky: #35507a;
+      --sun: #c98500;
+      --hill: #2c5c40;
+      --ground: #224634;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16.5px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 40px; }
+  header.hero h1 {
+    font-size: clamp(26px, 3.2vw, 40px);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+  .dek {
+    color: var(--ink-2);
+    font-size: clamp(16px, 1.5vw, 19px);
+    max-width: 62em;
+    margin-bottom: 22px;
+  }
+  .dek strong { color: var(--ink); }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.55fr 1fr;
+    gap: 22px;
+    align-items: stretch;
+    margin-bottom: 16px;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .panel h3 { font-size: 15px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; }
+  .tiles { display: grid; grid-template-rows: repeat(4, 1fr); gap: 10px; }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .tile .val {
+    font-weight: 650;
+    font-size: clamp(21px, 2vw, 27px);
+    min-width: 4.6em;
+    white-space: nowrap;
+  }
+  .tile .lbl { color: var(--ink-2); font-size: 13.5px; line-height: 1.35; }
+  .banner {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--blue);
+    background: var(--blue-wash);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 15.5px;
+    margin-bottom: 34px;
+  }
+  section { margin-bottom: 38px; }
+  h2 {
+    font-size: clamp(20px, 2.1vw, 26px);
+    line-height: 1.2;
+    margin-bottom: 12px;
+    letter-spacing: -0.005em;
+  }
+  h2 .kicker { color: var(--muted); font-weight: 600; font-size: 0.72em; display: block; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+  p { max-width: 70em; margin-bottom: 12px; }
+  p, li { color: var(--ink); }
+  .soft { color: var(--ink-2); }
+  em.gloss { font-style: normal; color: var(--ink-2); }
+  ul, ol { padding-left: 1.35em; margin-bottom: 12px; max-width: 66em; }
+  li { margin-bottom: 6px; }
+  figure { margin: 18px 0; }
+  figure svg { display: block; width: 100%; height: auto; }
+  .fig-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; max-width: 780px; }
+  figcaption { color: var(--ink-2); font-size: 13.5px; margin-top: 10px; max-width: 60em; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 14.5px;
+  }
+  .card h4 { font-size: 15.5px; margin-bottom: 6px; }
+  .card p { font-size: 14.5px; color: var(--ink-2); margin-bottom: 0; }
+  .legend-row { display: flex; gap: 20px; flex-wrap: wrap; margin: 4px 2px 10px; font-size: 14px; color: var(--ink-2); }
+  .legend-row .key { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 13px; height: 13px; border-radius: 3px; display: inline-block; }
+  .formula {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 15.5px;
+    max-width: 620px;
+    margin: 14px 0;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 640px; }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  th { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); border-bottom: 1px solid var(--axis); }
+  td.num { white-space: nowrap; font-weight: 600; }
+  .myths { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  .myth {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 14.5px;
+  }
+  .myth .m { color: var(--crit); font-weight: 650; }
+  .myth .r { color: var(--good); font-weight: 650; }
+  .myth p { font-size: 14.5px; margin-bottom: 6px; }
+  .myth p:last-child { margin-bottom: 0; color: var(--ink-2); }
+  dl.gloss-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 26px; max-width: 66em; }
+  dl.gloss-list > div { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+  dt { font-weight: 650; font-size: 14.5px; }
+  dd { color: var(--ink-2); font-size: 14px; }
+
+  /* CFG slider */
+  .cfg-lab { max-width: 720px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin: 16px 0; }
+  .cfg-top { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; }
+  .cfg-top .sval { font-size: 30px; font-weight: 650; min-width: 4.2em; }
+  .cfg-top .szone { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  input[type="range"] { width: 100%; accent-color: var(--blue); margin: 6px 0 2px; }
+  .cfg-scale-labels { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+  .cfg-desc { font-size: 14.5px; color: var(--ink-2); min-height: 3.2em; }
+  .cfg-note { font-size: 13px; color: var(--muted); margin-top: 10px; border-top: 1px solid var(--grid); padding-top: 10px; }
+
+  footer { color: var(--muted); font-size: 12px; margin-top: 40px; border-top: 1px solid var(--grid); padding-top: 14px; }
+
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .tiles { grid-template-rows: none; grid-template-columns: 1fr 1fr; }
+    .cards { grid-template-columns: 1fr; }
+    .myths { grid-template-columns: 1fr; }
+    dl.gloss-list { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .tiles { grid-template-columns: 1fr; }
+    .wrap { padding: 20px 16px 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>Diffusion models: destroy carefully, learn to rebuild</h1>
+  <p class="dek">Modern image generators — Stable Diffusion, Midjourney-class systems, DALL·E&nbsp;3, Flux — all work the same way: a fixed process gradually destroys images into noise, a network is trained to <strong>undo one small step</strong> of that destruction, and generation runs the destruction <strong>backwards from pure random noise</strong>. Nearly every variant you'll meet — DDIM, latent diffusion, distillation, flow matching — exists to make one thing cheaper: sampling.</p>
+
+  <div class="hero-grid">
+    <div class="panel">
+      <h3>The two processes</h3>
+      <figure style="margin:0">
+        <svg viewBox="0 0 720 330" role="img" aria-label="Diagram: a fixed forward process turns an image into pure noise over about 1000 small steps; a learned reverse process denoises step by step, and generation runs it from fresh noise.">
+          <defs>
+            <filter id="tvNoise" x="0%" y="0%" width="100%" height="100%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" stitchTiles="stitch"/>
+              <feColorMatrix type="saturate" values="0"/>
+            </filter>
+            <filter id="blurTile"><feGaussianBlur stdDeviation="4"/></filter>
+            <marker id="arrF" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--orange)"/>
+            </marker>
+            <marker id="arrR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--blue)"/>
+            </marker>
+            <marker id="arrG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+            </marker>
+            <clipPath id="tileClip"><rect x="0" y="0" width="110" height="110" rx="8"/></clipPath>
+          </defs>
+
+          <text x="60" y="20" text-anchor="start" font-size="20" font-weight="650" fill="var(--ink)">FORWARD — fixed noising, no learning</text>
+          <text x="652" y="20" text-anchor="end" font-size="20" fill="var(--ink-2)">≈1,000 steps</text>
+          <line x1="60" y1="40" x2="652" y2="40" stroke="var(--orange)" stroke-width="2.5" marker-end="url(#arrF)"/>
+
+          <!-- tile 1: t=0 -->
+          <g transform="translate(40,62)">
+            <g clip-path="url(#tileClip)">
+              <rect x="0" y="0" width="110" height="110" fill="var(--sky)"/>
+              <circle cx="78" cy="28" r="13" fill="var(--sun)"/>
+              <polygon points="0,72 36,44 72,76 110,56 110,110 0,110" fill="var(--hill)"/>
+              <rect x="0" y="88" width="110" height="22" fill="var(--ground)"/>
+            </g>
+            <rect x="0" y="0" width="110" height="110" rx="8" fill="none" stroke="var(--axis)"/>
+          </g>
+          <!-- tile 2: t≈200 -->
+          <g transform="translate(216,62)">
+            <g clip-path="url(#tileClip)">
+              <g opacity="0.85">
+                <rect x="0" y="0" width="110" height="110" fill="var(--sky)"/>
+                <circle cx="78" cy="28" r="13" fill="var(--sun)"/>
+                <polygon points="0,72 36,44 72,76 110,56 110,110 0,110" fill="var(--hill)"/>
+                <rect x="0" y="88" width="110" height="22" fill="var(--ground)"/>
+              </g>
+              <rect x="0" y="0" width="110" height="110" filter="url(#tvNoise)" opacity="0.35"/>
+            </g>
+            <rect x="0" y="0" width="110" height="110" rx="8" fill="none" stroke="var(--axis)"/>
+          </g>
+          <!-- tile 3: t≈600 -->
+          <g transform="translate(392,62)">
+            <g clip-path="url(#tileClip)">
+              <g opacity="0.5" filter="url(#blurTile)">
+                <rect x="0" y="0" width="110" height="110" fill="var(--sky)"/>
+                <circle cx="78" cy="28" r="16" fill="var(--sun)"/>
+                <polygon points="0,72 36,44 72,76 110,56 110,110 0,110" fill="var(--hill)"/>
+                <rect x="0" y="88" width="110" height="22" fill="var(--ground)"/>
+              </g>
+              <rect x="0" y="0" width="110" height="110" filter="url(#tvNoise)" opacity="0.65"/>
+            </g>
+            <rect x="0" y="0" width="110" height="110" rx="8" fill="none" stroke="var(--axis)"/>
+          </g>
+          <!-- tile 4: t=1000 -->
+          <g transform="translate(568,62)">
+            <g clip-path="url(#tileClip)">
+              <rect x="0" y="0" width="110" height="110" fill="#6a6a6a" opacity="0.4"/>
+              <rect x="0" y="0" width="110" height="110" filter="url(#tvNoise)" opacity="1"/>
+            </g>
+            <rect x="0" y="0" width="110" height="110" rx="8" fill="none" stroke="var(--axis)"/>
+          </g>
+
+          <line x1="156" y1="117" x2="206" y2="117" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrG)"/>
+          <line x1="332" y1="117" x2="382" y2="117" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrG)"/>
+          <line x1="508" y1="117" x2="558" y2="117" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrG)"/>
+
+          <text x="95" y="198" text-anchor="middle" font-size="20" fill="var(--ink)">t = 0</text>
+          <text x="95" y="222" text-anchor="middle" font-size="20" fill="var(--ink-2)">sharp image</text>
+          <text x="271" y="198" text-anchor="middle" font-size="20" fill="var(--ink)">t ≈ 200</text>
+          <text x="271" y="222" text-anchor="middle" font-size="20" fill="var(--ink-2)">slightly grainy</text>
+          <text x="447" y="198" text-anchor="middle" font-size="20" fill="var(--ink)">t ≈ 600</text>
+          <text x="447" y="222" text-anchor="middle" font-size="20" fill="var(--ink-2)">coarse shapes only</text>
+          <text x="623" y="198" text-anchor="middle" font-size="20" fill="var(--ink)">t = 1000</text>
+          <text x="623" y="222" text-anchor="middle" font-size="20" fill="var(--ink-2)">pure noise</text>
+
+          <line x1="652" y1="256" x2="60" y2="256" stroke="var(--blue)" stroke-width="2.5" marker-end="url(#arrR)"/>
+          <text x="360" y="290" text-anchor="middle" font-size="22" font-weight="650" fill="var(--ink)">REVERSE — learned denoising, one small step at a time</text>
+          <text x="360" y="316" text-anchor="middle" font-size="20" fill="var(--ink-2)">generate: start from fresh noise, run right → left (t = 1000 → 0)</text>
+        </svg>
+      </figure>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span class="val">≈1,000</span><span class="lbl">sequential network passes per image in naive (DDPM) sampling — the better part of a minute per image on a 2020 GPU</span></div>
+      <div class="tile"><span class="val">20–50</span><span class="lbl">steps in the everyday DDIM range — same trained model, deterministic, modest quality loss</span></div>
+      <div class="tile"><span class="val">≈48×</span><span class="lbl">fewer values per step when diffusion runs in VAE-compressed latent space — what put Stable Diffusion on consumer GPUs</span></div>
+      <div class="tile"><span class="val">s ≈ 7.5</span><span class="lbl">common classifier-free guidance default — trades diversity for prompt adherence</span></div>
+    </div>
+  </div>
+
+  <div class="banner"><strong>Two things it never does:</strong> generation does not start from an existing photo — it starts from pure random noise (except explicit image-to-image modes where you supply one). And the training images are not stored in the model: a few billion parameters cannot keep copies of billions of images — the weights encode statistics of what plausible images look like at every noise level.</div>
+</header>
+
+<section>
+  <h2><span class="kicker">Section 1</span>The core idea: two processes, opposite directions</h2>
+  <p>The <strong>forward (noising) process</strong> is fixed and involves no learning. Take a real image and add a small amount of Gaussian noise. Repeat, over and over — in the original DDPM formulation, about <strong>T = 1000 steps</strong> — following a predefined <em>noise schedule</em> <em class="gloss">(the recipe for how much noise each step adds)</em>. The destruction is gradual: at step 200 the image is slightly grainy, at step 600 only coarse shapes survive, at step 1000 nothing survives — the result is statistically indistinguishable from pure Gaussian noise, like analog TV static.</p>
+  <p>The <strong>reverse (denoising) process</strong> is what gets learned. A neural network is trained to undo <em>one small step</em>: given a noisy image and the step number <em>t</em> (the "timestep"), estimate a slightly less noisy version. Removing <em>all</em> the noise in one jump would be nearly impossible — countless clean images are consistent with a very noisy input — but removing <em>a little</em> is a tractable prediction problem, and chaining many small steps is what makes the whole thing work.</p>
+  <p><strong>Generation</strong> then samples a fresh image of pure random noise and applies the learned step repeatedly — t = 1000, 999, 998, … down to 0. Structure emerges gradually: first blobs of tone, then coarse layout, then object shapes, finally fine texture. The output is a new image that never existed anywhere; the only inputs were random numbers and the network's learned weights.</p>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 2</span>What the network actually predicts</h2>
+  <p>"The network denoises the image" hides a design choice: what exactly is its output? Three conventions are common — and they are <strong>mathematically interchangeable</strong> (simple algebra converts one to another), differing mainly in training stability and convention:</p>
+  <div class="cards">
+    <div class="card"><h4>ε — noise prediction</h4><p>Predict <em>the noise that was added</em>; subtracting a scaled version of it recovers an estimate of the clean image. The original DDPM choice and still the most common.</p></div>
+    <div class="card"><h4>Score prediction</h4><p>Predict the <em>score</em> — the gradient of the log-probability density of noisy images: the direction in pixel space that makes the image more probable. The predicted noise is just a negatively scaled score — two descriptions of the same quantity.</p></div>
+    <div class="card"><h4>v — velocity prediction</h4><p>Predict a defined mixture of image and noise ("velocity"). Introduced with progressive distillation; numerically better behaved at very high noise levels; used by several later models.</p></div>
+  </div>
+  <p>Whichever target is used, the network sees the noisy image and the timestep <em>t</em> — plus, in text-to-image models, a representation of the prompt (Section 8). Architecturally it is typically a <strong>U-Net</strong> <em class="gloss">(a convolutional encoder-decoder with skip connections)</em> in the Stable-Diffusion-1/2 generation, or a <strong>diffusion transformer (DiT)</strong> in newer systems like SD3 and Flux.</p>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 3</span>Training: one denoising exercise, repeated billions of times</h2>
+  <ol>
+    <li>Draw a real image from the training set.</li>
+    <li>Draw a random timestep <em>t</em> — anywhere from light to total noise.</li>
+    <li>Add the corresponding amount of noise <em>in one shot</em> — a closed-form formula gives the correctly noised image for any <em>t</em> directly, no need to simulate the intermediate steps.</li>
+    <li>Ask the network to predict the added noise; penalize it with a simple <strong>mean-squared error</strong> between predicted and actual noise.</li>
+  </ol>
+  <p>That is the entire objective. (Formally it is a weighted variational bound on the data likelihood, but the practical loss really is "guess the noise, MSE".) Each example exercises one random noise level, so over billions of examples the network learns denoising at <em>every</em> level: at high noise, global composition ("where could a horizon plausibly go?"); at low noise, fine texture. The objective is stable and scalable — no adversarial game as in GANs, where a generator and a discriminator must be kept in delicate balance — and that stability is a big reason diffusion displaced GANs for large-scale image generation.</p>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 4</span>Why sampling is slow — and the ladder of fixes</h2>
+  <p>Training looks at one noise level at a time, but <em>sampling</em> must walk the whole chain: naive DDPM sampling runs the full network once per step — <strong>~1,000 sequential forward passes</strong> per image, and the steps cannot be parallelized because each depends on the previous one. Nearly every major variant since exists to attack this cost. Read everything below as one long answer to: <em>how do we take fewer steps?</em></p>
+  <div class="legend-row">
+    <span class="key"><span class="swatch" style="background:var(--blue)"></span>uses the base trained model as-is</span>
+    <span class="key"><span class="swatch" style="background:var(--orange)"></span>needs retraining (new objective or student model)</span>
+  </div>
+  <figure class="fig-panel" style="margin-top:4px">
+    <svg viewBox="0 0 720 320" role="img" aria-label="Log-scale chart of typical sampling steps per family: DDPM about 1000; DDIM 20 to 50; rectified flow about 20 to 30; ODE solvers 10 to 20; distilled and consistency models 1 to 4.">
+      <line x1="180" y1="12" x2="180" y2="248" stroke="var(--grid)" stroke-width="1"/>
+      <line x1="350" y1="12" x2="350" y2="248" stroke="var(--grid)" stroke-width="1"/>
+      <line x1="520" y1="12" x2="520" y2="248" stroke="var(--grid)" stroke-width="1"/>
+      <line x1="690" y1="12" x2="690" y2="248" stroke="var(--grid)" stroke-width="1"/>
+
+      <!-- DDPM: point at 1000 -->
+      <text x="20" y="41" font-size="20" fill="var(--ink)">DDPM (original)</text>
+      <circle cx="690" cy="34" r="8" fill="var(--blue)" stroke="var(--surface)" stroke-width="2"><title>DDPM ancestral sampling: ~1000 steps</title></circle>
+      <text x="674" y="41" text-anchor="end" font-size="20" fill="var(--ink-2)">≈1,000</text>
+
+      <!-- DDIM 20-50 -->
+      <text x="20" y="89" font-size="20" fill="var(--ink)">DDIM</text>
+      <rect x="401" y="73" width="68" height="18" rx="4" fill="var(--blue)"><title>DDIM: 20-50 steps, same trained model</title></rect>
+      <text x="477" y="89" font-size="20" fill="var(--ink-2)">20–50</text>
+
+      <!-- Rectified flow ~20-30 -->
+      <text x="20" y="137" font-size="20" fill="var(--ink)">Rectified flow</text>
+      <rect x="401" y="121" width="30" height="18" rx="4" fill="var(--orange)"><title>Rectified flow / flow matching: ~20-30 steps, fewer viable</title></rect>
+      <text x="439" y="137" font-size="20" fill="var(--ink-2)">≈20–30</text>
+
+      <!-- ODE solvers 10-20 -->
+      <text x="20" y="185" font-size="20" fill="var(--ink)">ODE solvers</text>
+      <rect x="350" y="169" width="51" height="18" rx="4" fill="var(--blue)"><title>DPM-Solver and successors: ~10-20 steps, no retraining</title></rect>
+      <text x="409" y="185" font-size="20" fill="var(--ink-2)">10–20</text>
+
+      <!-- Distilled 1-4 -->
+      <text x="20" y="233" font-size="20" fill="var(--ink)">Distilled / LCM</text>
+      <rect x="180" y="217" width="102" height="18" rx="4" fill="var(--orange)"><title>Progressive distillation, consistency models, LCM: 1-4 steps</title></rect>
+      <text x="290" y="233" font-size="20" fill="var(--ink-2)">1–4</text>
+
+      <line x1="180" y1="248" x2="690" y2="248" stroke="var(--axis)" stroke-width="1.5"/>
+      <text x="180" y="274" text-anchor="middle" font-size="20" fill="var(--muted)">1</text>
+      <text x="350" y="274" text-anchor="middle" font-size="20" fill="var(--muted)">10</text>
+      <text x="520" y="274" text-anchor="middle" font-size="20" fill="var(--muted)">100</text>
+      <text x="690" y="274" text-anchor="middle" font-size="20" fill="var(--muted)">1,000</text>
+      <text x="360" y="306" text-anchor="middle" font-size="20" fill="var(--ink-2)">network evaluations per image (log scale) — CFG doubles this</text>
+    </svg>
+    <figcaption>Typical step counts by family. Rules of thumb from the source: below ~10 steps, undistilled models degrade visibly; above ~50, returns diminish rapidly. "More steps" refines the <em>same</em> trajectory — it is not a search over more images.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 5</span>DDIM: same model, fewer and deterministic steps</h2>
+  <p>DDIM (Denoising Diffusion Implicit Models, 2020) was the first big win, built on two observations. First: the DDPM sampler injects fresh randomness at every step, but you can define an alternative sampler — using the <em>same trained network, unchanged</em> — that is <strong>deterministic</strong>: fix the initial noise and you get exactly the same image every time. Second: this deterministic sampler tolerates much larger jumps. Instead of visiting all 1000 timesteps, visit a subsequence — <strong>20–50 steps is the typical practical range</strong> — with only a modest quality loss.</p>
+  <p>Determinism has side benefits beyond speed: the mapping from initial noise to final image becomes a well-defined function, so you can <em>invert</em> a generated image back to its noise (useful for editing) and smoothly interpolate between two images by interpolating their noise. When an image tool exposes a "steps" slider defaulting to something like 30, it is exposing exactly this tradeoff.</p>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 6</span>One lens that unifies everything: the score-based / SDE view</h2>
+  <p>In 2021, a parallel line of work (score-based generative models) was shown to be the <em>same thing</em> as diffusion in a continuous-time limit, and the merged view is the field's standard mental model today. The forward noising process is a <strong>stochastic differential equation (SDE)</strong> — a continuous random drift of images toward noise. Reversing it requires exactly one learned quantity: the <strong>score</strong> (the gradient of log-density from Section&nbsp;2). With the score in hand there are two ways back: a reverse-time SDE (random, like DDPM), or a <strong>probability flow ODE</strong> — an ordinary differential equation that is fully deterministic and produces the same distribution of images. DDIM is essentially a discretization of this ODE.</p>
+  <p>Why a non-ML reader should care: once sampling is "just solving an ODE," the entire toolbox of numerical ODE solvers applies. Purpose-built higher-order solvers (DPM-Solver and successors) get good samples in <strong>~10–20 steps</strong> with no retraining. This view also explains, in one picture, why so many variants coexist: they are different discretizations, different paths, or different parameterizations of the same underlying object.</p>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 7</span>Latent diffusion: do it in compressed space</h2>
+  <p>Everything so far operates directly on pixels, and pixels are expensive: a 512×512 RGB image is 512 × 512 × 3 = <strong>786,432 numbers</strong>, and the denoising network must process all of them at every one of dozens-to-hundreds of steps. <strong>Latent diffusion</strong> (2022) adds a compression stage: a separately trained <strong>variational autoencoder (VAE)</strong> <em class="gloss">(an encoder-decoder pair)</em> maps each image into a much smaller <em>latent</em> representation and back. In Stable Diffusion the encoder downsamples 8× in each spatial dimension: 512×512×3 becomes a <strong>64×64 latent with 4 channels = 16,384 numbers — roughly 48× fewer values</strong>. The compression is perceptual, not lossless: the VAE is trained so the reconstruction looks essentially identical, discarding imperceptible detail.</p>
+  <figure class="fig-panel">
+    <svg viewBox="0 0 720 280" role="img" aria-label="Pipeline: a 512 by 512 by 3 pixel image with 786,432 numbers is encoded by a VAE into a 64 by 64 by 4 latent with 16,384 numbers; the denoising loop runs in that latent space; a single VAE decoder pass produces the finished image.">
+      <defs>
+        <marker id="arrP" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-2)"/>
+        </marker>
+        <marker id="arrLoop" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--blue)"/>
+        </marker>
+      </defs>
+
+      <text x="380" y="34" text-anchor="middle" font-size="21" font-weight="650" fill="var(--ink)">the denoising loop runs here</text>
+      <path d="M 358,86 A 22,22 0 1 1 402,86" fill="none" stroke="var(--blue)" stroke-width="2.5" marker-end="url(#arrLoop)"/>
+
+      <!-- pixel image in -->
+      <rect x="20" y="60" width="190" height="140" rx="10" fill="var(--orange-wash)" stroke="var(--axis)"/>
+      <text x="115" y="105" text-anchor="middle" font-size="21" font-weight="650" fill="var(--ink)">pixel image</text>
+      <text x="115" y="135" text-anchor="middle" font-size="20" fill="var(--ink-2)">512 × 512 × 3</text>
+      <text x="115" y="163" text-anchor="middle" font-size="20" fill="var(--ink-2)">786,432 numbers</text>
+
+      <line x1="218" y1="130" x2="290" y2="130" stroke="var(--ink-2)" stroke-width="2" marker-end="url(#arrP)"/>
+
+      <!-- latent (smaller box) -->
+      <rect x="300" y="95" width="160" height="105" rx="10" fill="var(--blue-wash)" stroke="var(--blue)"/>
+      <text x="380" y="130" text-anchor="middle" font-size="21" font-weight="650" fill="var(--ink)">latent</text>
+      <text x="380" y="158" text-anchor="middle" font-size="20" fill="var(--ink-2)">64 × 64 × 4</text>
+      <text x="380" y="184" text-anchor="middle" font-size="20" fill="var(--ink-2)">16,384 numbers</text>
+
+      <line x1="468" y1="130" x2="540" y2="130" stroke="var(--ink-2)" stroke-width="2" marker-end="url(#arrP)"/>
+
+      <!-- pixel image out -->
+      <rect x="550" y="60" width="150" height="140" rx="10" fill="var(--orange-wash)" stroke="var(--axis)"/>
+      <text x="625" y="118" text-anchor="middle" font-size="21" font-weight="650" fill="var(--ink)">finished</text>
+      <text x="625" y="146" text-anchor="middle" font-size="21" font-weight="650" fill="var(--ink)">image</text>
+      <text x="625" y="176" text-anchor="middle" font-size="20" fill="var(--ink-2)">512 × 512</text>
+
+      <text x="254" y="234" text-anchor="middle" font-size="20" fill="var(--ink)">VAE encoder</text>
+      <text x="254" y="260" text-anchor="middle" font-size="20" fill="var(--ink-2)">8× smaller per side</text>
+      <text x="504" y="234" text-anchor="middle" font-size="20" fill="var(--ink)">VAE decoder</text>
+      <text x="504" y="260" text-anchor="middle" font-size="20" fill="var(--ink-2)">one pass, at the end</text>
+    </svg>
+    <figcaption>Every denoising step in latent space is ~48× cheaper than in pixel space. Note the division of labor: the VAE only compresses and decompresses — the diffusion model in the middle is what generates.</figcaption>
+  </figure>
+  <p>Generation becomes: sample random noise <em>in latent space</em> (e.g. 64×64×4), run the learned denoising loop there, then decode the final clean latent through the VAE decoder — one single pass — into the full-resolution image. This is the change that made Stable-Diffusion-class models run on consumer GPUs, and it is why the model is called "latent." The costs are minor: a slight quality ceiling from the compression bottleneck (historically visible in fine text and small faces, much improved in newer VAEs), and one extra decode pass.</p>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 8</span>Classifier-free guidance: steering with the prompt</h2>
+  <p>Text conditioning gets the prompt <em>into</em> the network — as embeddings from a text encoder such as CLIP or T5, attended to at each denoising step — but conditioning alone tends to produce images that only loosely follow the prompt. <strong>Classifier-free guidance (CFG)</strong> is the fix used by essentially every modern text-to-image system. At <em>training</em> time, the prompt is randomly dropped (replaced by an empty prompt) for typically <strong>~10–20%</strong> of examples, so one network learns both prompt-conditioned and unconditional denoising. At <em>sampling</em> time, every step runs the network <strong>twice</strong> — once with the prompt, once without — and blends the two predictions by <em>extrapolation</em>:</p>
+  <div class="formula">guided&nbsp;=&nbsp;unconditional&nbsp;+&nbsp;s&nbsp;×&nbsp;(conditional&nbsp;−&nbsp;unconditional)</div>
+  <figure class="fig-panel">
+    <svg viewBox="0 0 720 290" role="img" aria-label="Vector diagram: from the current noisy image, the network makes one prediction without the prompt and one with it; their difference is the direction the prompt pulls, and the guidance scale s extrapolates past the with-prompt prediction.">
+      <defs>
+        <marker id="arrU" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+        </marker>
+        <marker id="arrC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--blue)"/>
+        </marker>
+        <marker id="arrGd" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--orange)"/>
+        </marker>
+      </defs>
+
+      <circle cx="130" cy="230" r="7" fill="var(--ink)"/>
+      <text x="130" y="266" text-anchor="middle" font-size="20" fill="var(--ink-2)">current noisy image</text>
+
+      <line x1="136" y1="227" x2="320" y2="192" stroke="var(--muted)" stroke-width="2" marker-end="url(#arrU)"/>
+      <circle cx="330" cy="190" r="6" fill="var(--muted)"/>
+      <text x="330" y="222" text-anchor="middle" font-size="20" fill="var(--ink-2)">without prompt</text>
+
+      <line x1="137" y1="226" x2="440" y2="124" stroke="var(--blue)" stroke-width="2" marker-end="url(#arrC)"/>
+      <circle cx="450" cy="120" r="6" fill="var(--blue)"/>
+      <text x="450" y="98" text-anchor="middle" font-size="20" fill="var(--ink-2)">with prompt</text>
+
+      <line x1="336" y1="186" x2="444" y2="123" stroke="var(--blue)" stroke-width="2" stroke-dasharray="5 5"/>
+      <text x="368" y="150" text-anchor="middle" font-size="20" fill="var(--ink-2)">the prompt's pull</text>
+
+      <line x1="456" y1="116" x2="536" y2="70" stroke="var(--orange)" stroke-width="2.5" stroke-dasharray="5 5" marker-end="url(#arrGd)"/>
+      <text x="520" y="74" text-anchor="middle" font-size="20" fill="var(--ink-2)">× s</text>
+      <circle cx="546" cy="64" r="7" fill="var(--orange)"/>
+      <text x="546" y="40" text-anchor="middle" font-size="20" font-weight="650" fill="var(--ink)">guided prediction</text>
+    </svg>
+    <figcaption>Schematic. The difference between the two predictions is "the direction the prompt pulls," and the guidance scale <strong>s</strong> exaggerates it — s&nbsp;=&nbsp;1 means no guidance. Running the network twice per step means CFG <strong>doubles the evaluations per step</strong>, which matters when counting sampling cost.</figcaption>
+  </figure>
+
+  <div class="cfg-lab">
+    <h3 style="font-size:15px;color:var(--ink-2);margin-bottom:8px">Try the guidance scale</h3>
+    <div class="cfg-top">
+      <span class="sval">s = <span id="cfgVal">7.5</span></span>
+      <span class="szone" id="cfgZone">workhorse zone</span>
+    </div>
+    <input type="range" id="cfgRange" min="1" max="16" step="0.5" value="7.5" aria-label="Guidance scale s">
+    <div class="cfg-scale-labels"><span>1 — no guidance</span><span>≈7.5 — common default</span><span>&gt;12–15 — artifact territory</span></div>
+    <p class="cfg-desc" id="cfgDesc"></p>
+    <p class="cfg-note">Whatever s you pick: each step runs the network twice (with + without the prompt). The tradeoff is real and visible — s is an adherence-vs-diversity knob, not a quality knob.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 9</span>Distillation and consistency models: 1–4 steps</h2>
+  <p>Fast samplers plateau around 10–20 steps. Going lower requires <em>training</em> a model to take big jumps rather than cleverly scheduling small ones:</p>
+  <div class="cards">
+    <div class="card"><h4>Progressive distillation</h4><p>Train a student network to match, in one step, what a teacher does in two — then repeat, halving the step count each round (1000 → 500 → … → 4).</p></div>
+    <div class="card"><h4>Consistency models (2023)</h4><p>Train the network so that <em>any</em> noisy point on a trajectory maps directly to the same clean endpoint. That self-consistency allows <strong>1-step generation</strong>, with 2–4 steps as refinement. Latent consistency models (LCMs) apply this to Stable-Diffusion-class latents: ~4-step generation.</p></div>
+    <div class="card"><h4>Adversarial distillation</h4><p>SDXL-Turbo-style: add a GAN-like critic to sharpen few-step outputs.</p></div>
+  </div>
+  <p>The tradeoff: distilled few-step models trade some quality and diversity for speed — outputs tend to be slightly softer or less varied than the 20-50-step teacher — and the extra training stage adds pipeline complexity. This is the technology behind "real-time" generation demos that redraw as you type.</p>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 10</span>Flow matching and rectified flow: straighter paths</h2>
+  <p>The newest mainstream reformulation asks: why follow the curved paths that Gaussian noising dictates at all? <strong>Flow matching</strong> trains a network to predict a <strong>velocity field</strong> that transports noise to data along prescribed paths; <strong>rectified flow</strong> chooses the simplest possible ones — <strong>straight lines</strong>. A training point is just a linear blend of an image and a noise sample, and the regression target is the constant velocity (their difference) along that line.</p>
+  <figure class="fig-panel">
+    <svg viewBox="0 0 720 250" role="img" aria-label="Two paths from pure noise to a finished image: a curved diffusion path needing many small solver steps, and the straight rectified-flow path needing only a few big steps.">
+      <circle cx="90" cy="190" r="8" fill="var(--ink)"/>
+      <text x="90" y="228" text-anchor="middle" font-size="20" fill="var(--ink-2)">pure noise</text>
+      <circle cx="630" cy="60" r="8" fill="var(--ink)"/>
+      <text x="630" y="36" text-anchor="middle" font-size="20" fill="var(--ink-2)">finished image</text>
+
+      <!-- curved diffusion path with many small step dots -->
+      <path id="curvePath" d="M 90,190 C 200,214 340,196 450,150 C 540,112 590,92 630,60" fill="none" stroke="var(--blue)" stroke-width="2"/>
+      <g fill="var(--blue)" stroke="var(--surface)" stroke-width="1.5">
+        <circle cx="145" cy="199" r="4"/><circle cx="200" cy="203" r="4"/><circle cx="255" cy="202" r="4"/>
+        <circle cx="310" cy="196" r="4"/><circle cx="365" cy="185" r="4"/><circle cx="420" cy="165" r="4"/>
+        <circle cx="470" cy="142" r="4"/><circle cx="515" cy="122" r="4"/><circle cx="555" cy="105" r="4"/>
+        <circle cx="595" cy="85" r="4"/>
+      </g>
+      <text x="290" y="238" text-anchor="middle" font-size="20" fill="var(--ink-2)">curved path: many small steps</text>
+
+      <!-- straight rectified flow path, few dots -->
+      <line x1="90" y1="190" x2="630" y2="60" stroke="var(--orange)" stroke-width="2.5"/>
+      <g fill="var(--orange)" stroke="var(--surface)" stroke-width="1.5">
+        <circle cx="225" cy="157.5" r="5"/><circle cx="360" cy="125" r="5"/><circle cx="495" cy="92.5" r="5"/>
+      </g>
+      <text x="330" y="100" text-anchor="middle" font-size="20" fill="var(--ink-2)">straight path: few big steps</text>
+    </svg>
+    <figcaption>Solving an ODE along nearly straight paths needs far fewer steps than along curved ones — and the formulation drops diffusion-specific scaffolding (noise schedules, timestep-dependent scalings) for a cleaner recipe.</figcaption>
+  </figure>
+  <p>Mathematically it is a close sibling of diffusion — with Gaussian paths, flow matching recovers diffusion's probability-flow ODE, and the score / noise / velocity quantities remain interconvertible — so it is best read as a <em>reframing that generalizes</em>, not a rival mechanism. <strong>Stable Diffusion 3 and Flux-class models are trained this way</strong>, combined with transformer backbones and latent-space operation.</p>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 11</span>Variants at a glance</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Family</th><th>Typical steps</th><th>Character</th></tr></thead>
+      <tbody>
+        <tr><td>DDPM (ancestral)</td><td class="num">~1000</td><td>Original formulation; excellent quality; impractically slow</td></tr>
+        <tr><td>DDIM</td><td class="num">20–50</td><td>Same trained model; deterministic; the everyday workhorse range</td></tr>
+        <tr><td>ODE solvers (DPM-Solver++ etc.)</td><td class="num">10–20</td><td>Better numerics, no retraining; near-DDIM quality</td></tr>
+        <tr><td>Rectified flow / flow matching</td><td class="num">~20–30 (fewer viable)</td><td>Retrained objective; straight paths; SD3/Flux generation</td></tr>
+        <tr><td>Distilled / consistency / LCM</td><td class="num">1–4</td><td>Retrained for big jumps; fastest; mild quality &amp; diversity cost</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:12px" class="soft">Rules of thumb: below ~10 steps, undistilled models degrade visibly; above ~50, returns diminish rapidly. "More steps" is refinement of the <em>same</em> trajectory, not a search over more images — and remember CFG doubles the per-step cost. The honest cost metric is <strong>NFE</strong> <em class="gloss">(number of function evaluations — how many times the network runs during sampling)</em>.</p>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 12</span>Common misconceptions</h2>
+  <div class="myths">
+    <div class="myth">
+      <p><span class="m">✗ Myth:</span> "It searches a database and collages existing images."</p>
+      <p><span class="r">✓ Reality:</span> No training images are stored or consulted at generation time; the weights encode statistics, not copies, and sampling starts from random noise. Nuance: rare near-duplication of training images <em>has</em> been demonstrated — essentially for images repeated many times in the training set — a real but exceptional memorization failure mode, not the mechanism.</p>
+    </div>
+    <div class="myth">
+      <p><span class="m">✗ Myth:</span> "It denoises a real photo."</p>
+      <p><span class="r">✓ Reality:</span> Text-to-image generation starts from pure synthetic noise. Image-to-image and inpainting modes <em>do</em> start from a user-supplied image — by partially noising it and denoising back — but that is an explicit variant, not the default mechanism.</p>
+    </div>
+    <div class="myth">
+      <p><span class="m">✗ Myth:</span> "The VAE is the generator."</p>
+      <p><span class="r">✓ Reality:</span> The VAE only compresses and decompresses. The diffusion model operating in latent space does the generating.</p>
+    </div>
+    <div class="myth">
+      <p><span class="m">✗ Myth:</span> "More steps always means better images."</p>
+      <p><span class="r">✓ Reality:</span> Only up to a point (Section 11). Past the workhorse range, extra steps refine imperceptibly — and for distilled models, the intended step count is part of the design.</p>
+    </div>
+    <div class="myth">
+      <p><span class="m">✗ Myth:</span> "The guidance scale is a quality knob."</p>
+      <p><span class="r">✓ Reality:</span> It is an adherence-vs-diversity knob with an artifact regime at high values; "better" depends on what you want.</p>
+    </div>
+    <div class="myth">
+      <p><span class="m">✗ Myth:</span> "Diffusion, DDIM, score-based models, and flow matching are competing technologies."</p>
+      <p><span class="r">✓ Reality:</span> They are one framework: identical or interconvertible training targets — different samplers, paths, and parameterizations.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="kicker">Section 13</span>Glossary</h2>
+  <dl class="gloss-list">
+    <div><dt>Timestep (t)</dt><dd>Position along the noising process; high t = more noise.</dd></div>
+    <div><dt>Noise schedule</dt><dd>The predefined recipe for how much noise each forward step adds.</dd></div>
+    <div><dt>ε / score / velocity</dt><dd>Three interconvertible choices of network output.</dd></div>
+    <div><dt>Sampler</dt><dd>The algorithm that turns many network predictions into an image (DDPM, DDIM, DPM-Solver, …).</dd></div>
+    <div><dt>Latent space</dt><dd>The VAE-compressed representation where latent diffusion operates (e.g. 64×64×4 for a 512×512 image).</dd></div>
+    <div><dt>CFG scale (s)</dt><dd>Strength of classifier-free guidance extrapolation.</dd></div>
+    <div><dt>Distillation</dt><dd>Training a fast student model to imitate a slow teacher.</dd></div>
+    <div><dt>NFE</dt><dd>Number of function evaluations: how many times the network runs during sampling — the honest cost metric (CFG doubles it per step).</dd></div>
+  </dl>
+</section>
+
+<footer>diffusion-variants · combined · v1 · 2026-08-12</footer>
+
+</div>
+
+<script>
+(function () {
+  var range = document.getElementById('cfgRange');
+  var val = document.getElementById('cfgVal');
+  var zone = document.getElementById('cfgZone');
+  var desc = document.getElementById('cfgDesc');
+  function update() {
+    var s = parseFloat(range.value);
+    val.textContent = s.toFixed(1).replace(/\.0$/, '');
+    var z, d;
+    if (s === 1) {
+      z = 'no guidance';
+      d = 'The prompt still conditions the network, but its predictions are used as-is — and conditioning alone tends to follow the prompt only loosely.';
+    } else if (s < 5) {
+      z = 'mild guidance';
+      d = 'Closer to the unguided model: more sample diversity, looser prompt adherence than at the common default.';
+    } else if (s <= 10) {
+      z = 'workhorse zone';
+      d = 's ≈ 7.5 is a common default in Stable-Diffusion-class models: stronger prompt adherence and cleaner-looking, more "typical" images, at the cost of reduced diversity.';
+    } else if (s <= 12) {
+      z = 'pushing it';
+      d = 'Adherence keeps rising while diversity and naturalness keep falling — approaching the artifact regime.';
+    } else {
+      z = 'artifact regime';
+      d = 'Pushed too far (roughly s > 12–15 in classic SD): oversaturated colors and burned-in artifacts.';
+    }
+    zone.textContent = z;
+    desc.textContent = d;
+  }
+  range.addEventListener('input', update);
+  update();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>meridian — a map of the codebase</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --ink: #1b2430;
+    --muted: #57636f;
+    --line: #d9dee5;
+    --accent: #2160c4;
+    --accent-soft: #e8effb;
+    --good: #177245;
+    --good-soft: #e6f4ec;
+    --warn: #9a5b00;
+    --warn-soft: #fdf1de;
+    --bad: #b02a25;
+    --bad-soft: #fbe9e8;
+    --hub: #5b3fa8;
+    --hub-soft: #efeafa;
+    --code-bg: #eef1f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161d;
+      --card: #1b222c;
+      --ink: #e7ecf3;
+      --muted: #9aa7b5;
+      --line: #323d4b;
+      --accent: #7fb0f5;
+      --accent-soft: #1d2c42;
+      --good: #63c78d;
+      --good-soft: #17301f;
+      --warn: #e0a94f;
+      --warn-soft: #362a12;
+      --bad: #ef8b85;
+      --bad-soft: #3a1c1a;
+      --hub: #b39bec;
+      --hub-soft: #2a2340;
+      --code-bg: #232c38;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15.5px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  code, pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  code {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 0.88em;
+  }
+  a { color: var(--accent); }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 20px 32px; }
+  h2 { font-size: 1.35rem; margin: 0 0 4px; }
+  h3 { font-size: 1.05rem; margin: 0 0 6px; }
+  .kicker {
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 2px;
+  }
+  section { margin-top: 44px; }
+  .lede { color: var(--muted); margin: 0 0 18px; max-width: 72ch; }
+
+  /* ---------- hero / glance zone ---------- */
+  .hero {
+    max-width: 1400px; margin: 0 auto; padding: 22px 20px 8px;
+  }
+  .hero h1 { font-size: 1.7rem; margin: 0; }
+  .hero h1 code { font-size: 1em; background: none; padding: 0; color: var(--accent); }
+  .hero .sub { color: var(--muted); margin: 4px 0 0; max-width: 90ch; }
+
+  .flowwrap {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px 12px;
+    margin-top: 16px;
+  }
+  .flow {
+    display: flex; align-items: stretch; justify-content: center;
+    gap: 6px; flex-wrap: wrap;
+  }
+  .lane {
+    border: 1.5px dashed var(--line);
+    border-radius: 10px;
+    padding: 8px 10px 10px;
+    display: flex; flex-direction: column; gap: 6px;
+    min-width: 0;
+  }
+  .lane-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .chain { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .node {
+    background: var(--card);
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 9px;
+    text-align: center;
+    flex: 0 1 auto;
+  }
+  .node .n { font-weight: 650; font-size: 13px; white-space: nowrap; }
+  .node .s { font-size: 11px; color: var(--muted); }
+  .node.warn { border-color: var(--bad); background: var(--bad-soft); }
+  .node.warn .n { color: var(--bad); }
+  .node.hub {
+    border: 2px solid var(--hub); background: var(--hub-soft);
+    align-self: center; padding: 10px 12px;
+  }
+  .node.hub .n { color: var(--hub); font-size: 14px; }
+  .arr {
+    color: var(--muted); font-size: 15px; font-weight: 700;
+    flex: 0 0 auto; align-self: center;
+  }
+  .arr.big { font-size: 20px; color: var(--hub); }
+  .flow-foot {
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    margin-top: 10px; font-size: 12.5px; color: var(--muted);
+  }
+  .flow-foot b { color: var(--ink); }
+
+  .hero-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-top: 14px;
+  }
+  .hcard {
+    background: var(--card); border: 1px solid var(--line);
+    border-top: 4px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; font-size: 13.5px;
+  }
+  .hcard h3 { font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .hcard.go { border-top-color: var(--good); }
+  .hcard.go h3 { color: var(--good); }
+  .hcard.law { border-top-color: var(--accent); }
+  .hcard.law h3 { color: var(--accent); }
+  .hcard.no { border-top-color: var(--bad); }
+  .hcard.no h3 { color: var(--bad); }
+  .hcard ul { margin: 6px 0 0; padding-left: 18px; }
+  .hcard li { margin: 3px 0; }
+
+  .stats {
+    display: flex; flex-wrap: wrap; gap: 8px 18px;
+    justify-content: center; margin-top: 14px;
+    font-size: 12.5px; color: var(--muted);
+  }
+  .stats b { color: var(--ink); font-size: 14px; }
+  .stats .bad-n b { color: var(--bad); }
+
+  /* ---------- module map ---------- */
+  .maplayout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  .modtable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .modtable th {
+    text-align: left; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--muted);
+    padding: 4px 8px 6px; border-bottom: 1px solid var(--line);
+  }
+  .modtable td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .modtable td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .modtable .resp { color: var(--muted); font-size: 12.5px; }
+  .covcell { min-width: 110px; }
+  .bar {
+    background: var(--code-bg); border-radius: 4px; height: 9px;
+    overflow: hidden; margin-top: 4px;
+  }
+  .bar > i { display: block; height: 100%; border-radius: 4px; }
+  .cov-hi > i { background: var(--good); }
+  .cov-mid > i { background: var(--warn); }
+  .cov-lo > i { background: var(--bad); }
+  .covnum { font-size: 12px; font-variant-numeric: tabular-nums; }
+  .covnum.hi { color: var(--good); } .covnum.mid { color: var(--warn); } .covnum.lo { color: var(--bad); }
+
+  pre.tree {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; font-size: 12px; line-height: 1.5;
+    overflow-x: auto; margin: 0;
+  }
+  pre.tree .cm { color: var(--muted); }
+  pre.tree .hot { color: var(--bad); font-weight: 700; }
+  pre.tree .dir { font-weight: 700; }
+
+  /* ---------- flows ---------- */
+  .twocol { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; align-items: start; }
+  .panel {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .steps { margin: 8px 0 0; padding-left: 22px; }
+  .steps li { margin: 8px 0; }
+  .steps .t { color: var(--muted); font-size: 12.5px; }
+  .lat { display: flex; height: 22px; border-radius: 6px; overflow: hidden; margin: 10px 0 6px; }
+  .lat > span {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #fff; white-space: nowrap; overflow: hidden;
+  }
+  .lat .l1 { background: #3e6db5; }
+  .lat .l2 { background: #5b3fa8; }
+  .lat .l3 { background: #177245; }
+  @media (prefers-color-scheme: dark) {
+    .lat .l1 { background: #4a7cc9; } .lat .l2 { background: #7457c2; } .lat .l3 { background: #2b8a58; }
+  }
+  .latkey { font-size: 12px; color: var(--muted); }
+
+  /* ---------- rules ---------- */
+  .ruleslayout { display: grid; grid-template-columns: 440px 1fr; gap: 24px; align-items: start; }
+  .svgbox { max-width: 460px; }
+  .svgbox svg { width: 100%; height: auto; display: block; }
+  .legend { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend .sw { display: inline-block; width: 22px; height: 0; border-top: 2px solid var(--ink); vertical-align: middle; margin-right: 4px; }
+  .legend .sw.viol { border-top: 2px dashed var(--bad); }
+  .legend .sw.http { border-top: 2px dashed var(--muted); }
+  .inv { display: grid; gap: 10px; }
+  .invcard {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 4px solid var(--accent); border-radius: 8px;
+    padding: 10px 14px; font-size: 13.5px;
+  }
+  .invcard b { display: block; }
+  .invcard .why { color: var(--muted); font-size: 12.5px; }
+
+  /* ---------- hotspots ---------- */
+  .hotcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .hotcard {
+    background: var(--card); border: 1px solid var(--line);
+    border-top: 4px solid var(--bad); border-radius: 10px;
+    padding: 14px 16px; font-size: 13.5px;
+  }
+  .hotcard h3 { font-size: 14px; }
+  .hotcard h3 code { font-size: 12.5px; }
+  .hotcard .facts { color: var(--muted); font-size: 12.5px; margin: 2px 0 8px; }
+  .hotcard.big { border-top-width: 6px; }
+  .pill {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    border-radius: 99px; padding: 1px 9px; margin-bottom: 6px;
+    background: var(--bad-soft); color: var(--bad);
+  }
+
+  /* ---------- first change ---------- */
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+  .tabs button {
+    font: inherit; font-size: 13.5px; font-weight: 650;
+    color: var(--ink); background: var(--card);
+    border: 1.5px solid var(--line); border-radius: 99px;
+    padding: 7px 16px; cursor: pointer;
+  }
+  .tabs button:hover { border-color: var(--accent); }
+  .tabs button[aria-selected="true"] {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    .tabs button[aria-selected="true"] { color: #0e1116; }
+  }
+  .tabpanel {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 16px 18px; margin-top: 12px;
+  }
+  .tabpanel[hidden] { display: none; }
+  .recipe { margin: 6px 0 0; padding-left: 22px; }
+  .recipe li { margin: 7px 0; }
+  .recipe .why { color: var(--muted); font-size: 12.5px; }
+  .note-good {
+    border-left: 4px solid var(--good); background: var(--good-soft);
+    border-radius: 6px; padding: 8px 12px; font-size: 13px; margin-top: 12px;
+  }
+  .note-warn {
+    border-left: 4px solid var(--warn); background: var(--warn-soft);
+    border-radius: 6px; padding: 8px 12px; font-size: 13px; margin-top: 12px;
+  }
+
+  footer {
+    max-width: 1080px; margin: 30px auto 0; padding: 14px 20px 22px;
+    border-top: 1px solid var(--line);
+    font-size: 11.5px; color: var(--muted); text-align: center;
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 960px) {
+    .hero-cards, .hotcards { grid-template-columns: 1fr; }
+    .maplayout, .twocol, .ruleslayout { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 760px) {
+    .flow { flex-direction: column; align-items: stretch; }
+    .chain { flex-direction: column; align-items: stretch; }
+    .node .n { white-space: normal; }
+    .arr { transform: rotate(90deg); align-self: center; }
+    .hero h1 { font-size: 1.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <p class="kicker">codebase map · for new contributors</p>
+  <h1><code>meridian</code> — one pipeline, one SQLite file, everything reads through the store</h1>
+  <p class="sub">
+    A self-hosted read-later / RSS service. A one-way ingest pipeline writes articles into a single
+    SQLite database; a small HTTP API, a vanilla-JS web reader, and a CLI read them back out.
+    Two processes (API + workers), no external broker, cache, or database server.
+  </p>
+
+  <div class="flowwrap">
+    <div class="flow">
+      <div class="lane">
+        <div class="lane-label">Write path — one-way ingest</div>
+        <div class="chain">
+          <div class="node"><div class="n">scheduler</div><div class="s">60&nbsp;s tick</div></div>
+          <span class="arr">→</span>
+          <div class="node"><div class="n">jobs queue</div><div class="s">SQLite table · 8 workers</div></div>
+          <span class="arr">→</span>
+          <div class="node"><div class="n">fetcher</div><div class="s">HTTP · 20&nbsp;s timeout</div></div>
+          <span class="arr">→</span>
+          <div class="node warn"><div class="n">extractor ⚠</div><div class="s">pure · 1,140 LOC</div></div>
+          <span class="arr">→</span>
+          <div class="node"><div class="n">dedup</div><div class="s">simhash · ~7% dropped</div></div>
+        </div>
+      </div>
+      <span class="arr big">→</span>
+      <div class="node hub">
+        <div class="n">SQLite store</div>
+        <div class="s">one 1.8&nbsp;GB file · WAL</div>
+        <div class="s"><code>writer.py</code> writes · triggers keep FTS</div>
+      </div>
+      <span class="arr big">→</span>
+      <div class="lane">
+        <div class="lane-label">Read path</div>
+        <div class="chain">
+          <div class="node"><div class="n">api</div><div class="s">31 REST endpoints</div></div>
+          <span class="arr">→</span>
+          <div class="node"><div class="n">web reader + CLI</div><div class="s">same endpoints, no backdoor</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="flow-foot">
+      <span>fetch job → searchable article: <b>p50 2.1&nbsp;s</b></span>
+      <span>read one article: <b>p50 28&nbsp;ms</b></span>
+      <span>typical instance: <b>~200 feeds · ~120,000 articles</b></span>
+    </div>
+  </div>
+
+  <div class="hero-cards">
+    <div class="hcard go">
+      <h3>Your first change goes here</h3>
+      <ul>
+        <li><b>New source type</b> — a documented 4-file recipe centered on <code>pipeline/sources/</code>.</li>
+        <li><b>New API endpoint</b> — <code>api/routes.py</code> + <code>api/schemas.py</code>.</li>
+        <li>Almost never in <code>store/</code> or <code>queue/</code> — those are stable.</li>
+      </ul>
+    </div>
+    <div class="hcard law">
+      <h3>The rules that keep it sane</h3>
+      <ul>
+        <li>Only <code>store/writer.py</code> writes the database.</li>
+        <li>The extractor is pure: bytes in → Article out, no I/O.</li>
+        <li>Full-text index updated by SQLite triggers only.</li>
+        <li>Nothing imports <code>api/</code> or <code>cli/</code>.</li>
+      </ul>
+    </div>
+    <div class="hcard no">
+      <h3>Tread carefully</h3>
+      <ul>
+        <li><code>pipeline/extractor.py</code> — largest file (1,140 LOC), 14 site-specific heuristics, and the codebase's one layering violation.</li>
+        <li><code>web/js/reader.js</code> — 920 LOC, zero tests; the whole frontend has no test harness.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="stats">
+    <span><b>13,710</b> LOC backend Python</span>
+    <span><b>3,280</b> lines frontend</span>
+    <span><b>412</b> tests (~41&nbsp;s)</span>
+    <span><b>77%</b> backend coverage</span>
+    <span class="bad-n"><b>0%</b> frontend coverage</span>
+    <span><b>9</b> tables + FTS5</span>
+    <span><b>11</b> runtime deps · Python 3.12</span>
+  </div>
+</div>
+
+<main>
+
+<section id="map">
+  <p class="kicker">the map</p>
+  <h2>Seven parts, and where they live</h2>
+  <p class="lede">
+    Six Python packages under <code>meridian/</code> plus the <code>web/</code> frontend.
+    The store is the hub; everything layers on top of it. Coverage tells you which layers
+    are safe ground (store, queue) and which are thin ice (api, cli, frontend).
+  </p>
+  <div class="maplayout">
+    <table class="modtable">
+      <thead><tr><th>Module</th><th>Does</th><th>LOC</th><th>Coverage</th></tr></thead>
+      <tbody>
+        <tr><td><code>pipeline/</code></td><td class="resp">Ingest: schedule, fetch, extract, dedup. Produces articles, never serves them.</td><td class="num">4,180</td>
+          <td class="covcell"><span class="covnum hi">84%</span><div class="bar cov-hi"><i style="width:84%"></i></div></td></tr>
+        <tr><td><code>api/</code></td><td class="resp">HTTP surface: 31 endpoints, auth, pagination, OPML. Enqueues work; never fetches inline.</td><td class="num">2,940</td>
+          <td class="covcell"><span class="covnum mid">62%</span><div class="bar cov-mid"><i style="width:62%"></i></div></td></tr>
+        <tr><td><code>store/</code></td><td class="resp">All persistence. Owns the SQLite file, schema, 7 migrations, FTS. The only module that touches the DB.</td><td class="num">2,310</td>
+          <td class="covcell"><span class="covnum hi">91%</span><div class="bar cov-hi"><i style="width:91%"></i></div></td></tr>
+        <tr><td><code>render/</code></td><td class="resp">Stored article → display HTML: sanitize, template, merge highlight annotations.</td><td class="num">1,610</td>
+          <td class="covcell"><span class="covnum mid">76%</span><div class="bar cov-mid"><i style="width:76%"></i></div></td></tr>
+        <tr><td><code>queue/</code></td><td class="resp">Job queue on a SQLite table: broker, 8-thread worker pool, retry policy. No Redis, no Celery.</td><td class="num">1,120</td>
+          <td class="covcell"><span class="covnum hi">88%</span><div class="bar cov-hi"><i style="width:88%"></i></div></td></tr>
+        <tr><td><code>cli/</code></td><td class="resp">User commands. Talks to the API over HTTP via <code>client.py</code>; imports no backend package.</td><td class="num">980</td>
+          <td class="covcell"><span class="covnum lo">41%</span><div class="bar cov-lo"><i style="width:41%"></i></div></td></tr>
+        <tr><td>shared</td><td class="resp"><code>config.py</code> + <code>client.py</code> + <code>__init__.py</code>: config loading and the HTTP client both ends share.</td><td class="num">570</td>
+          <td class="covcell"><span class="covnum mid">79%</span><div class="bar cov-mid"><i style="width:79%"></i></div></td></tr>
+        <tr><td><code>web/</code></td><td class="resp">Vanilla-JS reader: list, reading view, highlights, settings. No framework, no build step.</td><td class="num">3,280</td>
+          <td class="covcell"><span class="covnum lo">0% — no JS test harness</span><div class="bar cov-lo"><i style="width:0%"></i></div></td></tr>
+      </tbody>
+    </table>
+    <pre class="tree"><span class="dir">meridian/</span>
+├── pyproject.toml            <span class="cm">uv-managed · Python 3.12 · 11 deps</span>
+├── meridian.toml.example     <span class="cm">config template</span>
+├── Makefile                  <span class="cm">make run / workers / test</span>
+├── <span class="dir">meridian/</span>                 <span class="cm">backend · 13,710 LOC</span>
+│   ├── config.py · client.py
+│   ├── <span class="dir">api/</span>       app.py · <span class="hot">routes.py ← hotspot</span> · schemas.py
+│   │              auth.py · pagination.py · opml.py · errors.py
+│   ├── <span class="dir">pipeline/</span>  scheduler.py · fetcher.py · <span class="hot">extractor.py ← hotspot</span>
+│   │              dedup.py · <span class="dir">sources/</span> (base · rss · html_page · mailbox)
+│   ├── <span class="dir">queue/</span>     broker.py · worker.py · retry.py
+│   ├── <span class="dir">store/</span>     db.py · writer.py · reader.py · schema.sql · migrations/
+│   ├── <span class="dir">render/</span>    template.py · sanitize.py · annotations.py
+│   └── <span class="dir">cli/</span>       main.py · commands/ (add · sync · search · export)
+├── <span class="dir">web/</span>                      <span class="cm">3,280 lines · no build step</span>
+│   ├── index.html · css/style.css
+│   └── js/  app.js · api.js · list.js · <span class="hot">reader.js ← hotspot</span> · settings.js
+├── <span class="dir">tests/</span>                    <span class="cm">412 tests · 6,240 LOC · 1,400 fixture pages</span>
+└── <span class="dir">docs/</span>      architecture.md · adding-a-source-type.md</pre>
+  </div>
+</section>
+
+<section id="flows">
+  <p class="kicker">runtime</p>
+  <h2>How data moves</h2>
+  <div class="twocol">
+    <div class="panel">
+      <h3>Flow A — the fetch pipeline (write path)</h3>
+      <ol class="steps">
+        <li><code>pipeline/scheduler.py</code> ticks every 60&nbsp;s, finds feeds whose poll interval (default 30&nbsp;min) has elapsed, enqueues one fetch job per feed. <span class="t">Typical queue depth 30–60; the health endpoint alerts at 500.</span></li>
+        <li><code>queue/broker.py</code> polls the jobs table every 500&nbsp;ms and leases jobs to 8 worker threads. <span class="t">Failures retry at 1&nbsp;min / 5&nbsp;min / 30&nbsp;min, then dead-letter.</span></li>
+        <li><code>pipeline/fetcher.py</code> does the HTTP work: conditional GET (ETag / Last-Modified), 20&nbsp;s timeout, per-host politeness delay.</li>
+        <li><code>pipeline/extractor.py</code> turns raw HTML into a structured Article — title, byline, body, word count. <span class="t">Pure, no I/O of any kind · p50 45&nbsp;ms, p95 320&nbsp;ms per article.</span></li>
+        <li><code>pipeline/dedup.py</code> computes a 64-bit simhash of the body; Hamming distance ≤&nbsp;3 against stored hashes marks a duplicate. <span class="t">About 7% of incoming items are flagged and dropped.</span></li>
+        <li><code>store/writer.py</code> persists each surviving article in a single transaction. SQLite triggers in <code>schema.sql</code> update the <code>articles_fts</code> FTS5 index — application code never writes the index.</li>
+      </ol>
+      <p class="t" style="color:var(--muted); font-size:12.5px; margin:10px 0 0;">
+        End to end, p50 from job dequeue to the article being searchable is <b style="color:var(--ink)">2.1&nbsp;s</b>, dominated by the network fetch.
+      </p>
+    </div>
+    <div class="panel">
+      <h3>Flow B — the read path</h3>
+      <p style="margin:6px 0 0; font-size:13.5px;">
+        <code>GET /articles/{id}</code> hits <code>api/routes.py</code>, reads via
+        <code>store/reader.py</code>, assembles display HTML in <code>render/template.py</code>,
+        then <code>render/annotations.py</code> merges the user's highlights — stored as character
+        offsets into the rendered text — into <code>&lt;mark&gt;</code> spans.
+      </p>
+      <div class="lat" aria-hidden="true">
+        <span class="l1" style="width:21.4%">6</span><span class="l2" style="width:50%">14</span><span class="l3" style="width:28.6%">8</span>
+      </div>
+      <p class="latkey">p50 in ms: <b>6</b> store read · <b>14</b> template · <b>8</b> annotations — <b>28&nbsp;ms total</b></p>
+      <p style="font-size:13.5px;">
+        The web reader (<code>web/js/reader.js</code>) and the CLI consume the same endpoints;
+        neither has a private backdoor into the database.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="rules">
+  <p class="kicker">discipline</p>
+  <h2>Layering and the five invariants</h2>
+  <p class="lede">
+    Import direction is strict and documented in <code>docs/architecture.md</code>:
+    <code>store/</code> sits at the bottom and imports no other meridian package (stdlib +
+    <code>sqlite3</code> only); nothing imports <code>api/</code> or <code>cli/</code>.
+    One known violation exists — and it lives in the scariest file.
+  </p>
+  <div class="ruleslayout">
+    <div class="svgbox">
+      <svg viewBox="0 0 420 470" role="img" aria-label="Layering diagram: api and cli on top, queue, pipeline and render in the middle, store at the bottom. Arrows show allowed imports pointing downward. A red dashed arrow marks the one violation, pipeline to render.">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+          <marker id="ahbad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" style="fill:var(--bad)"/>
+          </marker>
+        </defs>
+        <g style="color:var(--muted)" stroke="currentColor" stroke-width="1.6" fill="none">
+          <line x1="95" y1="74" x2="82" y2="186" marker-end="url(#ah)"/>
+          <line x1="138" y1="74" x2="326" y2="186" marker-end="url(#ah)"/>
+          <line x1="112" y1="74" x2="150" y2="344" marker-end="url(#ah)"/>
+          <line x1="150" y1="220" x2="141" y2="220" marker-end="url(#ah)"/>
+          <line x1="196" y1="248" x2="196" y2="344" marker-end="url(#ah)"/>
+          <line x1="88" y1="248" x2="140" y2="344" marker-end="url(#ah)"/>
+          <line x1="332" y1="248" x2="268" y2="344" marker-end="url(#ah)"/>
+          <line x1="224" y1="44" x2="200" y2="44" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+        </g>
+        <g style="color:var(--bad)" stroke="currentColor" stroke-width="2" fill="none">
+          <line x1="268" y1="224" x2="279" y2="224" stroke-dasharray="4 3" marker-end="url(#ahbad)"/>
+        </g>
+        <g style="fill:var(--card); stroke:var(--line)" stroke-width="1.6">
+          <rect x="24" y="16" width="172" height="58" rx="8"/>
+          <rect x="226" y="16" width="172" height="58" rx="8"/>
+          <rect x="24" y="192" width="112" height="56" rx="8"/>
+          <rect x="154" y="192" width="112" height="56" rx="8"/>
+          <rect x="284" y="192" width="112" height="56" rx="8"/>
+        </g>
+        <rect x="92" y="350" width="240" height="62" rx="8" style="fill:var(--hub-soft); stroke:var(--hub)" stroke-width="2"/>
+        <g style="fill:var(--ink)" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="15" font-weight="700" text-anchor="middle">
+          <text x="110" y="40">api/</text>
+          <text x="312" y="40">cli/</text>
+          <text x="80" y="216">queue/</text>
+          <text x="210" y="216">pipeline/</text>
+          <text x="340" y="216">render/</text>
+          <text x="212" y="376" style="fill:var(--hub)">store/</text>
+        </g>
+        <g style="fill:var(--muted)" font-size="11.5" text-anchor="middle">
+          <text x="110" y="60">HTTP · 31 endpoints</text>
+          <text x="312" y="60">speaks HTTP only</text>
+          <text x="80" y="236">jobs table</text>
+          <text x="210" y="236">ingest</text>
+          <text x="340" y="236">display HTML</text>
+          <text x="212" y="398">the only module that touches SQLite</text>
+          <text x="212" y="98" style="fill:var(--muted)">nothing imports api/ or cli/</text>
+        </g>
+        <g text-anchor="middle" font-size="12.5" font-weight="700" style="fill:var(--bad)">
+          <text x="212" y="282">⚠ the one violation: pipeline → render</text>
+          <text x="212" y="300">extractor.py:41 imports render.sanitize</text>
+        </g>
+      </svg>
+      <p class="legend">
+        <span class="sw"></span> allowed import (points at what gets imported) ·
+        <span class="sw viol"></span> the violation ·
+        <span class="sw http"></span> HTTP call, not an import
+      </p>
+    </div>
+    <div class="inv">
+      <div class="invcard"><b>1 · The extractor is pure.</b> Bytes in → Article out. No network, disk, DB, or clock; the same HTML always yields the same Article.
+        <span class="why">Enforced by a property test replaying all 1,400 fixture pages on every CI run.</span></div>
+      <div class="invcard"><b>2 · Only <code>store/writer.py</code> writes the database.</b> Every INSERT, UPDATE, and DELETE in the codebase lives in that one 610-LOC file; everything else reads through <code>store/reader.py</code>.</div>
+      <div class="invcard"><b>3 · The FTS index is trigger-maintained.</b> <code>articles_fts</code> is updated only by SQLite triggers in <code>schema.sql</code>; no Python touches it, so it can never drift from the articles table.</div>
+      <div class="invcard"><b>4 · Queue jobs are idempotent.</b> Replaying any job must not create duplicate articles — dedup plus the writer's upsert keys guarantee it.
+        <span class="why">This is what makes the retry policy safe.</span></div>
+      <div class="invcard"><b>5 · The API never fetches inline.</b> "Fetch this now" enqueues a job and returns <code>202 Accepted</code>; only workers touch the network.</div>
+      <div class="invcard" style="border-left-color:var(--bad)"><b style="color:var(--bad)">The violation, spelled out.</b>
+        <code>pipeline/extractor.py</code> (line 41) imports <code>clean_html()</code> from <code>render/sanitize.py</code> — a sideways pipeline&nbsp;→&nbsp;render edge, present since v0.8. A change to the <i>display</i> sanitizer can silently change what gets <i>stored</i>, and it is why two extractor purity tests are marked <code>xfail</code>. The fix (move <code>clean_html()</code> to a shared location) is tracked as issue&nbsp;#214, top of the debt list.</div>
+    </div>
+  </div>
+</section>
+
+<section id="hotspots">
+  <p class="kicker">caution</p>
+  <h2>The three tech-debt hotspots</h2>
+  <div class="hotcards">
+    <div class="hotcard big">
+      <span class="pill">the scary one</span>
+      <h3><code>meridian/pipeline/extractor.py</code></h3>
+      <p class="facts">1,140 LOC — largest file in the repo · max cyclomatic complexity 38</p>
+      <p>Contains <b>14 site-specific extraction heuristics</b> inlined as if/elif chains, plus the layering violation. Nearly every extraction bug fix lands here, and each one risks changing output for the other 13 heuristics. The 1,400-page fixture corpus is the only safety net.</p>
+    </div>
+    <div class="hotcard">
+      <span class="pill">endpoint pile-up</span>
+      <h3><code>meridian/api/routes.py</code></h3>
+      <p class="facts">All 31 endpoints in one 830-LOC file · file coverage 54%, below the module's 62%</p>
+      <p><code>auth.py</code> exists, but <b>11 routes inline their own copy-pasted auth check</b> instead of using it. Use <code>auth.py</code> when you add an endpoint.</p>
+    </div>
+    <div class="hotcard">
+      <span class="pill">untested frontend</span>
+      <h3><code>web/js/reader.js</code></h3>
+      <p class="facts">920 LOC of vanilla JS · zero tests (no JS harness exists)</p>
+      <p>Highlight anchoring uses <b>character offsets into the rendered HTML</b>, so any markup change in <code>render/template.py</code> silently corrupts existing highlight positions. This coupling caused 3 of the last 10 user-reported bugs.</p>
+    </div>
+  </div>
+</section>
+
+<section id="first-change">
+  <p class="kicker">getting started</p>
+  <h2>Where does your first change go?</h2>
+  <p class="lede">Pick what you're adding — each path is a known recipe.</p>
+  <div class="tabs" role="tablist" aria-label="Contribution paths">
+    <button role="tab" id="tab-source" aria-selected="true" aria-controls="panel-source">New source type</button>
+    <button role="tab" id="tab-endpoint" aria-selected="false" aria-controls="panel-endpoint">New API endpoint</button>
+    <button role="tab" id="tab-cli" aria-selected="false" aria-controls="panel-cli">New CLI command</button>
+  </div>
+
+  <div class="tabpanel" id="panel-source" role="tabpanel" aria-labelledby="tab-source">
+    <h3>The most common contribution: exactly 4 files</h3>
+    <p style="font-size:13px; color:var(--muted); margin:0;">Step-by-step in <code>docs/adding-a-source-type.md</code>. The three existing adapters (<code>rss.py</code>, <code>html_page.py</code>, <code>mailbox.py</code>) each followed this recipe.</p>
+    <ol class="recipe">
+      <li><code>meridian/pipeline/sources/base.py</code> — subclass <code>SourceAdapter</code> <span class="why">(implement <code>discover()</code> and <code>fetch_items()</code>)</span></li>
+      <li><code>meridian/pipeline/sources/__init__.py</code> — register the class in <code>SOURCE_REGISTRY</code></li>
+      <li><code>meridian/store/migrations/</code> — one migration extending the <code>source_type</code> CHECK constraint</li>
+      <li><code>meridian/cli/commands/add.py</code> — expose the new <code>--type</code> value</li>
+    </ol>
+    <div class="note-good">Plus a fixture-backed test under <code>tests/unit/pipeline/</code>.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-endpoint" role="tabpanel" aria-labelledby="tab-endpoint" hidden>
+    <h3>Two files, three if the frontend consumes it</h3>
+    <ol class="recipe">
+      <li><code>meridian/api/routes.py</code> — the handler <span class="why">(all 31 live here)</span></li>
+      <li><code>meridian/api/schemas.py</code> — request/response dataclasses + validation</li>
+      <li><code>web/js/api.js</code> — a fetch() wrapper, if the frontend consumes the endpoint</li>
+    </ol>
+    <div class="note-warn">Use <code>auth.py</code> for the auth check — 11 existing routes inline a copy-pasted version instead, and that's debt, not a pattern to follow. Remember the invariant: endpoints that trigger fetching enqueue a job and return <code>202 Accepted</code>; they never fetch inline.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-cli" role="tabpanel" aria-labelledby="tab-cli" hidden>
+    <h3>One new module</h3>
+    <ol class="recipe">
+      <li><code>meridian/cli/commands/&lt;name&gt;.py</code> — <code>main.py</code> auto-discovers it</li>
+    </ol>
+    <div class="note-good">The CLI talks to the API over HTTP via <code>client.py</code> — it never imports backend packages, and your command shouldn't either.</div>
+  </div>
+
+  <div class="note-good" style="margin-top:16px;">
+    <b>A newcomer's first change almost never touches <code>store/</code> or <code>queue/</code>.</b>
+    Those layers are stable (91% and 88% covered) and change only with schema migrations.
+  </div>
+</section>
+
+<section id="tests">
+  <p class="kicker">safety net</p>
+  <h2>Tests: strong backend, absent frontend</h2>
+  <div class="panel">
+    <p style="margin:0 0 8px;"><b>412 tests — 348 unit + 64 integration — full suite in ~41&nbsp;s locally.</b></p>
+    <ul style="margin:0; padding-left:20px; font-size:14px;">
+      <li><code>tests/unit/</code> mirrors the package layout one-to-one; the extractor's property test replays the 1,400 captured pages in <code>tests/fixtures/</code>.</li>
+      <li><code>tests/integration/</code> runs against a real temporary SQLite file and a live in-process ASGI app — no mocks at the store boundary.</li>
+      <li>Backend line coverage 77% overall: store 91 · queue 88 · pipeline 84 · shared 79 · render 76 · api 62 · cli 41.</li>
+      <li style="color:var(--bad)">The frontend has no test harness at all (0%) — treat <code>web/js/</code> changes as untested until you've clicked through them.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>codebase-structure · combined · v1 · 2026-08-12</footer>
+
+<script>
+(function () {
+  var tabs = document.querySelectorAll('[role="tab"]');
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      tabs.forEach(function (t) {
+        t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+        document.getElementById(t.getAttribute('aria-controls')).hidden = (t !== tab);
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
