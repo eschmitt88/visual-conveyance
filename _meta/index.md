@@ -27,6 +27,7 @@ and `/new-experiment`.
 ## Active experiments
 
 - [[experiments/2026-07-01-baseline-matrix]] — 7 approaches × 6 testcases; AI eval done (dashboard 9.02 leads), awaiting human ratings
+- [[experiments/2026-08-12-combined-matrix]] — approach 10 (free-choice + layout QA) × 6 testcases; generation in progress
 - [[experiments/2026-08-11-new-approach-matrix]] — DONE: 08 = 09 = 8.47 tie at #3 of 9; 08 beats sibling 03 by +1.09 (constraints vindicated); 09 = 2nd-best glance, weak depth (inverse of prediction); human pass pending
 
 ## Open questions
