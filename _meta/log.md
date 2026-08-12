@@ -20,3 +20,4 @@ skills; read by `/lint`.
 2026-08-11 17:43 add approaches 08-editorial-diagrams + 09-motion-explainer (ADR 0002)
 2026-08-11 21:05 new-experiment new-approach-matrix
 2026-08-11 21:23 new-approach-matrix: 12 evals aggregated, manifest rebuilt, experiment closed (status done)
+2026-08-12 04:35 human feedback recorded (eval/human-feedback-2026-08-12.md); approach 10-combined + tools/layout_check.py (ADR 0003)
