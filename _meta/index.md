@@ -23,6 +23,9 @@ and `/new-experiment`.
 - [[literature/posts/googleresearch2025generativeui]] — Google Generative UI: production bespoke-interactive-page generation, preference evals, accuracy + glance gaps = our niche (rel 5)
 - [[literature/repos/cathrynlavery-diagram-design]] — diagram-design skill: editorial SVG design system (one accent, 4px grid, density 4/10), 27 types, same artifact contract as ours; basis of approach 08 (rel 5)
 - [[literature/repos/3b1b-manim]] — manim/3b1b: explanatory-animation grammar (sequential revelation, morph transforms, persistent scene); grammar ported to static contract in approach 09 (rel 4)
+- [[literature/papers/chen2025svgenius]] — SVGenius: 2,377-query SVG benchmark, 22 models; universal complexity degradation (Claude 80%→33% PQA), computable complexity stratifier (rel 4)
+- [[literature/papers/vaduva2026code2uml]] — Code2UML: five-agent PlantUML pipeline + deterministic IR compaction; corrector ablation 65.5%→91.5%, relationship precision as hallucination probe (rel 3, cred 2)
+- [[literature/repos/swark-io-swark]] — Swark: VS Code codebase→Mermaid extension, one LLM call, ships a fixMermaidCycles repair pass; naive-baseline contrast (rel 2)
 
 ## Active experiments
 

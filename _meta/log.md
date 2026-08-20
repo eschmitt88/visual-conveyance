@@ -23,3 +23,10 @@ skills; read by `/lint`.
 2026-08-12 04:35 human feedback recorded (eval/human-feedback-2026-08-12.md); approach 10-combined + tools/layout_check.py (ADR 0003)
 2026-08-12 04:36 new-experiment combined-matrix
 2026-08-12 04:51 combined-matrix: 6 evals aggregated (10-combined 9.15, new #1), manifest rebuilt (60 cells), experiment closed
+2026-08-20 02:20 fetch-paper https://arxiv.org/abs/2605.24453 → raw/papers/vaduva2026code2uml.pdf
+2026-08-20 02:20 fetch-paper https://arxiv.org/abs/2506.03139 → raw/papers/chen2025svgenius.pdf
+2026-08-20 02:20 fetch-paper https://github.com/swark-io/swark → raw/repos/swark-io-swark.md
+2026-08-20 02:22 ingest vaduva2026code2uml
+2026-08-20 02:22 ingest chen2025svgenius
+2026-08-20 02:22 ingest swark-io-swark
+2026-08-20 02:25 curate 2026-07-01-ai-visual-conveyance.md ingested=3 declined=2 dup=7

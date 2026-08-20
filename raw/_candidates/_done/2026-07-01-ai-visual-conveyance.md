@@ -5,6 +5,7 @@ discovered: 2026-07-01
 source: discover
 n_requested: 12
 n_returned: 12
+curated: 2026-08-20
 ---
 
 ## 1. MermaidSeqBench: An Evaluation Benchmark for NL-to-Mermaid Sequence Diagram Generation
@@ -90,3 +91,42 @@ n_returned: 12
 - type: repo
 - summary: Curated list of systems where LLMs dynamically create, compose, and render UI components.
 - reason: Cheap breadth — a maintained map of the generative-UI space to mine for approach ideas beyond our initial set.
+
+## Curation
+
+Curated 2026-08-20. Twelve items; the seven ingested on 2026-07-01 were
+re-checked against `literature/**` `url:` fields and confirmed present.
+
+| # | Item | Disposition |
+|---|------|-------------|
+| 1 | MermaidSeqBench | already in graph → `shbita2025mermaidseqbench` |
+| 2 | DiagramEval | already in graph → `liang2025diagrameval` |
+| 3 | IGenBench | already in graph → `tang2026igenbench` |
+| 4 | The Visualization JUDGE | already in graph → `berger2024visualization` |
+| 5 | Glanceable Data Visualizations for Older Adults | already in graph → `while2024glanceable` |
+| 6 | Swark | ingested → `literature/repos/swark-io-swark` (rel 2) |
+| 7 | Code2UML | ingested → `vaduva2026code2uml` (rel 3, cred 2) |
+| 8 | Google Generative UI | already in graph → `googleresearch2025generativeui` |
+| 9 | SVGenius | ingested → `chen2025svgenius` (rel 4, cred 4) |
+| 10 | LIDA | already in graph → `dibia2023lida` |
+| 11 | Design practices in visualization-driven data exploration for non-expert audiences | declined — Elsevier paywall, `HTTP 403` on fetch; no accessible full text, and the framing is already covered by [[literature/papers/while2024glanceable]] for the non-expert-audience angle |
+| 12 | awesome-generative-ui | declined — curated link list, no substantive content of its own; the approach set is closed by ADR 0002/0003, so breadth-mining for new approach ideas has no consumer this phase |
+
+**Totals:** ingested 3, declined 2, already in graph 7.
+
+### Notes on the ingests
+
+- **Code2UML** was ingested for its corrector-pass ablation (65.5% → 91.5%
+  syntactic validity) and its Relationship Precision metric, not for its
+  headline numbers — credibility 2: the validity metric is circular (the
+  corrector grades its own work), the "ablation" is a post-hoc re-labelling,
+  and the abstract and conclusion disagree on cross-language variance.
+- **SVGenius** is the highest-value item of the three: it is the only
+  quantitative footing we have for the inline-SVG channel that approach
+  10-combined selected in 6/6 cells, and its complexity stratifier (path
+  count / control points / complex commands) is directly computable over
+  our 60 manifest cells.
+- **Swark** was ingested as prior art for the `codebase-structure` test case
+  and as the naive contrast to Code2UML's compaction (it truncates the file
+  set rather than ranking it). Its `fixMermaidCycles` setting independently
+  corroborates that raw LLM diagram-DSL output needs a mechanical repair pass.
