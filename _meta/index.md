@@ -12,6 +12,8 @@ and `/new-experiment`.
 
 (promote a cluster of ≥5 related concepts into `mocs/<theme>.md`)
 
+- [[mocs/visual-generation-methods]] — the generation side: structure-vs-freedom spectrum (DSL → constrained SVG → generative UI), motion as a channel, staged pipelines as the cross-cutting lever (5 concepts)
+
 ## Literature
 
 - [[literature/papers/shbita2025mermaidseqbench]] — MermaidSeqBench: NL→Mermaid benchmark, six-dimension LLM-as-judge rubric (rel 4)

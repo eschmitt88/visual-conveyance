@@ -30,3 +30,4 @@ skills; read by `/lint`.
 2026-08-20 02:22 ingest chen2025svgenius
 2026-08-20 02:22 ingest swark-io-swark
 2026-08-20 02:25 curate 2026-07-01-ai-visual-conveyance.md ingested=3 declined=2 dup=7
+2026-08-20 02:31 promote-moc visual-generation-methods (5 concepts)
